@@ -1,121 +1,232 @@
-# Inventory Web App Architecture
+# Inventory & Sales Web App Architecture
 
 ## Overview
 
-This document summarizes the planned architecture for an inventory
-management web application. The focus is on scalability,
-maintainability, and clean separation of concerns.
+This document summarizes the planned architecture for a business inventory and sales management web application.
 
-------------------------------------------------------------------------
+The platform will initially focus on **inventory management** and later expand into a full **sales and cashier system** with accounting-oriented features such as taxes, pricing calculations, and transaction tracking.
+
+The main architectural goals are:
+
+- Scalability
+- Maintainability
+- Separation of concerns
+- Business logic correctness
+- Extensibility for future accounting and POS features
+
+---
+
+# Core Product Vision
+
+The system will operate in **two primary modes**:
+
+1. Inventory Mode
+2. Selling / Cashier Mode
+
+The inventory side will be developed first to establish a strong and reliable foundation for stock management and product tracking.
+
+---
+
+# Frontend
+
+- Framework: React + TypeScript
+- Data Fetching & Server State: TanStack Query
+- UI Layer: Tailwind CSS + component library
+
+## Responsibilities
+
+- Display products, stock, transactions, and sales
+- Handle user interactions
+- Manage server state efficiently
+- Communicate with backend APIs
+- Support role-based interfaces depending on user type
+
+---
+
+# Application Modes
+
+## 1. Inventory Mode
+
+### Intended Users
+
+- Warehouse workers
+- Warehouse managers
+- Inspectors
+- Administrators
+
+### Features
+
+- Create products
+- Modify product information
+- Organize products
+- Register stock movements
+- Inventory inspections
+- Low stock alerts
+- Audit trails and history
+
+### Architectural Notes
+
+Inventory should be modeled using a transaction-based system:
+- Stock IN
+- Stock OUT
+- Transfers
+- Manual adjustments
+
+---
+
+## 2. Selling / Cashier Mode
+
+### Intended Users
+
+- Cashiers
+- Store employees
+- Managers
+
+### Features
+
+- Product lookup
+- Real-time inventory validation
+- Automatic stock deduction after sales
+- Receipt generation
+- Tax calculation
+- Transaction history
+
+### Architectural Notes
+
+Sales operations must:
+- Be transactional
+- Prevent negative stock
+- Synchronize inventory instantly
+- Maintain accurate accounting records
+
+---
+
+# Backend
+
+- Framework: FastAPI (REST API)
+
+## Key Principles
+
+- Keep routes thin
+- Separate business logic from API routes
+- Validate all incoming data
+- Use service layers for inventory and sales logic
+- Maintain transactional integrity
+
+---
+
+# Database
+
+- Platform: Supabase (PostgreSQL)
+
+## Core Entities
+
+- Products
+- Warehouses
+- Inventory Transactions
+- Sales
+- Users
+- Roles
+- Suppliers
+
+### Inventory Model
+
+Avoid relying only on static quantities.
+
+Instead:
+
+Current Stock = Sum of Inventory Transactions
+
+---
+
+# Authentication & Authorization
+
+## Authentication
+
+- Supabase Auth
+
+## Authorization
+
+Role-based access control (RBAC)
+
+### Example Roles
+
+- Admin
+- Warehouse Worker
+- Warehouse Manager
+- Inspector
+- Cashier
+
+---
+
+# Infrastructure
+
+## Core Services
+
+- Supabase Auth
+- Supabase Storage
+
+## Background Processing
+
+- Low stock alerts
+- Scheduled reports
+- Accounting summaries
+- Inventory reconciliation
+
+## Observability
+
+- Logging
+- Monitoring
+- Error tracking
+
+---
+
+# Deployment Strategy
 
 ## Frontend
 
--   **Framework:** React + TypeScript\
--   **Data Fetching & State (Server State):** TanStack Query
-    -   Handles caching, synchronization, and background updates\
--   **UI Layer:** Tailwind CSS and/or a component library
-
-### Responsibilities
-
--   Display data (products, stock, transactions)
--   Handle user interactions
--   Communicate with backend via API
--   Manage server state efficiently
-
-------------------------------------------------------------------------
+- Vercel
 
 ## Backend
 
--   **Framework:** FastAPI (REST API)
+- Render
 
-### Key Principles
+## Database & Auth
 
--   Keep routes thin
--   Implement a **business logic layer** separate from API routes
--   Validate and process data before interacting with the database
+- Supabase
 
-### Responsibilities
+---
 
--   API endpoints (CRUD + business operations)
--   Authentication/authorization integration
--   Data validation and processing
--   Orchestrating database operations
+# Development Roadmap
 
-------------------------------------------------------------------------
+## Phase 1 — Inventory System
 
-## Database
+- Products
+- Warehouses
+- Stock movements
+- User roles
+- Inventory tracking
+- Audit logs
 
--   **Platform:** Supabase (PostgreSQL)
+## Phase 2 — Selling / POS System
 
-### Design Approach
+- Cashier interface
+- Sales transactions
+- Real-time stock deduction
+- Receipts
+- Taxes and pricing logic
 
--   Use a **transaction-based model** for inventory:
-    -   Avoid storing only a single "quantity" field
-    -   Track stock movements (in, out, transfers)
--   Design normalized, scalable schemas
+## Phase 3 — Accounting & Reporting
 
-### Responsibilities
+- Financial reporting
+- Automated tax calculations
+- Revenue tracking
 
--   Persistent data storage
--   Enforcing constraints and relationships
--   Supporting concurrency and transactions
+---
 
-------------------------------------------------------------------------
+# Guiding Principles
 
-## Infrastructure
-
-### Core Services
-
--   **Authentication:** Supabase Auth
--   **File Storage:** Supabase Storage (for images, documents)
-
-### Background Processing
-
--   Scheduled jobs (e.g., low stock alerts, reports)
--   Async tasks (future scaling)
-
-### Observability
-
--   Logging
--   Monitoring
--   Error tracking
-
-------------------------------------------------------------------------
-
-## Deployment Strategy (Initial)
-
--   **Frontend Hosting:** Vercel
--   **Backend Hosting:** Render
--   **Database & Auth:** Supabase
-
-### Notes
-
--   This setup is optimized for rapid development and iteration
--   Can later migrate to more advanced infrastructure if needed
-
-------------------------------------------------------------------------
-
-## Architecture Flow
-
-Frontend (React + TanStack Query)\
-→ Backend (FastAPI REST API)\
-→ Database (Supabase PostgreSQL)
-
-------------------------------------------------------------------------
-
-## Future Considerations
-
--   Role-based access control (RBAC)
--   Audit logging (who changed what and when)
--   Advanced search and filtering
--   Offline support (optional)
--   Scaling background jobs
-
-------------------------------------------------------------------------
-
-## Guiding Principles
-
--   Keep layers separated (UI, API, DB)
--   Model the domain carefully (inventory is not simple CRUD)
--   Optimize for clarity first, performance later
--   Build for change and growth
+- Keep architecture layered and modular
+- Treat inventory as a transactional system
+- Optimize for correctness first
+- Build extensible business logic
