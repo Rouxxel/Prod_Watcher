@@ -103,7 +103,7 @@ Sales operations must:
 
 # Backend
 
-- Framework: FastAPI (REST API)
+- Framework: .NET
 
 ## Key Principles
 

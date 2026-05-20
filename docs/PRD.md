@@ -130,8 +130,8 @@ The goal is to create a centralized system that keeps inventory and sales synchr
 
 ## Backend
 
-- FastAPI
-- REST API
+- .NET
+- RESTful API
 
 ## Database
 
