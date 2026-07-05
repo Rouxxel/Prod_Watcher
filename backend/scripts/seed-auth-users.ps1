@@ -1,5 +1,5 @@
 # Provision ProdWatch dev auth users via Supabase Admin API, assign roles, and load demo activity.
-# Prerequisites: Flyway migrations applied (V1-V11), backend/.env configured, psql on PATH.
+# Prerequisites: Flyway migrations applied (V1-V12), backend/.env configured, psql on PATH.
 #
 # Usage (from repo root):
 #   .\backend\scripts\seed-auth-users.ps1
@@ -11,7 +11,7 @@ $BackendDir = Split-Path -Parent $ScriptDir
 $EnvFile = Join-Path $BackendDir ".env"
 
 if (-not (Test-Path $EnvFile)) {
-    Write-Error "Missing $EnvFile — copy backend/.env.example and fill in Supabase credentials."
+    Write-Error "Missing $EnvFile - copy backend/.env.example and fill in Supabase credentials."
 }
 
 Get-Content $EnvFile | ForEach-Object {
@@ -71,7 +71,7 @@ function Set-UserBanned {
     $userId = & psql $PsqlUrl -tA -c "SELECT id FROM public.profiles WHERE email = '$Email' LIMIT 1;" 2>$null
     $userId = ($userId | Out-String).Trim()
     if (-not $userId) {
-        Write-Host "  skip ban — profile not found for $Email"
+        Write-Host "  skip ban - profile not found for $Email"
         return
     }
 

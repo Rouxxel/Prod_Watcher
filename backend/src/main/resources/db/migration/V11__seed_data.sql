@@ -1,7 +1,7 @@
 -- Reference seed data (mirrors frontend/src/mock/seed.ts).
 -- Warehouses and products apply on Flyway migrate. Activity data (movements, audit,
--- transactions) is loaded by seed_demo_activity() after auth users exist — run
--- backend/scripts/seed-auth-users.ps1 (or .sh) once migrations have applied.
+-- transactions) is loaded by seed_demo_activity() after auth users exist.
+-- Step 2: run backend/scripts/seed-auth-users.ps1 — see docs/DATABASE_VERIFICATION.md
 
 -- ---------------------------------------------------------------------------
 -- Warehouses (fixed IDs for idempotent seed)
