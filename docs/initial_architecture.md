@@ -207,7 +207,7 @@ Role-based access control (RBAC)
 - **Primary:** [Vercel](https://vercel.com) — deploy the TanStack Start app as a Vite/Node SSR or static SPA build (recommended default)
 - **Optional:** [Cloudflare Workers](https://workers.cloudflare.com) — edge runtime via existing `wrangler.jsonc` and `@cloudflare/vite-plugin` when lower latency or Workers-specific features are needed
 
-Both targets share the same build output philosophy: environment variables (`VITE_API_BASE_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) are set per platform. Supabase Auth redirect URLs and backend CORS must list whichever production URL(s) are in use.
+Both targets set `VITE_API_BASE_URL` to the Render API. Supabase and database credentials live on the backend only. Supabase Auth redirect URLs and backend CORS must list whichever frontend URL(s) are in use.
 
 ## Backend
 
@@ -221,7 +221,7 @@ Both targets share the same build output philosophy: environment variables (`VIT
 
 - `docs/TASK_01_database.md` — Supabase schema, migrations, RLS, seed data
 - `docs/TASK_02_backend.md` — Java Spring Boot REST API
-- `docs/TASK_03_frontend.md` — Wire frontend shell to API + Supabase Auth
+- `docs/TASK_03_frontend.md` — Wire frontend shell to Java API (auth via backend)
 
 ---
 

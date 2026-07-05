@@ -218,14 +218,14 @@ service-role keys on the server only.
 
 ### 3. Replace mock auth
 
-Swap `src/hooks/use-current-user.tsx` for **Supabase Auth**:
+All auth goes through the **Java API** — no Supabase client in the frontend:
 
-- **Owner:** `/signup` (bootstrap only) → `supabase.auth.signUp` → email confirm → admin role
-- **Staff:** admin provisions via `/users` with password (pre-confirmed, no email)
-- **Login:** `supabase.auth.signInWithPassword` at `/login`
-- Fetch profile + role from `GET /api/v1/users/me`
-- Attach Supabase JWT on API requests
-- Keep the existing `login/logout` context shape
+- **Owner:** `/signup` → `POST /api/v1/auth/signup` (bootstrap only)
+- **Staff:** admin provisions via `/users`; employees use `/login`
+- **Login:** `POST /api/v1/auth/login` → store `accessToken` from response; send `Authorization: Bearer …` on API calls
+- **Logout:** `POST /api/v1/auth/logout` + clear stored token
+- Profile + role from `GET /api/v1/users/me`
+- Keep the existing `login/logout` context shape in `use-current-user.tsx`
 
 ### 4. Replace seed data
 
