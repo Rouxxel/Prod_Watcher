@@ -29,9 +29,10 @@ The inventory side will be developed first to establish a strong and reliable fo
 
 # Frontend
 
-- Framework: React + TypeScript
+- Framework: React 19 + TypeScript (TanStack Start)
+- Routing: TanStack Router (file-based)
 - Data Fetching & Server State: TanStack Query
-- UI Layer: Tailwind CSS + component library
+- UI Layer: Tailwind CSS v4 + shadcn/ui
 
 ## Responsibilities
 
@@ -40,6 +41,11 @@ The inventory side will be developed first to establish a strong and reliable fo
 - Manage server state efficiently
 - Communicate with backend APIs
 - Support role-based interfaces depending on user type
+
+## Deployment
+
+- **Primary:** Vercel
+- **Optional:** Cloudflare Workers (edge; repo includes `wrangler.jsonc`)
 
 ---
 
@@ -103,15 +109,22 @@ Sales operations must:
 
 # Backend
 
-- Framework: .NET
+- Framework: **Java — Spring Boot 3** (Java 17+)
+- API style: RESTful (`/api/v1/...`)
+- Persistence: Spring Data JPA
+- Migrations: Flyway (`backend/src/main/resources/db/migration/`)
+- Validation: Jakarta Bean Validation on DTOs
+- Security: Spring Security + Supabase JWT validation
+- Structure: `controller` → `service` → `repository` → `entity` / `dto`
 
 ## Key Principles
 
-- Keep routes thin
-- Separate business logic from API routes
+- Keep controllers thin
+- Separate business logic in service layers
 - Validate all incoming data
 - Use service layers for inventory and sales logic
-- Maintain transactional integrity
+- Maintain transactional integrity (`@Transactional` on stock and sales operations)
+- Config-driven endpoints and rate limits via `config_file.json`
 
 ---
 
@@ -149,6 +162,9 @@ Current Stock = Sum of Inventory Transactions
 
 Role-based access control (RBAC)
 
+- Roles stored in a separate `user_roles` table (not on the user profile row)
+- Enforced in the Java service layer and via Supabase RLS policies
+
 ### Example Roles
 
 - Admin
@@ -185,15 +201,24 @@ Role-based access control (RBAC)
 
 ## Frontend
 
-- Vercel
+- **Primary:** [Vercel](https://vercel.com) — deploy the TanStack Start app as a Vite/Node SSR or static SPA build (recommended default)
+- **Optional:** [Cloudflare Workers](https://workers.cloudflare.com) — edge runtime via existing `wrangler.jsonc` and `@cloudflare/vite-plugin` when lower latency or Workers-specific features are needed
+
+Both targets share the same build output philosophy: environment variables (`VITE_API_BASE_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) are set per platform. Supabase Auth redirect URLs and backend CORS must list whichever production URL(s) are in use.
 
 ## Backend
 
-- Render
+- Render (Spring Boot JAR / Docker)
 
 ## Database & Auth
 
-- Supabase
+- Supabase (PostgreSQL + Auth + Storage)
+
+## Implementation plans
+
+- `docs/TASK_01_database.md` — Supabase schema, migrations, RLS, seed data
+- `docs/TASK_02_backend.md` — Java Spring Boot REST API
+- `docs/TASK_03_frontend.md` — Wire frontend shell to API + Supabase Auth
 
 ---
 

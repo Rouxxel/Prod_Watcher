@@ -123,15 +123,20 @@ The goal is to create a centralized system that keeps inventory and sales synchr
 
 ## Frontend
 
-- React
-- TypeScript
+- React 19 + TypeScript
+- TanStack Start + TanStack Router
 - TanStack Query
-- Tailwind CSS
+- Tailwind CSS v4 + shadcn/ui
+- Deploy: Vercel (primary); Cloudflare Workers (optional edge target)
 
 ## Backend
 
-- .NET
+- Java 17+
+- Spring Boot 3
 - RESTful API
+- Spring Data JPA
+- Flyway (database migrations)
+- Spring Security (Supabase JWT)
 
 ## Database
 
@@ -139,9 +144,10 @@ The goal is to create a centralized system that keeps inventory and sales synchr
 
 ## Hosting
 
-- Frontend: Vercel
-- Backend: Render
-- Database/Auth: Supabase
+- **Frontend (primary):** Vercel — TanStack Start / Vite production build
+- **Frontend (optional):** Cloudflare Workers — existing `wrangler.jsonc` + `@cloudflare/vite-plugin` target for edge deployment
+- **Backend:** Render
+- **Database/Auth:** Supabase
 
 ---
 
