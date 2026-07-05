@@ -1,0 +1,3 @@
+// Project name used by Gradle and the produced artifact.
+// Rename per project (mirrors renaming the Python package folder).
+rootProject.name = 'java-rest-api-template'

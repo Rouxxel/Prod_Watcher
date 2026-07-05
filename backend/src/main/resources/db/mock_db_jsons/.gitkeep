@@ -1,0 +1,3 @@
+# Mock JSON "tables" for the in-memory / file-backed repository go here.
+# Use util/SecureFileIo's record helpers (readAll/createRecord/updateRecord/
+# deleteRecord) against files in this folder. Empty placeholder for git.

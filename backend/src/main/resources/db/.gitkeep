@@ -1,0 +1,2 @@
+# Database migration files go here (e.g. Flyway: V1__init.sql, V2__add_table.sql,
+# or Liquibase changelogs). Empty placeholder so the folder is tracked by git.

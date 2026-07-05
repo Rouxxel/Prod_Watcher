@@ -1,0 +1,64 @@
+//#############################################################################
+//### Gradle build script for the Java REST API Template
+//###
+//### Spring Boot 3 + Java 17.
+//### requirements.txt (dependencies) + the implicit "how to run" wiring.
+//#############################################################################
+
+plugins {
+    // Spring Boot plugin: gives us `bootRun` (dev run) and `bootJar` (fat jar).
+    id 'org.springframework.boot' version '3.3.5'
+    // Manages versions of all Spring/3rd-party deps so we don't pin each one.
+    id 'io.spring.dependency-management' version '1.1.6'
+    id 'java'
+}
+
+// Maven-style coordinates. Rename per project.
+group = 'com.template'
+version = '1.0.0'
+
+java {
+    // Spring Boot 3 requires Java 17+. We target Java 17 bytecode but compile
+    // with whatever JDK 17+ you have installed (more forgiving than a strict
+    // toolchain, which would demand an exact JDK 17). Switch to a toolchain
+    // block if you prefer Gradle to provision a specific JDK.
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // --- Web framework (FastAPI equivalent) ---
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // --- Bean validation for DTOs (Pydantic Field constraints equivalent) ---
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // --- Actuator: production health/metrics endpoints (optional but handy) ---
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // --- OpenAPI / Swagger UI (FastAPI's /docs equivalent) ---
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+
+    // --- YAML support for SecureFileIo.readYaml/writeYaml ---
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
+
+    // --- Phone number validation used by Validators.validatePhoneFormat ---
+    implementation 'com.googlecode.libphonenumber:libphonenumber:8.13.50'
+
+    // --- Tests ---
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Name the produced fat jar predictably for the Dockerfile COPY step.
+tasks.named('bootJar') {
+    archiveFileName = 'app.jar'
+}

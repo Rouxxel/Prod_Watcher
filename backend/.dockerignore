@@ -1,0 +1,39 @@
+# Build output (rebuilt inside the image)
+build/
+out/
+bin/
+.gradle/
+
+# Logs (created in the container)
+logs/
+*.log
+
+# Env files (passed via env_file / real environment, not baked into the image)
+.env.local
+.env.production
+.env.development
+
+# Keys must never be copied into the image
+*.pem
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docs / tests not needed at runtime
+README.md
+*.md
+src/test/
+
+# OS files
+.DS_Store
+Thumbs.db

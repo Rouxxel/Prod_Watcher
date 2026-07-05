@@ -1,0 +1,47 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: java_rest_api_template
+    env_file: .env
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs  # Persist logs
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional services - uncomment as needed
+
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: java_rest_api_postgres
+  #   environment:
+  #     POSTGRES_DB: ${POSTGRES_DB:-api_db}
+  #     POSTGRES_USER: ${POSTGRES_USER:-api_user}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-api_password}
+  #   ports:
+  #     - "5432:5432"
+  #   restart: unless-stopped
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: java_rest_api_redis
+  #   ports:
+  #     - "6379:6379"
+  #   restart: unless-stopped
+  #   volumes:
+  #     - redis_data:/data
+  #   command: redis-server --appendonly yes
+
+# volumes:
+#   postgres_data:
+#   redis_data:
