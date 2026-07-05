@@ -156,7 +156,10 @@ Current Stock = Sum of Inventory Transactions
 
 ## Authentication
 
-- Supabase Auth
+- Supabase Auth (`auth.users`)
+- **Owner bootstrap:** public `/signup` → email confirmation → first user becomes `admin`
+- **Staff provisioning:** admin creates users via Admin API (`email_confirm: true`, admin-set password) — no invite/confirm email
+- **Promote to admin:** separate action on `/users`, not part of normal provisioning
 
 ## Authorization
 

@@ -220,11 +220,12 @@ service-role keys on the server only.
 
 Swap `src/hooks/use-current-user.tsx` for **Supabase Auth**:
 
-- Use `supabase.auth.signInWithPassword` in `/login`.
-- Subscribe to `supabase.auth.onAuthStateChange` in `CurrentUserProvider`.
-- Fetch the user profile + role from `GET /api/v1/users/me` (Java API reads `user_roles`).
-- Attach the Supabase access token as `Authorization: Bearer …` on API requests.
-- Keep the existing `login/logout` API shape so callers don't change.
+- **Owner:** `/signup` (bootstrap only) → `supabase.auth.signUp` → email confirm → admin role
+- **Staff:** admin provisions via `/users` with password (pre-confirmed, no email)
+- **Login:** `supabase.auth.signInWithPassword` at `/login`
+- Fetch profile + role from `GET /api/v1/users/me`
+- Attach Supabase JWT on API requests
+- Keep the existing `login/logout` context shape
 
 ### 4. Replace seed data
 
