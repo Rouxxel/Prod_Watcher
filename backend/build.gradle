@@ -49,6 +49,10 @@ dependencies {
     // --- Phone number validation used by Validators.validatePhoneFormat ---
     implementation 'com.googlecode.libphonenumber:libphonenumber:8.13.50'
 
+    // --- Database migrations (Flyway) — version managed by Spring Boot BOM ---
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+
     // --- Tests ---
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
