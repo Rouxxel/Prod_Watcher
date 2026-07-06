@@ -371,8 +371,8 @@ Inactive users (`profiles.active = false`) fail `is_active_user()` checks.
 | V8 | `V8__audit_entries.sql` | `audit_entries` |
 | V9 | `V9__transactions.sql` | `transactions` |
 | V10 | `V10__rls_policies.sql` | RLS enable + policies |
-| V11 | `V11__seed_data.sql` | Reference seed + `seed_demo_activity()` |
-| V12 | `V12__storage_product_images.sql` | `product-images` bucket + storage RLS |
+| V11 | `V11__storage_product_images.sql` | `product-images` bucket + storage RLS |
+| V12 | `V12__seed_data.sql` | Reference seed + `seed_demo_activity()` (returns jsonb) |
 
 ---
 
