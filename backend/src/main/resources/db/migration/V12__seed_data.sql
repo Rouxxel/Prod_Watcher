@@ -192,8 +192,9 @@ ON CONFLICT (id) DO NOTHING;
 -- Activity seed (movements, audit, transactions) — requires auth users / profiles
 -- ---------------------------------------------------------------------------
 
+-- Returns jsonb so it works over the Supabase REST RPC endpoint (PostgREST).
 CREATE OR REPLACE FUNCTION public.seed_demo_activity()
-RETURNS void
+RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
@@ -217,8 +218,7 @@ BEGIN
     SELECT id INTO u_inactive FROM profiles WHERE email = 'devon@acme.co';
 
     IF u_worker IS NULL OR u_cashier IS NULL THEN
-        RAISE NOTICE 'seed_demo_activity: skipping — provision auth users first (scripts/seed-auth-users.ps1)';
-        RETURN;
+        RETURN jsonb_build_object('status', 'skipped', 'reason', 'provision auth users first');
     END IF;
 
     -- Opening balances so product_stock_summary matches frontend mock Product.stock
@@ -290,6 +290,13 @@ BEGIN
             now() - interval '1 day' + interval '12 hours'
         )
     ON CONFLICT (id) DO NOTHING;
+
+    RETURN jsonb_build_object(
+        'status', 'ok',
+        'stock_movements', (SELECT count(*) FROM stock_movements),
+        'audit_entries', (SELECT count(*) FROM audit_entries),
+        'transactions', (SELECT count(*) FROM transactions)
+    );
 END;
 $$;
 
