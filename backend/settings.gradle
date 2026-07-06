@@ -1,2 +1,1 @@
-// Project name used by Gradle and the produced artifact.
-rootProject.name = 'Prod_Watcher'
+rootProject.name = 'prodwatch-api'

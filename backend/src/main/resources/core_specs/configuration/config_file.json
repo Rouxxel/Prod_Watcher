@@ -6,7 +6,7 @@
     "logging": {
         "logging_level": "debug",
         "dir_name": "logs",
-        "log_file_name": "prod_watch_bcknd"
+        "log_file_name": "prodwatch_api"
     },
 
     "email_validation": {
@@ -29,20 +29,68 @@
             "endpoint_route": "/"
         },
 
-        "example_endpoint_1": {
-            "request_limit": 10,
+        "health_endpoint": {
+            "request_limit": 30,
             "unit_of_time_for_limit": "m",
-            "endpoint_prefix": "/subsection",
-            "endpoint_tag": "example-items",
-            "endpoint_route": "/items"
+            "endpoint_prefix": "/api/v1",
+            "endpoint_tag": "health",
+            "endpoint_route": "/health"
         },
 
-        "example_endpoint_2": {
-            "request_limit": 5,
+        "auth_endpoint": {
+            "request_limit": 20,
             "unit_of_time_for_limit": "m",
-            "endpoint_prefix": "/subsection",
-            "endpoint_tag": "example-status",
-            "endpoint_route": "/status"
+            "endpoint_prefix": "/api/v1",
+            "endpoint_tag": "auth",
+            "endpoint_route": "/auth"
+        },
+
+        "products_endpoint": {
+            "request_limit": 60,
+            "unit_of_time_for_limit": "m",
+            "endpoint_prefix": "/api/v1",
+            "endpoint_tag": "products",
+            "endpoint_route": "/products"
+        },
+
+        "warehouses_endpoint": {
+            "request_limit": 30,
+            "unit_of_time_for_limit": "m",
+            "endpoint_prefix": "/api/v1",
+            "endpoint_tag": "warehouses",
+            "endpoint_route": "/warehouses"
+        },
+
+        "movements_endpoint": {
+            "request_limit": 40,
+            "unit_of_time_for_limit": "m",
+            "endpoint_prefix": "/api/v1",
+            "endpoint_tag": "stock-movements",
+            "endpoint_route": "/stock-movements"
+        },
+
+        "audit_endpoint": {
+            "request_limit": 30,
+            "unit_of_time_for_limit": "m",
+            "endpoint_prefix": "/api/v1",
+            "endpoint_tag": "audit",
+            "endpoint_route": "/audit"
+        },
+
+        "users_endpoint": {
+            "request_limit": 20,
+            "unit_of_time_for_limit": "m",
+            "endpoint_prefix": "/api/v1",
+            "endpoint_tag": "users",
+            "endpoint_route": "/users"
+        },
+
+        "transactions_endpoint": {
+            "request_limit": 30,
+            "unit_of_time_for_limit": "m",
+            "endpoint_prefix": "/api/v1",
+            "endpoint_tag": "transactions",
+            "endpoint_route": "/transactions"
         }
     }
 }

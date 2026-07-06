@@ -1,8 +1,13 @@
+# ProdWatch API — Docker build context exclusions
+
 # Build output (rebuilt inside the image)
 build/
 out/
 bin/
 .gradle/
+
+# Legacy wrapper path (use gradle/wrapper/ only)
+wrapper/
 
 # Logs (created in the container)
 logs/

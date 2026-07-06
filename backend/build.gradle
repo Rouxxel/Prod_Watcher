@@ -1,27 +1,15 @@
-//#############################################################################
-//### Gradle build script for the Prod Watch Backend
-//###
-//### Spring Boot 3 + Java 17.
-//### requirements.txt (dependencies) + the implicit "how to run" wiring.
-//#############################################################################
+// Gradle build script for ProdWatch API — Spring Boot 3 + Java 17.
 
 plugins {
-    // Spring Boot plugin: gives us `bootRun` (dev run) and `bootJar` (fat jar).
     id 'org.springframework.boot' version '3.3.5'
-    // Manages versions of all Spring/3rd-party deps so we don't pin each one.
     id 'io.spring.dependency-management' version '1.1.6'
     id 'java'
 }
 
-// Maven-style coordinates.
 group = 'com.prodwatch'
 version = '1.0.0'
 
 java {
-    // Spring Boot 3 requires Java 17+. We target Java 17 bytecode but compile
-    // with whatever JDK 17+ you have installed (more forgiving than a strict
-    // toolchain, which would demand an exact JDK 17). Switch to a toolchain
-    // block if you prefer Gradle to provision a specific JDK.
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
 }
@@ -31,32 +19,27 @@ repositories {
 }
 
 dependencies {
-    // --- Web framework (FastAPI equivalent) ---
     implementation 'org.springframework.boot:spring-boot-starter-web'
-
-    // --- Bean validation for DTOs (Pydantic Field constraints equivalent) ---
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-
-    // --- Actuator: production health/metrics endpoints (optional but handy) ---
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
 
-    // --- OpenAPI / Swagger UI (FastAPI's /docs equivalent) ---
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
-
-    // --- YAML support for SecureFileIo.readYaml/writeYaml ---
-    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
-
-    // --- Phone number validation used by Validators.validatePhoneFormat ---
-    implementation 'com.googlecode.libphonenumber:libphonenumber:8.13.50'
-
-    // --- Database migrations (Flyway) — version managed by Spring Boot BOM ---
+    runtimeOnly 'org.postgresql:postgresql'
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-    runtimeOnly 'org.postgresql:postgresql'
 
-    // --- Tests ---
+    implementation 'com.auth0:java-jwt:4.4.0'
+
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
+    implementation 'com.googlecode.libphonenumber:libphonenumber:8.13.50'
+
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
@@ -64,7 +47,6 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-// Name the produced fat jar predictably for the Dockerfile COPY step.
 tasks.named('bootJar') {
     archiveFileName = 'app.jar'
 }

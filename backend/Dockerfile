@@ -1,5 +1,5 @@
 #############################################################################
-### Multi-stage Dockerfile for the Prod Watch Backend
+### Multi-stage Dockerfile for ProdWatch API
 ### Spring Boot 3 + Java 17 (Temurin). Optimized for production deployment.
 #############################################################################
 
