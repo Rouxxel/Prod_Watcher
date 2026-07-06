@@ -9,7 +9,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 // @cloudflare/vite-plugin builds from this — wrangler.jsonc main alone is insufficient.
 export default defineConfig({
   server: {
-    port: 8080,
+    port: 8000,
     strictPort: true,
     host: true,
   },

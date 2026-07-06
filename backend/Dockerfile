@@ -1,5 +1,5 @@
 #############################################################################
-### Multi-stage Dockerfile for the Java REST API Template
+### Multi-stage Dockerfile for the Prod Watch Backend
 ### Spring Boot 3 + Java 17 (Temurin). Optimized for production deployment.
 #############################################################################
 

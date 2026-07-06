@@ -35,7 +35,7 @@ import java.util.stream.Stream;
 public final class LogsDeleter {
 
     // SET THIS to your project's root folder name (case-insensitive).
-    public static final String ROOT_FOLDER = "java-rest-api-template";
+    public static final String ROOT_FOLDER = "Prod_Watcher";
     public static final String[] FOLDERS_TO_REMOVE =
             { "logs", "build", "out", "bin", ".gradle", "dist" };
 

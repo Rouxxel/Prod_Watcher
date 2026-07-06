@@ -158,8 +158,6 @@ The whole point of the shell is that pages, hooks, and components are
 **agnostic to where data comes from**. To go live, replace the mock service
 layer — that's it.
 
-See `docs/TASK_03_frontend.md` for the full integration checklist.
-
 ### 1. Stack overview
 
 | Layer | Technology |
@@ -167,12 +165,6 @@ See `docs/TASK_03_frontend.md` for the full integration checklist.
 | Frontend (this repo) | TanStack Start — deploy to **Vercel** (primary) or **Cloudflare Workers** (optional) |
 | API | **Java Spring Boot 3** on Render (`backend/`) |
 | Database & Auth | **Supabase** (PostgreSQL + Auth + Storage) |
-
-Recommended order:
-
-1. Provision Supabase (Postgres, Auth, Storage) — see `docs/TASK_01_database.md`.
-2. Deploy the Java API — see `docs/TASK_02_backend.md`.
-3. Wire this frontend — see `docs/TASK_03_frontend.md`.
 
 ### 2. Replace each service module
 
