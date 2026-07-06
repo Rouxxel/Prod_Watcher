@@ -1,5 +1,5 @@
 //#############################################################################
-//### Gradle build script for the Java REST API Template
+//### Gradle build script for the Prod Watch Backend
 //###
 //### Spring Boot 3 + Java 17.
 //### requirements.txt (dependencies) + the implicit "how to run" wiring.
@@ -13,8 +13,8 @@ plugins {
     id 'java'
 }
 
-// Maven-style coordinates. Rename per project.
-group = 'com.template'
+// Maven-style coordinates.
+group = 'com.prodwatch'
 version = '1.0.0'
 
 java {
@@ -52,6 +52,8 @@ dependencies {
     // --- Database migrations (Flyway) — version managed by Spring Boot BOM ---
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    runtimeOnly 'org.postgresql:postgresql'
 
     // --- Tests ---
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -65,4 +67,26 @@ tasks.named('test') {
 // Name the produced fat jar predictably for the Dockerfile COPY step.
 tasks.named('bootJar') {
     archiveFileName = 'app.jar'
+}
+
+// Load backend/.env into bootRun (Spring does not read .env files automatically).
+tasks.named('bootRun') {
+    def dotenv = file('.env')
+    if (dotenv.exists()) {
+        dotenv.readLines().each { line ->
+            def trimmed = line.trim()
+            if (trimmed.isEmpty() || trimmed.startsWith('#')) {
+                return
+            }
+            def eq = trimmed.indexOf('=')
+            if (eq > 0) {
+                def key = trimmed.substring(0, eq).trim()
+                def value = trimmed.substring(eq + 1).trim()
+                if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+                    value = value.substring(1, value.length() - 1)
+                }
+                environment key, value
+            }
+        }
+    }
 }

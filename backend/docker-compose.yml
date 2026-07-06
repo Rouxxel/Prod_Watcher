@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: java_rest_api_template
+    container_name: Prod_Watcher
     env_file: .env
     ports:
       - "${SERVER_PORT:-8080}:8080"
