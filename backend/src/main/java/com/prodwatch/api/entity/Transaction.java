@@ -120,4 +120,20 @@ public class Transaction {
     public Instant getCreatedAt() {
         return createdAt;
     }
+
+    public static Transaction create(
+            List<TransactionLineItem> items,
+            BigDecimal subtotal,
+            BigDecimal tax,
+            BigDecimal total,
+            Profile cashier) {
+        Transaction transaction = new Transaction();
+        transaction.items = new ArrayList<>(items);
+        transaction.subtotal = subtotal;
+        transaction.tax = tax;
+        transaction.total = total;
+        transaction.cashier = cashier;
+        transaction.status = TransactionStatus.completed;
+        return transaction;
+    }
 }

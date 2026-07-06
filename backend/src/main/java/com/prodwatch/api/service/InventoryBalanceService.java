@@ -1,0 +1,51 @@
+package com.prodwatch.api.service;
+
+import java.util.List;
+import java.util.UUID;
+
+import com.prodwatch.api.entity.Product;
+import com.prodwatch.api.error.InsufficientStockException;
+import com.prodwatch.api.repository.InventoryBalanceRepository;
+import com.prodwatch.api.repository.ProductRepository;
+import com.prodwatch.api.repository.ProductStockSummaryRepository;
+
+import org.springframework.stereotype.Service;
+
+@Service
+public class InventoryBalanceService {
+
+    private final InventoryBalanceRepository inventoryBalanceRepository;
+    private final ProductStockSummaryRepository productStockSummaryRepository;
+    private final ProductRepository productRepository;
+
+    public InventoryBalanceService(
+            InventoryBalanceRepository inventoryBalanceRepository,
+            ProductStockSummaryRepository productStockSummaryRepository,
+            ProductRepository productRepository) {
+        this.inventoryBalanceRepository = inventoryBalanceRepository;
+        this.productStockSummaryRepository = productStockSummaryRepository;
+        this.productRepository = productRepository;
+    }
+
+    public int getStock(UUID productId, UUID warehouseId) {
+        return inventoryBalanceRepository.getStockForProduct(productId, warehouseId);
+    }
+
+    public int getStockAtDefaultWarehouse(UUID productId) {
+        return productStockSummaryRepository.getDefaultWarehouseStock(productId);
+    }
+
+    public void assertSufficientStock(UUID productId, UUID warehouseId, int qty) {
+        int available = getStock(productId, warehouseId);
+        if (available < qty) {
+            throw new InsufficientStockException(
+                    "Insufficient stock: need " + qty + ", have " + available);
+        }
+    }
+
+    public List<Product> getLowStockProducts() {
+        return productRepository.findAll().stream()
+                .filter(p -> getStockAtDefaultWarehouse(p.getId()) <= p.getLowStockThreshold())
+                .toList();
+    }
+}

@@ -38,4 +38,6 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, UU
             @Param("type") StockMovementType type,
             @Param("from") Instant from,
             @Param("to") Instant to);
+
+    boolean existsByFromWarehouse_IdOrToWarehouse_Id(UUID fromWarehouseId, UUID toWarehouseId);
 }

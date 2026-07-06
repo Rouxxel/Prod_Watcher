@@ -129,4 +129,23 @@ public class StockMovement {
     public Instant getCreatedAt() {
         return createdAt;
     }
+
+    public static StockMovement create(
+            StockMovementType type,
+            Product product,
+            int qty,
+            Warehouse fromWarehouse,
+            Warehouse toWarehouse,
+            Profile user,
+            String note) {
+        StockMovement movement = new StockMovement();
+        movement.type = type;
+        movement.product = product;
+        movement.qty = qty;
+        movement.fromWarehouse = fromWarehouse;
+        movement.toWarehouse = toWarehouse;
+        movement.user = user;
+        movement.note = note;
+        return movement;
+    }
 }
