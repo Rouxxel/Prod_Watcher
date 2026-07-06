@@ -1,6 +1,6 @@
-# Java REST API Template
+# Prod Watch Java REST API
 
-A production-ready **Spring Boot 3 (Java 17)** template for building scalable REST APIs with Docker support, config-driven rate limiting, a custom logger, input validation, and RSA encryption utilities.
+A production-ready **Spring Boot 3 (Java 17)** Prod Watch backend for building scalable REST APIs with Docker support, config-driven rate limiting, a custom logger, input validation, and RSA encryption utilities.
 
 The concepts map one-to-one; the structure follows idiomatic Java backend conventions (`controller` / `service` / `repository` / `entity` / `dto` / `error`) instead of being a literal 1:1 port.
 
@@ -20,7 +20,7 @@ The concepts map one-to-one; the structure follows idiomatic Java backend conven
 ## Project Structure
 
 ```
-java_rest_api_template/
+prod_watcher/
 ├── src/
 │   ├── main/
 │   │   ├── java/com/template/restapi/
@@ -76,7 +76,7 @@ java_rest_api_template/
 ├── gradlew / gradlew.bat / gradle/wrapper/      # Gradle wrapper
 ├── Dockerfile                                   # Multi-stage Docker build
 ├── docker-compose.yml
-├── .env / .env.example                          # Environment variables template
+├── .env / .env.example                          # Environment variables
 ├── start.sh / start.bat                         # Dev setup and launch scripts
 ├── .dockerignore
 ├── .gitignore
@@ -107,7 +107,7 @@ Or use the helper scripts which also load `.env` and offer dev/prod/Docker modes
 start.bat           # Windows
 ```
 
-> **Gradle wrapper note:** this template ships `gradle/wrapper/gradle-wrapper.jar`. If your copy is missing it (some zip exports strip jars), bootstrap it once with a system Gradle (`gradle wrapper`) or just open the project in IntelliJ/VS Code, which generates it automatically. `start.sh` / `start.bat` fall back to a system `gradle` if the wrapper jar is absent.
+> **Gradle wrapper note:** this backend ships `gradle/wrapper/gradle-wrapper.jar`. If your copy is missing it (some zip exports strip jars), bootstrap it once with a system Gradle (`gradle wrapper`) or just open the project in IntelliJ/VS Code, which generates it automatically. `start.sh` / `start.bat` fall back to a system `gradle` if the wrapper jar is absent.
 
 Then access:
 - API: http://localhost:8080
@@ -131,8 +131,13 @@ docker compose up --build
 Or manually:
 
 ```bash
-docker build -t java-rest-api-template .
-docker run -p 8080:8080 --env-file .env java-rest-api-template
+docker build -t Prod_Watcher .
+docker run -p 8080:8080 --env-file .env Prod_Watcher
+```
+
+### DNS check
+```bash
+nslookup db.project_id.supabase.co
 ```
 
 ## Configuration

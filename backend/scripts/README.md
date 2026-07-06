@@ -103,7 +103,7 @@ Safe to re-run — inserts are idempotent (`ON CONFLICT DO NOTHING`).
 | `Missing backend/.env` | Copy `backend/.env.example` → `backend/.env` and fill in Supabase credentials |
 | `422 Unprocessable Entity` on first user | User already exists — re-run is OK; script prints `exists` |
 | `remote name could not be resolved` | `SUPABASE_URL` still has placeholder values |
-| `stock_movements still empty` after script | Run `seed-activity-only.sql` in Supabase SQL Editor |
+| `stock_movements still empty` after script | Run `seed-activity-only.sql` in SQL Editor, or re-run the seed script |
 | Re-run after partial success | Script is idempotent; safe to run again |
 
 ---
@@ -112,3 +112,8 @@ Safe to re-run — inserts are idempotent (`ON CONFLICT DO NOTHING`).
 
 - [`docs/SUPABASE_SETUP.md`](../../docs/SUPABASE_SETUP.md) — Auth & Storage dashboard setup
 - [`docs/DATABASE_SCHEMA.md`](../../docs/DATABASE_SCHEMA.md) — Schema reference
+- [`docs/DATABASE_VERIFICATION.md`](../../docs/DATABASE_VERIFICATION.md) — Phase 8 verification
+
+## `verify-database.sql`
+
+Run in **Supabase SQL Editor** after auth + activity seed to validate counts, stock, RLS, and helpers.
