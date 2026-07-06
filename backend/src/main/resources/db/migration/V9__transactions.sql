@@ -1,4 +1,4 @@
--- POS sales transactions (schema only; backend wiring in TASK_02 Phase 2).
+-- POS sales transactions (schema only; backend wiring).
 -- items jsonb shape mirrors frontend CartItem[]: { productId, name, sku, qty, unitPrice }
 
 CREATE TABLE public.transactions (

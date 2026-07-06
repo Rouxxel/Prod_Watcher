@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Java REST API Template - Development Startup Script
+# Prod Watch Backend - Development Startup Script
 
-echo "Java REST API Template - Development Setup"
+echo "Prod Watch Backend - Development Setup"
 echo "=========================================="
 
 # Check Java

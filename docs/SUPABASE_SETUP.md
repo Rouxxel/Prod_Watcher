@@ -1,7 +1,5 @@
 # Supabase Setup — Storage & Auth
 
-Runbook for **Phase 5.3** (Storage) and **Phase 6** (Auth) from `docs/TASK_01_database.md`.
-
 SQL migrations automate the storage bucket (`V12__storage_product_images.sql`) and auth triggers (`V3__profiles_and_roles.sql`). Dashboard steps below must be applied once per Supabase project.
 
 ---
@@ -30,7 +28,7 @@ Example: `https://your-project.supabase.co/storage/v1/object/public/product-imag
 
 `V11__seed_data.sql` still uses external [picsum.photos](https://picsum.photos) URLs so demo data works without uploaded files. When ready:
 
-1. Upload images to the `product-images` bucket (Dashboard → Storage, or API from TASK_03).
+1. Upload images to the `product-images` bucket.
 2. Update `products.images` to Storage URLs (migration or admin script).
 3. Optional path convention: `{sku}/{index}.jpg` (e.g. `KTL-001/1.jpg`).
 
@@ -54,7 +52,7 @@ Open **Supabase Dashboard → Authentication → Providers → Email**.
 Choose **one**:
 
 1. **Dashboard:** Authentication → Providers → Email → disable **Enable sign ups** after the first admin exists, **or**
-2. **Backend (preferred, TASK_02):** Reject `POST /auth/signup` when `user_roles` already has an `admin` row.
+2. **Backend:** Reject `POST /auth/signup` when `user_roles` already has an `admin` row.
 
 Keep the dashboard option as a safety net in production.
 
@@ -110,7 +108,7 @@ Already implemented in migrations — no extra dashboard hooks required for MVP.
 | --- | --- |
 | `on_auth_user_created` → `profiles` row | `V3__profiles_and_roles.sql` (`handle_new_user` trigger on `auth.users`) |
 | `bootstrap_assign_admin(user_id)` | `V3__profiles_and_roles.sql` — called by backend after owner email confirmation |
-| Block inactive users | RLS policies use `is_active_user()`; **backend JWT filter (TASK_02)** must reject login/API access when `profiles.active = false` |
+| Block inactive users | RLS policies use `is_active_user()`; must reject login/API access when `profiles.active = false` |
 | Devon Cruz (inactive) | Seed script sets `profiles.active = false` + Auth ban via Admin API |
 
 ### Optional: Custom Access Token hook
@@ -138,7 +136,7 @@ Use this checklist after migrations and `seed-auth-users` script (or real signup
 ### Promote to admin
 
 - [ ] Existing user gets new/updated `user_roles` row with `admin` — no new `auth.users` row
-- [ ] Audit entry `ROLE_PROMOTED_TO_ADMIN` (backend, TASK_02)
+- [ ] Audit entry `ROLE_PROMOTED_TO_ADMIN` (backend)
 
 ### Quick SQL checks
 
@@ -194,4 +192,3 @@ Apply once per environment (project):
 | `backend/src/main/resources/db/migration/V12__storage_product_images.sql` | Storage bucket + RLS |
 | `backend/scripts/seed-auth-users.ps1` / `.sh` | Dev auth users + roles |
 | `backend/.env.example` | Env vars + dev seed password comments |
-| `docs/TASK_02_backend.md` | JWT filter, signup guard, Auth Admin API |

@@ -1,7 +1,7 @@
 @echo off
-REM Java REST API Template - Development Startup Script (Windows)
+REM Prod Watch Backend - Development Startup Script (Windows)
 
-echo Java REST API Template - Development Setup
+echo Prod Watch Backend - Development Setup
 echo ==========================================
 
 REM Check Java

@@ -225,7 +225,7 @@ Append-only audit trail.
 
 ### `transactions`
 
-POS sales (schema only until TASK_02 Phase 2 wiring).
+POS sales (schema only).
 
 | Column | Type | Constraints |
 | --- | --- | --- |
@@ -373,11 +373,3 @@ Inactive users (`profiles.active = false`) fail `is_active_user()` checks.
 | V10 | `V10__rls_policies.sql` | RLS enable + policies |
 | V11 | `V11__storage_product_images.sql` | `product-images` bucket + storage RLS |
 | V12 | `V12__seed_data.sql` | Reference seed + `seed_demo_activity()` (returns jsonb) |
-
----
-
-## Related docs
-
-- [`TASK_01_database.md`](TASK_01_database.md) — implementation plan
-- [`SUPABASE_SETUP.md`](SUPABASE_SETUP.md) — Auth & Storage dashboard setup
-- [`TASK_02_backend.md`](TASK_02_backend.md) — JPA entities, datasource, API

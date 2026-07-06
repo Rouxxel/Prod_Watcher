@@ -217,12 +217,6 @@ Both targets set `VITE_API_BASE_URL` to the Render API. Supabase and database cr
 
 - Supabase (PostgreSQL + Auth + Storage)
 
-## Implementation plans
-
-- `docs/TASK_01_database.md` — Supabase schema, migrations, RLS, seed data
-- `docs/TASK_02_backend.md` — Java Spring Boot REST API
-- `docs/TASK_03_frontend.md` — Wire frontend shell to Java API (auth via backend)
-
 ---
 
 # Development Roadmap

@@ -93,7 +93,7 @@ Query: section 7 in `verify-database.sql`.
 | `has_role()` works | `verify-database.sql` §6 |
 | Devon inactive | `is_active_user` = false; Auth ban in Dashboard |
 | Auth redirect URLs | [`SUPABASE_SETUP.md`](SUPABASE_SETUP.md) |
-| Bootstrap sign-up guard | TASK_02 backend |
+| Bootstrap sign-up guard |
 | Admin-provisioned skip confirm | Seed script uses `email_confirm: true` |
 
 ### Data
@@ -111,7 +111,7 @@ Query: section 7 in `verify-database.sql`.
 | --- | --- |
 | Flyway on backend startup | Wired in `application.properties` + JDBC (needs valid `DATABASE_URL`) |
 | Backend connects via `DATABASE_URL` | `spring.datasource.url=${DATABASE_URL}` |
-| Frontend auth via Java API | TASK_03 (no Supabase client on frontend) |
+| Frontend auth via Java API |
 
 ---
 
@@ -132,11 +132,3 @@ If you created the schema in the SQL Editor before starting the backend:
 | `stock_movements` empty | Run `SELECT seed_demo_activity();` in SQL Editor |
 | Flyway fails on boot | Fix `DATABASE_URL`; use the Session Pooler host and ensure the password/project ref are correct |
 | Counts wrong | Re-run `seed_demo_activity()` (idempotent) |
-
----
-
-## Related
-
-- [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md)
-- [`SUPABASE_SETUP.md`](SUPABASE_SETUP.md)
-- [`TASK_01_database.md`](TASK_01_database.md)
