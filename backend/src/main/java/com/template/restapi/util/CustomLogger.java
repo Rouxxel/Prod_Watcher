@@ -56,7 +56,7 @@ public final class CustomLogger {
 
     // Default configuration values - overridden in setup() from config_file.json
     public static String logDirectory = "logs";
-    public static String logFileName = "x_bcknd";
+    public static String logFileName = "prod_watch_bcknd";
     public static LogLevel minimumLogLevel = LogLevel.DEBUG;
 
     private CustomLogger() { }

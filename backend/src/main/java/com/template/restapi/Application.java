@@ -38,7 +38,7 @@ public class Application {
         JsonNode logging = ConfigLoader.logging();
         CustomLogger.setup(
                 logging.path("dir_name").asText("logs"),
-                logging.path("log_file_name").asText("x_bcknd"),
+                logging.path("log_file_name").asText("prod_watch_bcknd"),
                 parseLevel(logging.path("logging_level").asText("debug")));
 
         // Flush/close the logger when the JVM stops (Ctrl+C, container stop, etc.).
