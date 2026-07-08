@@ -88,8 +88,9 @@ src/
     use-cart.tsx                # POS cart context
     queries.ts                  # TanStack Query hooks wrapping services
 
-  services/                     # Mock API layer — the seam to a real backend
-    api.ts                      # fakeDelay(), newId()
+  services/                     # API layer — HTTP client + domain services
+    api.ts                      # apiGet/Post/Patch/Delete + ApiError
+    mock-utils.ts               # fakeDelay/newId (removed when mocks are wired)
     products.service.ts
     warehouses.service.ts
     movements.service.ts
@@ -99,7 +100,7 @@ src/
 
   mock/seed.ts                  # In-memory seed data
   types/index.ts                # Shared domain types
-  lib/                          # format, notify, utils
+  lib/                          # format, notify, auth-token, utils
   assets/                       # Logo, images
   styles.css                    # Tailwind v4 + design tokens
 
@@ -125,10 +126,24 @@ TanStack Router uses **dot-separated filenames**:
 
 ```bash
 bun install
-bun run dev          # http://localhost:8080
+bun run dev          # http://localhost:8000
 bun run build        # production build (Worker target)
 bun run lint
 ```
+
+Copy `.env.example` to `.env`. Default API URL: `http://localhost:8080/api/v1` (Java backend on port **8080**; frontend Vite on **8000**).
+
+### Environment
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_API_BASE_URL` | Java API base including `/api/v1` (no trailing slash) |
+
+No Supabase keys in the frontend — auth and data go through the Java API only.
+
+### Auth token storage
+
+After login (Phase 2), the Supabase JWT from `POST /auth/login` is stored in **`sessionStorage`** (`prodwatch:access-token`) via `src/lib/auth-token.ts`. `src/services/api.ts` sends `Authorization: Bearer …` on requests; **401** clears the token and redirects to `/login`.
 
 ### Mock credentials
 

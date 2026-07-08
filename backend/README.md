@@ -93,7 +93,7 @@ Log in via `POST /api/v1/auth/login`, then call protected routes with `Authoriza
 
 `CORS_ALLOWED_ORIGINS` must list **every** browser origin that calls this API:
 
-1. **Local dev** — e.g. `http://localhost:8080`, `http://localhost:3000` (match your Vite port)
+1. **Local dev** — `http://localhost:8000` (frontend Vite), plus legacy ports if needed
 2. **Vercel production** — add `https://your-app.vercel.app` after first frontend deploy
 3. **Cloudflare Workers** (optional edge target) — add the Workers URL only if deployed
 
