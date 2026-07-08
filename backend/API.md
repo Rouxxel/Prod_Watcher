@@ -596,6 +596,7 @@ Per-endpoint limits are defined in `src/main/resources/core_specs/configuration/
 
 ## Related docs
 
-- Backend implementation plan: [`docs/TASK_02_backend.md`](../docs/TASK_02_backend.md)
-- Database schema: [`docs/TASK_01_database.md`](../docs/TASK_01_database.md)
-- Frontend integration & deploy: [`docs/TASK_03_frontend.md`](../docs/TASK_03_frontend.md) (Phase 9 — CORS / Vercel)
+- [`README.md`](README.md) — setup, env vars, Docker, Render
+- [`docs/DATABASE_SCHEMA.md`](../docs/DATABASE_SCHEMA.md) — Postgres schema reference
+- [`docs/SUPABASE_SETUP.md`](../docs/SUPABASE_SETUP.md) — Supabase project configuration
+- [`frontend/README.md`](../frontend/README.md) — frontend deploy and CORS

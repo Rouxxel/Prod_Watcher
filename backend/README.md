@@ -4,10 +4,10 @@
 
 | Resource | Location |
 | --- | --- |
-| Implementation plan | [`docs/TASK_02_backend.md`](../docs/TASK_02_backend.md) |
 | **API reference** | [`API.md`](API.md) |
-| Database schema | [`docs/TASK_01_database.md`](../docs/TASK_01_database.md) |
-| Frontend deploy (CORS) | [`docs/TASK_03_frontend.md`](../docs/TASK_03_frontend.md) — Phase 9 |
+| Database schema | [`docs/DATABASE_SCHEMA.md`](../docs/DATABASE_SCHEMA.md) |
+| Supabase setup | [`docs/SUPABASE_SETUP.md`](../docs/SUPABASE_SETUP.md) |
+| Frontend app | [`frontend/README.md`](../frontend/README.md) |
 
 Base package: **`com.prodwatch.api`**. Gradle project: **`prodwatch-api`**.
 
@@ -18,7 +18,7 @@ Base package: **`com.prodwatch.api`**. Gradle project: **`prodwatch-api`**.
 ### 1. Prerequisites
 
 - JDK 17+
-- Supabase project with Postgres + Auth ([`docs/TASK_01_database.md`](../docs/TASK_01_database.md))
+- Supabase project with Postgres + Auth ([`docs/SUPABASE_SETUP.md`](../docs/SUPABASE_SETUP.md))
 
 ### 2. Configure environment
 
@@ -97,7 +97,7 @@ Log in via `POST /api/v1/auth/login`, then call protected routes with `Authoriza
 2. **Vercel production** — add `https://your-app.vercel.app` after first frontend deploy
 3. **Cloudflare Workers** (optional edge target) — add the Workers URL only if deployed
 
-After updating CORS on Render, redeploy the backend service. Frontend steps: [`docs/TASK_03_frontend.md`](../docs/TASK_03_frontend.md) Phase 9.
+After updating CORS on Render, redeploy the backend service. See [`frontend/README.md`](../frontend/README.md) for frontend deploy and CORS configuration.
 
 ---
 
