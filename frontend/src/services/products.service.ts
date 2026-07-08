@@ -1,31 +1,34 @@
-import { products as seed } from "@/mock/seed";
 import type { Product, ProductInput } from "@/types";
-import { fakeDelay, newId } from "./mock-utils";
+import { apiDelete, apiGet, apiPatch, apiPost, isApiError } from "./api";
 
-let store: Product[] = [...seed];
+function toProductPayload(input: ProductInput) {
+  const { stock: _stock, ...body } = input;
+  return body;
+}
 
 export const productsService = {
   async list(): Promise<Product[]> {
-    await fakeDelay();
-    return [...store];
+    return apiGet<Product[]>("/products");
   },
+
   async get(id: string): Promise<Product | undefined> {
-    await fakeDelay(150);
-    return store.find((p) => p.id === id);
+    try {
+      return await apiGet<Product>(`/products/${id}`);
+    } catch (err) {
+      if (isApiError(err) && err.status === 404) return undefined;
+      throw err;
+    }
   },
+
   async create(input: ProductInput): Promise<Product> {
-    await fakeDelay();
-    const created: Product = { ...input, id: newId("p") };
-    store = [created, ...store];
-    return created;
+    return apiPost<Product>("/products", toProductPayload(input));
   },
+
   async update(id: string, input: ProductInput): Promise<Product> {
-    await fakeDelay();
-    store = store.map((p) => (p.id === id ? { ...input, id } : p));
-    return { ...input, id };
+    return apiPatch<Product>(`/products/${id}`, toProductPayload(input));
   },
+
   async remove(id: string): Promise<void> {
-    await fakeDelay();
-    store = store.filter((p) => p.id !== id);
+    await apiDelete(`/products/${id}`);
   },
 };

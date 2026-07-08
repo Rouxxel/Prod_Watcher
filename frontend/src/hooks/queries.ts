@@ -5,7 +5,7 @@ import { movementsService } from "@/services/movements.service";
 import { auditService } from "@/services/audit.service";
 import { transactionsService } from "@/services/transactions.service";
 import { usersService } from "@/services/users.service";
-import type { ProductInput } from "@/types";
+import type { ProductInput, StockMovementInput } from "@/types";
 
 export const useProducts = () =>
   useQuery({ queryKey: ["products"], queryFn: () => productsService.list() });
@@ -47,5 +47,16 @@ export const useDeleteProduct = () => {
   return useMutation({
     mutationFn: (id: string) => productsService.remove(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
+  });
+};
+
+export const useCreateMovement = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: StockMovementInput) => movementsService.create(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["movements"] });
+    },
   });
 };

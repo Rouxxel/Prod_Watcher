@@ -21,8 +21,9 @@ import {
 } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/common/TableSkeleton";
 import { EmptyState } from "@/components/common/EmptyState";
-import { useMovements, useProducts, useUsers, useWarehouses } from "@/hooks/queries";
+import { useMovements, useProducts, useWarehouses } from "@/hooks/queries";
 import { dateTime } from "@/lib/format";
+import type { StockMovement } from "@/types";
 
 export const Route = createFileRoute("/_app/stock-movements")({
   component: MovementsPage,
@@ -38,14 +39,14 @@ const typeColor: Record<string, string> = {
 function MovementsPage() {
   const movements = useMovements();
   const products = useProducts();
-  const users = useUsers();
   const warehouses = useWarehouses();
   const [filter, setFilter] = useState<string>("all");
 
   const data = (movements.data ?? []).filter((m) => filter === "all" || m.type === filter);
 
-  const productName = (id: string) => products.data?.find((p) => p.id === id)?.name ?? id;
-  const userName = (id: string) => users.data?.find((u) => u.id === id)?.name ?? "—";
+  const productName = (m: StockMovement) =>
+    m.productName ?? products.data?.find((p) => p.id === m.productId)?.name ?? m.productId;
+  const userName = (m: StockMovement) => m.userName ?? "—";
   const whName = (id?: string) => (id ? warehouses.data?.find((w) => w.id === id)?.name ?? "—" : "—");
 
   return (
@@ -87,12 +88,12 @@ function MovementsPage() {
               <TableBody>
                 {data.map((m) => (
                   <TableRow key={m.id}>
-                    <TableCell className="font-medium">{productName(m.productId)}</TableCell>
+                    <TableCell className="font-medium">{productName(m)}</TableCell>
                     <TableCell><Badge variant="outline" className={typeColor[m.type]}>{m.type}</Badge></TableCell>
                     <TableCell className="text-right tabular-nums">{m.qty > 0 ? `+${m.qty}` : m.qty}</TableCell>
                     <TableCell className="text-muted-foreground">{whName(m.fromWarehouseId)}</TableCell>
                     <TableCell className="text-muted-foreground">{whName(m.toWarehouseId)}</TableCell>
-                    <TableCell>{userName(m.userId)}</TableCell>
+                    <TableCell>{userName(m)}</TableCell>
                     <TableCell className="text-muted-foreground">{dateTime(m.timestamp)}</TableCell>
                   </TableRow>
                 ))}

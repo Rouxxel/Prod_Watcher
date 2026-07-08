@@ -45,6 +45,33 @@ export interface StockMovement {
   userId: string;
   timestamp: string;
   note?: string;
+  /** Present on API list/detail responses */
+  productName?: string;
+  userName?: string;
+}
+
+export interface StockMovementInput {
+  type: StockMovementType;
+  productId: string;
+  qty: number;
+  fromWarehouseId?: string | null;
+  toWarehouseId?: string | null;
+  note?: string | null;
+}
+
+export type WarehouseInput = Omit<Warehouse, "id">;
+
+export interface UserProvisionInput {
+  name: string;
+  email: string;
+  password: string;
+  role: Role;
+  active: boolean;
+}
+
+export interface UserUpdateInput {
+  role?: Role;
+  active?: boolean;
 }
 
 export interface AuditEntry {
