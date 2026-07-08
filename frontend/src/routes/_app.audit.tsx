@@ -13,8 +13,12 @@ import {
 } from "@/components/ui/table";
 import { TableSkeleton } from "@/components/common/TableSkeleton";
 import { EmptyState } from "@/components/common/EmptyState";
-import { useAudit, useUsers } from "@/hooks/queries";
+import { useAudit } from "@/hooks/queries";
 import { dateTime } from "@/lib/format";
+
+function shortId(id: string) {
+  return id.length > 8 ? `${id.slice(0, 8)}…` : id;
+}
 
 export const Route = createFileRoute("/_app/audit")({
   component: AuditPage,
@@ -22,8 +26,6 @@ export const Route = createFileRoute("/_app/audit")({
 
 function AuditPage() {
   const audit = useAudit();
-  const users = useUsers();
-  const userName = (id: string) => users.data?.find((u) => u.id === id)?.name ?? "—";
 
   return (
     <div>
@@ -50,7 +52,7 @@ function AuditPage() {
                   <TableRow key={a.id}>
                     <TableCell><Badge variant="outline" className="bg-primary/15 text-primary-foreground border-primary/30">{a.action}</Badge></TableCell>
                     <TableCell className="text-muted-foreground">{a.entity} · {a.entityId}</TableCell>
-                    <TableCell>{userName(a.userId)}</TableCell>
+                    <TableCell>{shortId(a.userId)}</TableCell>
                     <TableCell className="text-muted-foreground">{a.details ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{dateTime(a.timestamp)}</TableCell>
                   </TableRow>

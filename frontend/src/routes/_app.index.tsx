@@ -4,9 +4,10 @@ import { StatCard } from "@/components/common/StatCard";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useProducts, useMovements, useTransactions, useUsers } from "@/hooks/queries";
+import { useProducts, useMovements, useTransactions } from "@/hooks/queries";
 import { currency, dateTime } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { StockMovement } from "@/types";
 
 export const Route = createFileRoute("/_app/")({
   component: DashboardPage,
@@ -23,7 +24,6 @@ function DashboardPage() {
   const products = useProducts();
   const movements = useMovements();
   const transactions = useTransactions();
-  const users = useUsers();
 
   const totalProducts = products.data?.length ?? 0;
   const stockValue = products.data?.reduce((s, p) => s + p.price * p.stock, 0) ?? 0;
@@ -33,8 +33,9 @@ function DashboardPage() {
     ?.filter((t) => t.status === "completed" && new Date(t.timestamp).toDateString() === today)
     .reduce((s, t) => s + t.total, 0) ?? 0;
 
-  const userName = (id: string) => users.data?.find((u) => u.id === id)?.name ?? "—";
-  const productName = (id: string) => products.data?.find((p) => p.id === id)?.name ?? id;
+  const productName = (m: StockMovement) =>
+    m.productName ?? products.data?.find((p) => p.id === m.productId)?.name ?? m.productId;
+  const userName = (m: StockMovement) => m.userName ?? "—";
 
   return (
     <div>
@@ -74,9 +75,9 @@ function DashboardPage() {
                       className="grid grid-cols-[1fr_120px_80px] items-center gap-2 px-3 py-2.5"
                     >
                       <div className="min-w-0 border-r border-border/40 pr-2">
-                        <div className="truncate text-sm font-medium">{productName(m.productId)}</div>
+                        <div className="truncate text-sm font-medium">{productName(m)}</div>
                         <div className="truncate text-xs text-muted-foreground">
-                          by {userName(m.userId)} · {dateTime(m.timestamp)}
+                          by {userName(m)} · {dateTime(m.timestamp)}
                         </div>
                       </div>
                       <div className="flex justify-center border-r border-border/40">

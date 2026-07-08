@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, Plus } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -21,8 +22,10 @@ import {
 } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/common/TableSkeleton";
 import { EmptyState } from "@/components/common/EmptyState";
-import { useMovements, useProducts, useWarehouses } from "@/hooks/queries";
+import { MovementFormDialog } from "@/components/movements/MovementFormDialog";
+import { useCreateMovement, useMovements, useProducts, useWarehouses } from "@/hooks/queries";
 import { dateTime } from "@/lib/format";
+import { toast } from "sonner";
 import type { StockMovement } from "@/types";
 
 export const Route = createFileRoute("/_app/stock-movements")({
@@ -40,7 +43,9 @@ function MovementsPage() {
   const movements = useMovements();
   const products = useProducts();
   const warehouses = useWarehouses();
+  const createMut = useCreateMovement();
   const [filter, setFilter] = useState<string>("all");
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const data = (movements.data ?? []).filter((m) => filter === "all" || m.type === filter);
 
@@ -51,7 +56,15 @@ function MovementsPage() {
 
   return (
     <div>
-      <PageHeader title="Stock Movements" description="Every IN, OUT, transfer, and adjustment across the network." />
+      <PageHeader
+        title="Stock Movements"
+        description="Every IN, OUT, transfer, and adjustment across the network."
+        actions={
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Record movement
+          </Button>
+        }
+      />
       <Card className="p-4">
         <div className="mb-4 flex items-center justify-between">
           <Select value={filter} onValueChange={setFilter}>
@@ -70,7 +83,16 @@ function MovementsPage() {
         {movements.isLoading ? (
           <TableSkeleton rows={6} cols={6} />
         ) : data.length === 0 ? (
-          <EmptyState icon={ArrowLeftRight} title="No movements" description="No records match this filter." />
+          <EmptyState
+            icon={ArrowLeftRight}
+            title="No movements"
+            description="No records match this filter."
+            action={
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Record movement
+              </Button>
+            }
+          />
         ) : (
           <div className="overflow-hidden rounded-md border border-border">
             <Table>
@@ -102,6 +124,22 @@ function MovementsPage() {
           </div>
         )}
       </Card>
+
+      <MovementFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        products={products.data ?? []}
+        warehouses={warehouses.data ?? []}
+        pending={createMut.isPending}
+        onSubmit={(input) =>
+          createMut.mutate(input, {
+            onSuccess: () => {
+              toast.success("Movement recorded");
+              setDialogOpen(false);
+            },
+          })
+        }
+      />
     </div>
   );
 }

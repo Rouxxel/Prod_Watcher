@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, Pencil, Trash2, Package } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -59,7 +59,7 @@ function ProductsPage() {
   const deleteMut = useDeleteProduct();
   const { isSingleLocation, setDetectedWarehouseCount } = useBusinessMode();
 
-  useMemo(() => {
+  useEffect(() => {
     if (warehouses.data) setDetectedWarehouseCount(warehouses.data.length);
   }, [warehouses.data, setDetectedWarehouseCount]);
 
@@ -243,7 +243,7 @@ function ProductsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this product?</AlertDialogTitle>
             <AlertDialogDescription>
-              {toDelete?.name} ({toDelete?.sku}) will be permanently removed from the mock catalog.
+              {toDelete?.name} ({toDelete?.sku}) will be permanently removed from the catalog.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
