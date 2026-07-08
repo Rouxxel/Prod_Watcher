@@ -104,3 +104,10 @@ export interface Transaction {
   status: TransactionStatus;
   timestamp: string;
 }
+
+export interface TransactionCreateInput {
+  items: CartItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+}

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { TableSkeleton } from "@/components/common/TableSkeleton";
 import { EmptyState } from "@/components/common/EmptyState";
-import { useTransactions, useUsers } from "@/hooks/queries";
+import { useTransactions } from "@/hooks/queries";
 import { currency, dateTime } from "@/lib/format";
 import type { TransactionStatus } from "@/types";
 
@@ -27,10 +27,12 @@ const statusStyle: Record<TransactionStatus, string> = {
   void: "bg-destructive/15 text-destructive border-destructive/30",
 };
 
+function shortId(id: string) {
+  return id.length > 8 ? `${id.slice(0, 8).toUpperCase()}…` : id.toUpperCase();
+}
+
 function TransactionsPage() {
   const tx = useTransactions();
-  const users = useUsers();
-  const cashierName = (id: string) => users.data?.find((u) => u.id === id)?.name ?? "—";
 
   return (
     <div>
@@ -38,6 +40,8 @@ function TransactionsPage() {
       <Card className="p-4">
         {tx.isLoading ? (
           <TableSkeleton rows={6} cols={5} />
+        ) : tx.isError ? (
+          <EmptyState icon={Receipt} title="Unable to load transactions" description="You may not have permission to view sales history." />
         ) : (tx.data?.length ?? 0) === 0 ? (
           <EmptyState icon={Receipt} title="No transactions yet" />
         ) : (
@@ -56,11 +60,17 @@ function TransactionsPage() {
               <TableBody>
                 {tx.data?.map((t) => (
                   <TableRow key={t.id}>
-                    <TableCell className="font-medium">#{t.id.toUpperCase()}</TableCell>
-                    <TableCell>{cashierName(t.cashierId)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{t.items.reduce((s, i) => s + i.qty, 0)}</TableCell>
+                    <TableCell className="font-medium">#{shortId(t.id)}</TableCell>
+                    <TableCell className="text-muted-foreground">{shortId(t.cashierId)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {t.items.reduce((s, i) => s + i.qty, 0)}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">{currency(t.total)}</TableCell>
-                    <TableCell><Badge variant="outline" className={statusStyle[t.status]}>{t.status}</Badge></TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={statusStyle[t.status]}>
+                        {t.status}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{dateTime(t.timestamp)}</TableCell>
                   </TableRow>
                 ))}
