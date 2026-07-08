@@ -47,7 +47,7 @@ public class Transaction {
     private Profile cashier;
 
     @Convert(converter = TransactionStatusConverter.class)
-    @Column(name = "status", nullable = false, columnDefinition = "transaction_status")
+    @Column(name = "status", nullable = false)
     private TransactionStatus status = TransactionStatus.completed;
 
     @Column(name = "created_at", nullable = false, updatable = false)

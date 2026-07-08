@@ -94,6 +94,11 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String detail) {
+        if (status.is5xxServerError()) {
+            CustomLogger.error(status.value() + " " + status.getReasonPhrase() + ": " + detail);
+        } else {
+            CustomLogger.warning(status.value() + " " + status.getReasonPhrase() + ": " + detail);
+        }
         ErrorResponse body = new ErrorResponse(status.value(), status.getReasonPhrase(), detail);
         return ResponseEntity.status(status).body(body);
     }

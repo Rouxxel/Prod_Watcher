@@ -9,6 +9,8 @@ import com.prodwatch.api.repository.InventoryBalanceRepository;
 import com.prodwatch.api.repository.ProductRepository;
 import com.prodwatch.api.repository.ProductStockSummaryRepository;
 
+import jakarta.persistence.EntityManager;
+
 import org.springframework.stereotype.Service;
 
 @Service
@@ -17,21 +19,26 @@ public class InventoryBalanceService {
     private final InventoryBalanceRepository inventoryBalanceRepository;
     private final ProductStockSummaryRepository productStockSummaryRepository;
     private final ProductRepository productRepository;
+    private final EntityManager entityManager;
 
     public InventoryBalanceService(
             InventoryBalanceRepository inventoryBalanceRepository,
             ProductStockSummaryRepository productStockSummaryRepository,
-            ProductRepository productRepository) {
+            ProductRepository productRepository,
+            EntityManager entityManager) {
         this.inventoryBalanceRepository = inventoryBalanceRepository;
         this.productStockSummaryRepository = productStockSummaryRepository;
         this.productRepository = productRepository;
+        this.entityManager = entityManager;
     }
 
     public int getStock(UUID productId, UUID warehouseId) {
+        entityManager.flush();
         return inventoryBalanceRepository.getStockForProduct(productId, warehouseId);
     }
 
     public int getStockAtDefaultWarehouse(UUID productId) {
+        entityManager.flush();
         return productStockSummaryRepository.getDefaultWarehouseStock(productId);
     }
 
