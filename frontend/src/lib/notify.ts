@@ -31,7 +31,12 @@ export const validation = {
   passwordTooShort: (min = 8) =>
     notify.error("Password too short", `Use at least ${min} characters.`),
   networkError: () =>
-    notify.error("Network error", "Could not reach the server. Please retry."),
+    notify.error("Network error", "Could not reach the server. Check your connection and try again."),
+  rateLimit: (detail?: string) =>
+    notify.error(
+      "Too many requests",
+      detail ?? "Request rate limit exceeded. Please wait a moment and try again.",
+    ),
   unauthorized: () =>
     notify.error("Access denied", "You don't have permission to perform this action."),
   saved: (entity = "Changes") => notify.success(`${entity} saved`),

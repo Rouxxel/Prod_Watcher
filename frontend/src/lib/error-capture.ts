@@ -1,17 +1,28 @@
-// Captures the original Error out-of-band so server.ts can recover the stack
-// when h3 has already swallowed the throw into a generic 500 Response.
+import { isApiError } from "@/services/api";
+
+export type ApiErrorContext = {
+  method?: string;
+  path?: string;
+  source?: string;
+};
+
+// ---------------------------------------------------------------------------
+// SSR — recover swallowed h3 errors (server.ts)
+// ---------------------------------------------------------------------------
 
 let lastCapturedError: { error: unknown; at: number } | undefined;
 const TTL_MS = 5_000;
 
-function record(error: unknown) {
+function recordUnhandled(error: unknown) {
   lastCapturedError = { error, at: Date.now() };
 }
 
 if (typeof globalThis.addEventListener === "function") {
-  globalThis.addEventListener("error", (event) => record((event as ErrorEvent).error ?? event));
+  globalThis.addEventListener("error", (event) =>
+    recordUnhandled((event as ErrorEvent).error ?? event),
+  );
   globalThis.addEventListener("unhandledrejection", (event) =>
-    record((event as PromiseRejectionEvent).reason),
+    recordUnhandled((event as PromiseRejectionEvent).reason),
   );
 }
 
@@ -24,4 +35,30 @@ export function consumeLastCapturedError(): unknown {
   const { error } = lastCapturedError;
   lastCapturedError = undefined;
   return error;
+}
+
+// ---------------------------------------------------------------------------
+// Browser API — dev console logging (api.ts, toastApiError)
+// ---------------------------------------------------------------------------
+
+/** Log API failures to the console in development. No-op in production builds. */
+export function captureApiError(err: unknown, context?: ApiErrorContext): void {
+  if (!import.meta.env.DEV) return;
+
+  if (isApiError(err)) {
+    console.warn("[ProdWatch API]", {
+      status: err.status,
+      error: err.error,
+      detail: err.message,
+      ...context,
+    });
+    return;
+  }
+
+  if (err instanceof Error) {
+    console.warn("[ProdWatch API]", err.message, context ?? {});
+    return;
+  }
+
+  console.warn("[ProdWatch API]", err, context ?? {});
 }
