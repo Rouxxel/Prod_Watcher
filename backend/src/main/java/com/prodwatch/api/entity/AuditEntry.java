@@ -43,6 +43,17 @@ public class AuditEntry {
 
     protected AuditEntry() {}
 
+    public static AuditEntry create(
+            Profile user, String action, String entity, UUID entityId, String details) {
+        AuditEntry entry = new AuditEntry();
+        entry.setUser(user);
+        entry.setAction(action);
+        entry.setEntity(entity);
+        entry.setEntityId(entityId);
+        entry.setDetails(details);
+        return entry;
+    }
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) {

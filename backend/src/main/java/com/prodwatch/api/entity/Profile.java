@@ -35,6 +35,15 @@ public class Profile {
 
     protected Profile() {}
 
+    public static Profile create(UUID id, String email, String name, boolean active) {
+        Profile profile = new Profile();
+        profile.id = id;
+        profile.email = email;
+        profile.name = name;
+        profile.active = active;
+        return profile;
+    }
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();

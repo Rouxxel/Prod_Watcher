@@ -34,6 +34,13 @@ public class Warehouse {
 
     protected Warehouse() {}
 
+    public static Warehouse create(String name, String location) {
+        Warehouse warehouse = new Warehouse();
+        warehouse.name = name;
+        warehouse.location = location;
+        return warehouse;
+    }
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();

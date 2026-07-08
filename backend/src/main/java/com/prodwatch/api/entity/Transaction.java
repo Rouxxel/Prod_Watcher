@@ -47,7 +47,7 @@ public class Transaction {
     private Profile cashier;
 
     @Convert(converter = TransactionStatusConverter.class)
-    @Column(name = "status", nullable = false, columnDefinition = "transaction_status")
+    @Column(name = "status", nullable = false)
     private TransactionStatus status = TransactionStatus.completed;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -119,5 +119,21 @@ public class Transaction {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public static Transaction create(
+            List<TransactionLineItem> items,
+            BigDecimal subtotal,
+            BigDecimal tax,
+            BigDecimal total,
+            Profile cashier) {
+        Transaction transaction = new Transaction();
+        transaction.items = new ArrayList<>(items);
+        transaction.subtotal = subtotal;
+        transaction.tax = tax;
+        transaction.total = total;
+        transaction.cashier = cashier;
+        transaction.status = TransactionStatus.completed;
+        return transaction;
     }
 }

@@ -58,6 +58,25 @@ public class Product {
 
     protected Product() {}
 
+    public static Product create(
+            String name,
+            String sku,
+            String category,
+            BigDecimal price,
+            Warehouse defaultWarehouse,
+            int lowStockThreshold,
+            String[] images) {
+        Product product = new Product();
+        product.name = name;
+        product.sku = sku;
+        product.category = category;
+        product.price = price;
+        product.defaultWarehouse = defaultWarehouse;
+        product.lowStockThreshold = lowStockThreshold;
+        product.images = images != null ? images : new String[0];
+        return product;
+    }
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();
