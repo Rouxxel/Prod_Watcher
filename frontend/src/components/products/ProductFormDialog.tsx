@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Plus, Upload, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,12 @@ import {
 import type { Product, ProductInput, Warehouse } from "@/types";
 import { ProductImageCarousel } from "./ProductImageCarousel";
 import { useBusinessMode } from "@/hooks/use-business-mode";
+import {
+  buildProductImagePath,
+  isProductImageUploadEnabled,
+  uploadProductImage,
+} from "@/lib/storage";
+import { notify } from "@/lib/notify";
 
 interface Props {
   open: boolean;
@@ -44,6 +50,9 @@ const empty: ProductInput = {
 export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onSubmit, pending }: Props) {
   const [form, setForm] = useState<ProductInput>(empty);
   const [imageUrl, setImageUrl] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadEnabled = isProductImageUploadEnabled();
   const { isSingleLocation } = useBusinessMode();
 
   useEffect(() => {
@@ -82,6 +91,24 @@ export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onS
       form.images.filter((_, i) => i !== idx),
     );
 
+  const handleFileUpload = async (file: File) => {
+    setUploadingImage(true);
+    try {
+      const path = buildProductImagePath(file, form.sku || undefined);
+      const url = await uploadProductImage(file, path);
+      set("images", [...form.images, url]);
+      notify.success("Image uploaded");
+    } catch (err) {
+      notify.error(
+        "Upload failed",
+        err instanceof Error ? err.message : "Could not upload image.",
+      );
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -103,7 +130,7 @@ export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onS
               aspect="aspect-[4/3]"
               className="w-full"
             />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Input
                 placeholder="Paste an image URL…"
                 value={imageUrl}
@@ -114,11 +141,42 @@ export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onS
                     addImage();
                   }
                 }}
+                className="min-w-[200px] flex-1"
               />
               <Button type="button" variant="secondary" onClick={addImage}>
-                <Plus className="mr-1 h-4 w-4" /> Add
+                <Plus className="mr-1 h-4 w-4" /> Add URL
               </Button>
+              {uploadEnabled && (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void handleFileUpload(file);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={uploadingImage || pending}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="mr-1 h-4 w-4" />
+                    {uploadingImage ? "Uploading…" : "Upload file"}
+                  </Button>
+                </>
+              )}
             </div>
+            {!uploadEnabled && (
+              <p className="text-xs text-muted-foreground">
+                Set <code className="text-foreground/80">VITE_SUPABASE_URL</code> and{" "}
+                <code className="text-foreground/80">VITE_SUPABASE_ANON_KEY</code> to enable file uploads.
+                URL paste works without them.
+              </p>
+            )}
             {form.images.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {form.images.map((src, idx) => (
@@ -203,7 +261,7 @@ export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onS
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || uploadingImage}>
               {initial ? "Save changes" : "Create product"}
             </Button>
           </DialogFooter>
