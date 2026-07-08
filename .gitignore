@@ -15,7 +15,7 @@ target/
 *.zip
 *.tar.gz
 *.rar
-!gradle/wrapper/gradle-wrapper.jar   # keep the wrapper jar if you commit it
+!**/gradle/wrapper/gradle-wrapper.jar
 
 # --- Gradle ---
 .gradle/
