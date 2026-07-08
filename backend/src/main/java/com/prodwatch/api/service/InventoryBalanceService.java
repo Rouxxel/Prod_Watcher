@@ -7,7 +7,6 @@ import com.prodwatch.api.entity.Product;
 import com.prodwatch.api.error.InsufficientStockException;
 import com.prodwatch.api.repository.InventoryBalanceRepository;
 import com.prodwatch.api.repository.ProductRepository;
-import com.prodwatch.api.repository.ProductStockSummaryRepository;
 
 import jakarta.persistence.EntityManager;
 
@@ -17,17 +16,14 @@ import org.springframework.stereotype.Service;
 public class InventoryBalanceService {
 
     private final InventoryBalanceRepository inventoryBalanceRepository;
-    private final ProductStockSummaryRepository productStockSummaryRepository;
     private final ProductRepository productRepository;
     private final EntityManager entityManager;
 
     public InventoryBalanceService(
             InventoryBalanceRepository inventoryBalanceRepository,
-            ProductStockSummaryRepository productStockSummaryRepository,
             ProductRepository productRepository,
             EntityManager entityManager) {
         this.inventoryBalanceRepository = inventoryBalanceRepository;
-        this.productStockSummaryRepository = productStockSummaryRepository;
         this.productRepository = productRepository;
         this.entityManager = entityManager;
     }
@@ -39,7 +35,11 @@ public class InventoryBalanceService {
 
     public int getStockAtDefaultWarehouse(UUID productId) {
         entityManager.flush();
-        return productStockSummaryRepository.getDefaultWarehouseStock(productId);
+        return productRepository
+                .findById(productId)
+                .map(p -> inventoryBalanceRepository.getStockForProduct(
+                        productId, p.getDefaultWarehouse().getId()))
+                .orElse(0);
     }
 
     public void assertSufficientStock(UUID productId, UUID warehouseId, int qty) {

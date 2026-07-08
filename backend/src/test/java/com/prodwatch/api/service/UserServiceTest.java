@@ -1,0 +1,115 @@
+package com.prodwatch.api.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
+
+import java.util.UUID;
+
+import com.prodwatch.api.dto.user.UserProvisionRequest;
+import com.prodwatch.api.dto.user.UserUpdateRequest;
+import com.prodwatch.api.entity.AppRole;
+import com.prodwatch.api.entity.Profile;
+import com.prodwatch.api.entity.UserRole;
+import com.prodwatch.api.error.BusinessRuleException;
+import com.prodwatch.api.repository.ProfileRepository;
+import com.prodwatch.api.repository.UserRoleRepository;
+import com.prodwatch.api.security.CurrentUser;
+import com.prodwatch.api.support.AbstractIntegrationTest;
+import com.prodwatch.api.support.TestFixtures;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
+
+@SpringBootTest
+@ActiveProfiles("test")
+@Transactional
+class UserServiceTest extends AbstractIntegrationTest {
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private ProfileRepository profileRepository;
+
+    @Autowired
+    private UserRoleRepository userRoleRepository;
+
+    @MockBean
+    private SupabaseAuthService supabaseAuthService;
+
+    private CurrentUser admin;
+
+    @BeforeEach
+    void setUp() {
+        TestFixtures.seedUser(profileRepository, userRoleRepository, TestFixtures.ADMIN_ID, AppRole.admin);
+        admin = TestFixtures.currentUser(TestFixtures.ADMIN_ID, AppRole.admin);
+        when(supabaseAuthService.createConfirmedUser(anyString(), anyString(), anyString()))
+                .thenReturn(UUID.fromString("cccccccc-cccc-4ccc-8ccc-ccccccccccc1"));
+    }
+
+    @Test
+    void provisionRejectsAdminRole() {
+        UserProvisionRequest request = new UserProvisionRequest(
+                "new@test.local", "New User", "Password123!", AppRole.admin, true);
+
+        assertThatThrownBy(() -> userService.provision(request, admin))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Cannot provision admin");
+    }
+
+    @Test
+    void provisionCreatesConfirmedUser() {
+        UserProvisionRequest request = new UserProvisionRequest(
+                "worker@test.local", "Worker", "Password123!", AppRole.warehouse_worker, true);
+
+        var response = userService.provision(request, admin);
+
+        assertThat(response.email()).isEqualTo("worker@test.local");
+        assertThat(response.role()).isEqualTo(AppRole.warehouse_worker);
+        assertThat(response.active()).isTrue();
+    }
+
+    @Test
+    void cannotAssignAdminViaPatch() {
+        Profile worker = profileRepository.save(Profile.create(
+                UUID.fromString("dddddddd-dddd-4ddd-8ddd-dddddddddddd"),
+                "patch@test.local",
+                "Patch User",
+                true));
+        userRoleRepository.save(new UserRole(worker, AppRole.warehouse_worker));
+
+        assertThatThrownBy(() -> userService.update(
+                        worker.getId(), new UserUpdateRequest(null, AppRole.admin), admin))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("promote-admin");
+    }
+
+    @Test
+    void promoteToAdminWorks() {
+        Profile worker = profileRepository.save(Profile.create(
+                UUID.fromString("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"),
+                "promote@test.local",
+                "Promote User",
+                true));
+        userRoleRepository.save(new UserRole(worker, AppRole.warehouse_worker));
+
+        var response = userService.promoteToAdmin(worker.getId(), admin);
+
+        assertThat(response.role()).isEqualTo(AppRole.admin);
+    }
+
+    @Test
+    void cannotDeactivateLastAdmin() {
+        assertThatThrownBy(() -> userService.deactivate(TestFixtures.ADMIN_ID, admin))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("last admin");
+    }
+}
