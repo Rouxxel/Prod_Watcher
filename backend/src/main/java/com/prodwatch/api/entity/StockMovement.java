@@ -3,9 +3,6 @@ package com.prodwatch.api.entity;
 import java.time.Instant;
 import java.util.UUID;
 
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -28,8 +25,7 @@ public class StockMovement {
     private UUID id;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "type", nullable = false, columnDefinition = "stock_movement_type")
+    @Column(name = "type", nullable = false)
     private StockMovementType type;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
