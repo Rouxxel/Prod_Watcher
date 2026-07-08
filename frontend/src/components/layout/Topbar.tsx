@@ -23,8 +23,7 @@ export function Topbar() {
   const modeLabel = mode === "selling" ? "Selling" : mode === "inventory" ? "Inventory" : "—";
 
   const handleLogout = () => {
-    logout();
-    navigate({ to: "/login" });
+    void logout().then(() => navigate({ to: "/login" }));
   };
 
   return (

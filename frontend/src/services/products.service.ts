@@ -1,6 +1,6 @@
 import { products as seed } from "@/mock/seed";
 import type { Product, ProductInput } from "@/types";
-import { fakeDelay, newId } from "./api";
+import { fakeDelay, newId } from "./mock-utils";
 
 let store: Product[] = [...seed];
 
