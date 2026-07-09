@@ -13,8 +13,11 @@ import type {
   WarehouseInput,
 } from "@/types";
 
-export const useProducts = () =>
-  useQuery({ queryKey: ["products"], queryFn: () => productsService.list() });
+export const useProducts = (warehouseId?: string) =>
+  useQuery({
+    queryKey: ["products", warehouseId ?? "all"],
+    queryFn: () => productsService.list(warehouseId),
+  });
 
 export const useWarehouses = () =>
   useQuery({ queryKey: ["warehouses"], queryFn: () => warehousesService.list() });

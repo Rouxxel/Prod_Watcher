@@ -46,8 +46,9 @@ public class ProductsController {
     public List<ProductResponse> list(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) Boolean lowStock) {
-        return productService.list(category, search, lowStock);
+            @RequestParam(required = false) Boolean lowStock,
+            @RequestParam(required = false) UUID warehouseId) {
+        return productService.list(category, search, lowStock, warehouseId);
     }
 
     @RateLimit("products_endpoint")

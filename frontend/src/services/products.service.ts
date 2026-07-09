@@ -7,8 +7,9 @@ function toProductPayload(input: ProductInput) {
 }
 
 export const productsService = {
-  async list(): Promise<Product[]> {
-    return apiGet<Product[]>("/products");
+  async list(warehouseId?: string): Promise<Product[]> {
+    const query = warehouseId ? `?warehouseId=${encodeURIComponent(warehouseId)}` : "";
+    return apiGet<Product[]>(`/products${query}`);
   },
 
   async get(id: string): Promise<Product | undefined> {

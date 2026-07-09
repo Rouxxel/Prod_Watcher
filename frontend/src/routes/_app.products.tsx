@@ -52,8 +52,10 @@ export const Route = createFileRoute("/_app/products")({
 });
 
 function ProductsPage() {
-  const products = useProducts();
   const warehouses = useWarehouses();
+  const [warehouseFilter, setWarehouseFilter] = useState("all");
+  const stockWarehouseId = warehouseFilter === "all" ? undefined : warehouseFilter;
+  const products = useProducts(stockWarehouseId);
   const createMut = useCreateProduct();
   const updateMut = useUpdateProduct();
   const deleteMut = useDeleteProduct();
@@ -80,12 +82,17 @@ function ProductsPage() {
       const q = query.toLowerCase();
       if (q && !p.name.toLowerCase().includes(q) && !p.sku.toLowerCase().includes(q)) return false;
       if (category !== "all" && p.category !== category) return false;
+      if (warehouseFilter !== "all") {
+        const stockedHere = p.stock > 0;
+        const defaultHere = p.warehouseId === warehouseFilter;
+        if (!stockedHere && !defaultHere) return false;
+      }
       if (stockLevel === "out" && p.stock !== 0) return false;
       if (stockLevel === "low" && (p.stock === 0 || p.stock > p.lowStockThreshold)) return false;
       if (stockLevel === "ok" && p.stock <= p.lowStockThreshold) return false;
       return true;
     });
-  }, [products.data, query, category, stockLevel]);
+  }, [products.data, query, category, stockLevel, warehouseFilter]);
 
   const handleSubmit = (input: ProductInput) => {
     if (editing) {
@@ -117,6 +124,9 @@ function ProductsPage() {
     if (p.stock <= p.lowStockThreshold) return <Badge variant="outline" className="bg-warning/15 text-warning border-warning/30">Low</Badge>;
     return <Badge variant="outline" className="bg-success/15 text-success border-success/30">OK</Badge>;
   };
+
+  const stockColumnLabel =
+    warehouseFilter === "all" ? "Stock" : `Stock (${warehouseName(warehouseFilter)})`;
 
   return (
     <div>
@@ -150,6 +160,17 @@ function ProductsPage() {
               ))}
             </SelectContent>
           </Select>
+          {!isSingleLocation && (
+            <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Warehouse" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All warehouses</SelectItem>
+                {warehouses.data?.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Select value={stockLevel} onValueChange={setStockLevel}>
             <SelectTrigger className="w-[160px]"><SelectValue placeholder="Stock level" /></SelectTrigger>
             <SelectContent>
@@ -184,7 +205,7 @@ function ProductsPage() {
                   <TableHead>SKU</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="text-right">Stock</TableHead>
+                  <TableHead className="text-right">{stockColumnLabel}</TableHead>
                   <TableHead>Status</TableHead>
                   {!isSingleLocation && <TableHead>Warehouse</TableHead>}
                   <TableHead className="w-[100px]" />
