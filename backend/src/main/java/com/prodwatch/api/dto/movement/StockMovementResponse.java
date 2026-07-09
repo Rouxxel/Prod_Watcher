@@ -13,6 +13,8 @@ public record StockMovementResponse(
         int qty,
         UUID fromWarehouseId,
         UUID toWarehouseId,
+        String provider,
+        String recipient,
         UUID userId,
         String userName,
         Instant timestamp,

@@ -54,6 +54,12 @@ public class StockMovement {
     @Column(name = "note")
     private String note;
 
+    @Column(name = "provider")
+    private String provider;
+
+    @Column(name = "recipient")
+    private String recipient;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -126,6 +132,22 @@ public class StockMovement {
         this.note = note;
     }
 
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
+    }
+
+    public String getRecipient() {
+        return recipient;
+    }
+
+    public void setRecipient(String recipient) {
+        this.recipient = recipient;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -137,6 +159,8 @@ public class StockMovement {
             Warehouse fromWarehouse,
             Warehouse toWarehouse,
             Profile user,
+            String provider,
+            String recipient,
             String note) {
         StockMovement movement = new StockMovement();
         movement.type = type;
@@ -145,6 +169,8 @@ public class StockMovement {
         movement.fromWarehouse = fromWarehouse;
         movement.toWarehouse = toWarehouse;
         movement.user = user;
+        movement.provider = provider;
+        movement.recipient = recipient;
         movement.note = note;
         return movement;
     }

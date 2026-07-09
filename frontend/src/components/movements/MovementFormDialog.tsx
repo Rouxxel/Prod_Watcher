@@ -32,12 +32,16 @@ interface Props {
 
 const TYPES: StockMovementType[] = ["IN", "OUT", "TRANSFER", "ADJUSTMENT"];
 
+type AdjustmentDirection = "add" | "remove";
+
 const empty = (): StockMovementInput => ({
   type: "IN",
   productId: "",
   qty: 1,
   fromWarehouseId: null,
   toWarehouseId: null,
+  provider: "",
+  recipient: "",
   note: null,
 });
 
@@ -50,14 +54,19 @@ export function MovementFormDialog({
   pending,
 }: Props) {
   const [form, setForm] = useState<StockMovementInput>(empty());
+  const [adjustmentDirection, setAdjustmentDirection] = useState<AdjustmentDirection>("add");
+  const [adjustmentWarehouseId, setAdjustmentWarehouseId] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
+      const defaultWarehouseId = warehouses[0]?.id ?? null;
       setForm({
         ...empty(),
         productId: products[0]?.id ?? "",
-        toWarehouseId: warehouses[0]?.id ?? null,
+        toWarehouseId: defaultWarehouseId,
       });
+      setAdjustmentDirection("add");
+      setAdjustmentWarehouseId(defaultWarehouseId);
     }
   }, [open, products, warehouses]);
 
@@ -77,8 +86,16 @@ export function MovementFormDialog({
       notify.error("Destination warehouse required for IN movements");
       return false;
     }
+    if (form.type === "IN" && !form.provider?.trim()) {
+      notify.error("Provider required", "Enter the supplier or company the stock came from.");
+      return false;
+    }
     if (form.type === "OUT" && !form.fromWarehouseId) {
       notify.error("Source warehouse required for OUT movements");
+      return false;
+    }
+    if (form.type === "OUT" && !form.recipient?.trim()) {
+      notify.error("Recipient required", "Enter the customer or company the stock is going to.");
       return false;
     }
     if (form.type === "TRANSFER") {
@@ -92,18 +109,16 @@ export function MovementFormDialog({
       }
     }
     if (form.type === "ADJUSTMENT") {
-      const hasFrom = !!form.fromWarehouseId;
-      const hasTo = !!form.toWarehouseId;
-      if (hasFrom === hasTo) {
-        notify.error("Adjustment requires exactly one warehouse (source or destination)");
+      if (!adjustmentWarehouseId) {
+        notify.error("Warehouse required for adjustments");
         return false;
       }
     }
     return true;
   };
 
-  const showFrom = form.type === "OUT" || form.type === "TRANSFER" || form.type === "ADJUSTMENT";
-  const showTo = form.type === "IN" || form.type === "TRANSFER" || form.type === "ADJUSTMENT";
+  const showFrom = form.type === "OUT" || form.type === "TRANSFER";
+  const showTo = form.type === "IN" || form.type === "TRANSFER";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -121,6 +136,20 @@ export function MovementFormDialog({
             if (!validate()) return;
             onSubmit({
               ...form,
+              fromWarehouseId:
+                form.type === "ADJUSTMENT"
+                  ? adjustmentDirection === "remove"
+                    ? adjustmentWarehouseId
+                    : null
+                  : form.fromWarehouseId,
+              toWarehouseId:
+                form.type === "ADJUSTMENT"
+                  ? adjustmentDirection === "add"
+                    ? adjustmentWarehouseId
+                    : null
+                  : form.toWarehouseId,
+              provider: form.type === "IN" ? form.provider?.trim() || null : null,
+              recipient: form.type === "OUT" ? form.recipient?.trim() || null : null,
               note: form.note?.trim() || null,
             });
           }}
@@ -131,12 +160,25 @@ export function MovementFormDialog({
               value={form.type}
               onValueChange={(v) => {
                 const type = v as StockMovementType;
+                const defaultWarehouseId = warehouses[0]?.id ?? null;
                 setForm((f) => ({
                   ...f,
                   type,
-                  fromWarehouseId: type === "IN" ? null : f.fromWarehouseId ?? warehouses[0]?.id ?? null,
-                  toWarehouseId: type === "OUT" ? null : f.toWarehouseId ?? warehouses[0]?.id ?? null,
+                  fromWarehouseId:
+                    type === "IN" || type === "ADJUSTMENT"
+                      ? null
+                      : f.fromWarehouseId ?? defaultWarehouseId,
+                  toWarehouseId:
+                    type === "OUT" || type === "ADJUSTMENT"
+                      ? null
+                      : f.toWarehouseId ?? defaultWarehouseId,
+                  provider: type === "IN" ? f.provider ?? "" : null,
+                  recipient: type === "OUT" ? f.recipient ?? "" : null,
                 }));
+                if (type === "ADJUSTMENT") {
+                  setAdjustmentDirection("add");
+                  setAdjustmentWarehouseId(defaultWarehouseId);
+                }
               }}
             >
               <SelectTrigger>
@@ -177,6 +219,67 @@ export function MovementFormDialog({
               required
             />
           </div>
+          {form.type === "IN" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="movement-provider">Provider</Label>
+              <Input
+                id="movement-provider"
+                value={form.provider ?? ""}
+                onChange={(e) => set("provider", e.target.value)}
+                placeholder="e.g. Acme Steel Co."
+                required
+              />
+            </div>
+          )}
+          {form.type === "OUT" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="movement-recipient">Recipient</Label>
+              <Input
+                id="movement-recipient"
+                value={form.recipient ?? ""}
+                onChange={(e) => set("recipient", e.target.value)}
+                placeholder="e.g. BuildRight Contractors"
+                required
+              />
+            </div>
+          )}
+          {form.type === "ADJUSTMENT" && (
+            <>
+              <div className="space-y-1.5">
+                <Label>Direction</Label>
+                <Select
+                  value={adjustmentDirection}
+                  onValueChange={(v) => setAdjustmentDirection(v as AdjustmentDirection)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="add">Add stock</SelectItem>
+                    <SelectItem value="remove">Remove stock</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Warehouse</Label>
+                <Select
+                  value={adjustmentWarehouseId ?? ""}
+                  onValueChange={(v) => setAdjustmentWarehouseId(v || null)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select warehouse" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {warehouses.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
           {showFrom && (
             <div className="space-y-1.5">
               <Label>From warehouse</Label>

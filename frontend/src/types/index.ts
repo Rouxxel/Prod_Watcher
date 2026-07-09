@@ -42,6 +42,8 @@ export interface StockMovement {
   qty: number;
   fromWarehouseId?: string;
   toWarehouseId?: string;
+  provider?: string;
+  recipient?: string;
   userId: string;
   timestamp: string;
   note?: string;
@@ -56,6 +58,8 @@ export interface StockMovementInput {
   qty: number;
   fromWarehouseId?: string | null;
   toWarehouseId?: string | null;
+  provider?: string | null;
+  recipient?: string | null;
   note?: string | null;
 }
 

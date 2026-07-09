@@ -72,7 +72,7 @@ class TransactionServiceTest extends AbstractIntegrationTest {
                 new String[0]));
 
         stockMovementService.create(
-                new StockMovementCreate(StockMovementType.IN, product.getId(), 10, null, warehouse.getId(), "seed"),
+                new StockMovementCreate(StockMovementType.IN, product.getId(), 10, null, warehouse.getId(), "Test Supplier", null, "seed"),
                 TestFixtures.currentUser(TestFixtures.WORKER_ID, AppRole.warehouse_worker));
     }
 

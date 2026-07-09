@@ -114,6 +114,8 @@ public class TransactionService {
                     line.warehouse(),
                     null,
                     cashierProfile,
+                    null,
+                    "POS customer",
                     "POS sale " + transaction.getId()));
         }
 
@@ -159,6 +161,8 @@ public class TransactionService {
                     null,
                     warehouse,
                     actor,
+                    "POS return",
+                    null,
                     newStatus + " " + transaction.getId()));
         }
 

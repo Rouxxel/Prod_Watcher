@@ -177,7 +177,7 @@ class ApiIntegrationTest extends AbstractIntegrationTest {
                 "Low stock", "LOW-001", "general", BigDecimal.TEN, warehouseRepository.findById(warehouseId).orElseThrow(), 1, new String[0]));
 
         StockMovementCreate out = new StockMovementCreate(
-                StockMovementType.OUT, product.getId(), 5, warehouseId, null, null);
+                StockMovementType.OUT, product.getId(), 5, warehouseId, null, null, "Test Customer", null);
 
         mockMvc.perform(post("/api/v1/stock-movements")
                         .header("Authorization", TestFixtures.bearerHeader(TestFixtures.WORKER_ID))
@@ -201,7 +201,7 @@ class ApiIntegrationTest extends AbstractIntegrationTest {
         seedStock(product.getId(), 3);
 
         StockMovementCreate transfer = new StockMovementCreate(
-                StockMovementType.TRANSFER, product.getId(), 5, warehouseId, destId, null);
+                StockMovementType.TRANSFER, product.getId(), 5, warehouseId, destId, null, null, null);
 
         mockMvc.perform(post("/api/v1/stock-movements")
                         .header("Authorization", TestFixtures.bearerHeader(TestFixtures.WORKER_ID))
@@ -300,7 +300,7 @@ class ApiIntegrationTest extends AbstractIntegrationTest {
 
     private void seedStock(UUID productId, int qty) throws Exception {
         StockMovementCreate in =
-                new StockMovementCreate(StockMovementType.IN, productId, qty, null, warehouseId, "seed");
+                new StockMovementCreate(StockMovementType.IN, productId, qty, null, warehouseId, "Test Supplier", null, "seed");
         mockMvc.perform(post("/api/v1/stock-movements")
                         .header("Authorization", TestFixtures.bearerHeader(TestFixtures.WORKER_ID))
                         .contentType(APPLICATION_JSON)

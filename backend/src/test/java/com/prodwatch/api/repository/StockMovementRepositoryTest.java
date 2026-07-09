@@ -61,19 +61,19 @@ class StockMovementRepositoryTest {
     @Test
     void inventoryBalanceReflectsInOutAndTransfer() {
         stockMovementRepository.save(StockMovement.create(
-                StockMovementType.IN, product, 20, null, source, user, "opening"));
+                StockMovementType.IN, product, 20, null, source, user, "Acme Supply", null, "opening"));
         entityManager.flush();
         assertThat(inventoryBalanceRepository.getStockForProduct(product.getId(), source.getId()))
                 .isEqualTo(20);
 
         stockMovementRepository.save(StockMovement.create(
-                StockMovementType.OUT, product, 5, source, null, user, "issue"));
+                StockMovementType.OUT, product, 5, source, null, user, null, "Customer Co", "issue"));
         entityManager.flush();
         assertThat(inventoryBalanceRepository.getStockForProduct(product.getId(), source.getId()))
                 .isEqualTo(15);
 
         stockMovementRepository.save(StockMovement.create(
-                StockMovementType.TRANSFER, product, 3, source, destination, user, "move"));
+                StockMovementType.TRANSFER, product, 3, source, destination, user, null, null, "move"));
         entityManager.flush();
         assertThat(inventoryBalanceRepository.getStockForProduct(product.getId(), source.getId()))
                 .isEqualTo(12);
@@ -84,16 +84,16 @@ class StockMovementRepositoryTest {
     @Test
     void adjustmentIncreasesAndDecreasesStock() {
         stockMovementRepository.save(StockMovement.create(
-                StockMovementType.IN, product, 10, null, source, user, "seed"));
+                StockMovementType.IN, product, 10, null, source, user, "Seed Co", null, "seed"));
 
         stockMovementRepository.save(StockMovement.create(
-                StockMovementType.ADJUSTMENT, product, 4, null, source, user, "found extra"));
+                StockMovementType.ADJUSTMENT, product, 4, null, source, user, null, null, "found extra"));
         entityManager.flush();
         assertThat(inventoryBalanceRepository.getStockForProduct(product.getId(), source.getId()))
                 .isEqualTo(14);
 
         stockMovementRepository.save(StockMovement.create(
-                StockMovementType.ADJUSTMENT, product, 2, source, null, user, "shrinkage"));
+                StockMovementType.ADJUSTMENT, product, 2, source, null, user, null, null, "shrinkage"));
         entityManager.flush();
         assertThat(inventoryBalanceRepository.getStockForProduct(product.getId(), source.getId()))
                 .isEqualTo(12);

@@ -45,6 +45,8 @@ CREATE TABLE IF NOT EXISTS stock_movements (
     from_warehouse_id   UUID        REFERENCES warehouses (id),
     to_warehouse_id     UUID        REFERENCES warehouses (id),
     user_id             UUID        NOT NULL REFERENCES profiles (id),
+    provider            VARCHAR(255),
+    recipient           VARCHAR(255),
     note                VARCHAR(255),
     created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

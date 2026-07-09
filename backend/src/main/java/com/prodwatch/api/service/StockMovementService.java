@@ -77,11 +77,23 @@ public class StockMovementService {
                 if (dto.toWarehouseId() == null) {
                     throw new BusinessRuleException("IN movement requires toWarehouseId");
                 }
+                if (dto.provider() == null || dto.provider().isBlank()) {
+                    throw new BusinessRuleException("IN movement requires provider");
+                }
+                if (dto.recipient() != null && !dto.recipient().isBlank()) {
+                    throw new BusinessRuleException("Recipient is only allowed for OUT movements");
+                }
                 toWarehouse = loadWarehouse(dto.toWarehouseId());
             }
             case OUT -> {
                 if (dto.fromWarehouseId() == null) {
                     throw new BusinessRuleException("OUT movement requires fromWarehouseId");
+                }
+                if (dto.recipient() == null || dto.recipient().isBlank()) {
+                    throw new BusinessRuleException("OUT movement requires recipient");
+                }
+                if (dto.provider() != null && !dto.provider().isBlank()) {
+                    throw new BusinessRuleException("Provider is only allowed for IN movements");
                 }
                 fromWarehouse = loadWarehouse(dto.fromWarehouseId());
                 inventoryBalanceService.assertSufficientStock(product.getId(), fromWarehouse.getId(), dto.qty());
@@ -115,7 +127,15 @@ public class StockMovementService {
         }
 
         StockMovement movement = stockMovementRepository.save(StockMovement.create(
-                dto.type(), product, dto.qty(), fromWarehouse, toWarehouse, profile, dto.note()));
+                dto.type(),
+                product,
+                dto.qty(),
+                fromWarehouse,
+                toWarehouse,
+                profile,
+                normalizeProvider(dto.type(), dto.provider()),
+                normalizeRecipient(dto.type(), dto.recipient()),
+                dto.note()));
 
         auditService.log(user.getUserId(), auditAction(dto.type()), "movement", movement.getId(), product.getSku());
         return toResponse(movement);
@@ -131,6 +151,20 @@ public class StockMovementService {
         return warehouseRepository
                 .findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"));
+    }
+
+    private static String normalizeProvider(StockMovementType type, String provider) {
+        if (type != StockMovementType.IN) {
+            return null;
+        }
+        return provider == null ? null : provider.trim();
+    }
+
+    private static String normalizeRecipient(StockMovementType type, String recipient) {
+        if (type != StockMovementType.OUT) {
+            return null;
+        }
+        return recipient == null ? null : recipient.trim();
     }
 
     private static String auditAction(StockMovementType type) {
@@ -151,6 +185,8 @@ public class StockMovementService {
                 movement.getQty(),
                 movement.getFromWarehouse() != null ? movement.getFromWarehouse().getId() : null,
                 movement.getToWarehouse() != null ? movement.getToWarehouse().getId() : null,
+                movement.getProvider(),
+                movement.getRecipient(),
                 movement.getUser().getId(),
                 movement.getUser().getName(),
                 movement.getCreatedAt(),

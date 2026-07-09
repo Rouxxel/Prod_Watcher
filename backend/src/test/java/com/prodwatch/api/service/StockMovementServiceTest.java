@@ -70,7 +70,7 @@ class StockMovementServiceTest extends AbstractIntegrationTest {
     @Test
     void inIncreasesStock() {
         stockMovementService.create(
-                new StockMovementCreate(StockMovementType.IN, product.getId(), 10, null, warehouseA.getId(), null),
+                new StockMovementCreate(StockMovementType.IN, product.getId(), 10, null, warehouseA.getId(), "Test Supplier", null, null),
                 TestFixtures.currentUser(TestFixtures.WORKER_ID, AppRole.warehouse_worker));
 
         assertThat(inventoryBalanceService.getStock(product.getId(), warehouseA.getId())).isEqualTo(10);
@@ -81,7 +81,7 @@ class StockMovementServiceTest extends AbstractIntegrationTest {
         seedStock(10);
 
         stockMovementService.create(
-                new StockMovementCreate(StockMovementType.OUT, product.getId(), 4, warehouseA.getId(), null, null),
+                new StockMovementCreate(StockMovementType.OUT, product.getId(), 4, warehouseA.getId(), null, null, "Test Customer", null),
                 TestFixtures.currentUser(TestFixtures.WORKER_ID, AppRole.warehouse_worker));
 
         assertThat(inventoryBalanceService.getStock(product.getId(), warehouseA.getId())).isEqualTo(6);
@@ -92,7 +92,7 @@ class StockMovementServiceTest extends AbstractIntegrationTest {
         seedStock(2);
 
         assertThatThrownBy(() -> stockMovementService.create(
-                        new StockMovementCreate(StockMovementType.OUT, product.getId(), 5, warehouseA.getId(), null, null),
+                        new StockMovementCreate(StockMovementType.OUT, product.getId(), 5, warehouseA.getId(), null, null, "Test Customer", null),
                         TestFixtures.currentUser(TestFixtures.WORKER_ID, AppRole.warehouse_worker)))
                 .isInstanceOf(InsufficientStockException.class);
     }
@@ -108,6 +108,8 @@ class StockMovementServiceTest extends AbstractIntegrationTest {
                         3,
                         warehouseA.getId(),
                         warehouseB.getId(),
+                        null,
+                        null,
                         null),
                 TestFixtures.currentUser(TestFixtures.WORKER_ID, AppRole.warehouse_worker));
 
@@ -120,19 +122,19 @@ class StockMovementServiceTest extends AbstractIntegrationTest {
         seedStock(6);
 
         stockMovementService.create(
-                new StockMovementCreate(StockMovementType.ADJUSTMENT, product.getId(), 2, null, warehouseA.getId(), "found"),
+                new StockMovementCreate(StockMovementType.ADJUSTMENT, product.getId(), 2, null, warehouseA.getId(), null, null, "found"),
                 TestFixtures.currentUser(TestFixtures.WORKER_ID, AppRole.warehouse_worker));
         assertThat(inventoryBalanceService.getStock(product.getId(), warehouseA.getId())).isEqualTo(8);
 
         stockMovementService.create(
-                new StockMovementCreate(StockMovementType.ADJUSTMENT, product.getId(), 3, warehouseA.getId(), null, "loss"),
+                new StockMovementCreate(StockMovementType.ADJUSTMENT, product.getId(), 3, warehouseA.getId(), null, null, null, "loss"),
                 TestFixtures.currentUser(TestFixtures.WORKER_ID, AppRole.warehouse_worker));
         assertThat(inventoryBalanceService.getStock(product.getId(), warehouseA.getId())).isEqualTo(5);
     }
 
     private void seedStock(int qty) {
         stockMovementService.create(
-                new StockMovementCreate(StockMovementType.IN, product.getId(), qty, null, warehouseA.getId(), "seed"),
+                new StockMovementCreate(StockMovementType.IN, product.getId(), qty, null, warehouseA.getId(), "Test Supplier", null, "seed"),
                 TestFixtures.currentUser(TestFixtures.WORKER_ID, AppRole.warehouse_worker));
     }
 }

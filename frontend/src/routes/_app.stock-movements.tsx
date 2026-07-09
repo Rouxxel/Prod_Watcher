@@ -52,6 +52,11 @@ function MovementsPage() {
   const productName = (m: StockMovement) =>
     m.productName ?? products.data?.find((p) => p.id === m.productId)?.name ?? m.productId;
   const userName = (m: StockMovement) => m.userName ?? "—";
+  const fromLabel = (m: StockMovement) =>
+    m.type === "IN" ? m.provider ?? "—" : whName(m.fromWarehouseId);
+  const toLabel = (m: StockMovement) =>
+    m.type === "OUT" ? m.recipient ?? "—" : whName(m.toWarehouseId);
+
   const whName = (id?: string) => (id ? warehouses.data?.find((w) => w.id === id)?.name ?? "—" : "—");
 
   return (
@@ -113,8 +118,8 @@ function MovementsPage() {
                     <TableCell className="font-medium">{productName(m)}</TableCell>
                     <TableCell><Badge variant="outline" className={typeColor[m.type]}>{m.type}</Badge></TableCell>
                     <TableCell className="text-right tabular-nums">{m.qty > 0 ? `+${m.qty}` : m.qty}</TableCell>
-                    <TableCell className="text-muted-foreground">{whName(m.fromWarehouseId)}</TableCell>
-                    <TableCell className="text-muted-foreground">{whName(m.toWarehouseId)}</TableCell>
+                    <TableCell className="text-muted-foreground">{fromLabel(m)}</TableCell>
+                    <TableCell className="text-muted-foreground">{toLabel(m)}</TableCell>
                     <TableCell>{userName(m)}</TableCell>
                     <TableCell className="text-muted-foreground">{dateTime(m.timestamp)}</TableCell>
                   </TableRow>
