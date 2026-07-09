@@ -17,6 +17,8 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
 
     List<InventoryBalance> findById_ProductId(UUID productId);
 
+    List<InventoryBalance> findById_WarehouseId(UUID warehouseId);
+
     Optional<InventoryBalance> findById_ProductIdAndId_WarehouseId(UUID productId, UUID warehouseId);
 
     @Query("""

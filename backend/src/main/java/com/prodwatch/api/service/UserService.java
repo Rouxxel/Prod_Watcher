@@ -1,0 +1,178 @@
+package com.prodwatch.api.service;
+
+import java.util.List;
+import java.util.UUID;
+
+import com.prodwatch.api.dto.user.UserProvisionRequest;
+import com.prodwatch.api.dto.user.UserResetPasswordRequest;
+import com.prodwatch.api.dto.user.UserResponse;
+import com.prodwatch.api.dto.user.UserUpdateRequest;
+import com.prodwatch.api.entity.AppRole;
+import com.prodwatch.api.entity.Profile;
+import com.prodwatch.api.entity.UserRole;
+import com.prodwatch.api.error.BusinessRuleException;
+import com.prodwatch.api.error.ResourceNotFoundException;
+import com.prodwatch.api.repository.ProfileRepository;
+import com.prodwatch.api.repository.UserRoleRepository;
+import com.prodwatch.api.security.CurrentUser;
+import com.prodwatch.api.security.RoleChecker;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class UserService {
+
+    private final ProfileRepository profileRepository;
+    private final UserRoleRepository userRoleRepository;
+    private final SupabaseAuthService supabaseAuthService;
+    private final AuditService auditService;
+
+    public UserService(
+            ProfileRepository profileRepository,
+            UserRoleRepository userRoleRepository,
+            SupabaseAuthService supabaseAuthService,
+            AuditService auditService) {
+        this.profileRepository = profileRepository;
+        this.userRoleRepository = userRoleRepository;
+        this.supabaseAuthService = supabaseAuthService;
+        this.auditService = auditService;
+    }
+
+    public List<UserResponse> list() {
+        return profileRepository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    public UserResponse get(UUID id) {
+        return toResponse(loadProfile(id));
+    }
+
+    public UserResponse getMe(CurrentUser currentUser) {
+        return get(currentUser.getUserId());
+    }
+
+    @Transactional
+    public UserResponse provision(UserProvisionRequest dto, CurrentUser admin) {
+        RoleChecker.requireAdmin(admin);
+        if (dto.role() == AppRole.admin) {
+            throw new BusinessRuleException("Cannot provision admin via this endpoint");
+        }
+        if (profileRepository.existsByEmail(dto.email())) {
+            throw new BusinessRuleException("Email already registered");
+        }
+
+        UUID userId = supabaseAuthService.createConfirmedUser(dto.email(), dto.password(), dto.name());
+        Profile profile = ensureProfile(userId, dto.email(), dto.name(), dto.active());
+        userRoleRepository.save(new UserRole(profile, dto.role()));
+
+        auditService.log(admin.getUserId(), "USER_PROVISIONED", "user", userId, dto.email());
+        return toResponse(profile);
+    }
+
+    @Transactional
+    public UserResponse update(UUID id, UserUpdateRequest dto, CurrentUser admin) {
+        RoleChecker.requireAdmin(admin);
+        Profile profile = loadProfile(id);
+        UserRole userRole = userRoleRepository
+                .findByUser_Id(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
+
+        if (dto.active() != null) {
+            profile.setActive(dto.active());
+            if (dto.active()) {
+                supabaseAuthService.enableUser(id);
+            } else {
+                assertNotLastAdmin(id, userRole.getRole());
+                supabaseAuthService.disableUser(id);
+            }
+        }
+
+        if (dto.role() != null) {
+            if (dto.role() == AppRole.admin) {
+                throw new BusinessRuleException("Use promote-admin to grant admin role");
+            }
+            userRole.setRole(dto.role());
+            userRoleRepository.save(userRole);
+            auditService.log(admin.getUserId(), "ROLE_CHANGED", "user", id, dto.role().name());
+        }
+
+        profileRepository.save(profile);
+        return toResponse(profile);
+    }
+
+    @Transactional
+    public UserResponse promoteToAdmin(UUID id, CurrentUser admin) {
+        RoleChecker.requireAdmin(admin);
+        Profile profile = loadProfile(id);
+        UserRole userRole = userRoleRepository
+                .findByUser_Id(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
+
+        if (userRole.getRole() == AppRole.admin) {
+            return toResponse(profile);
+        }
+
+        userRole.setRole(AppRole.admin);
+        userRoleRepository.save(userRole);
+        auditService.log(admin.getUserId(), "ROLE_PROMOTED_TO_ADMIN", "user", id, profile.getEmail());
+        return toResponse(profile);
+    }
+
+    @Transactional
+    public void resetPassword(UUID id, UserResetPasswordRequest dto, CurrentUser admin) {
+        RoleChecker.requireAdmin(admin);
+        loadProfile(id);
+        supabaseAuthService.updatePassword(id, dto.newPassword());
+        auditService.log(admin.getUserId(), "PASSWORD_RESET_BY_ADMIN", "user", id, null);
+    }
+
+    @Transactional
+    public UserResponse deactivate(UUID id, CurrentUser admin) {
+        RoleChecker.requireAdmin(admin);
+        Profile profile = loadProfile(id);
+        UserRole userRole = userRoleRepository
+                .findByUser_Id(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
+        assertNotLastAdmin(id, userRole.getRole());
+        profile.setActive(false);
+        supabaseAuthService.disableUser(id);
+        profileRepository.save(profile);
+        return toResponse(profile);
+    }
+
+    @Transactional
+    public UserResponse reactivate(UUID id, CurrentUser admin) {
+        RoleChecker.requireAdmin(admin);
+        Profile profile = loadProfile(id);
+        profile.setActive(true);
+        supabaseAuthService.enableUser(id);
+        profileRepository.save(profile);
+        return toResponse(profile);
+    }
+
+    private Profile loadProfile(UUID id) {
+        return profileRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
+    private Profile ensureProfile(UUID userId, String email, String name, boolean active) {
+        return profileRepository.findById(userId).orElseGet(() -> profileRepository.save(
+                Profile.create(userId, email, name, active)));
+    }
+
+    private UserResponse toResponse(Profile profile) {
+        AppRole role = userRoleRepository
+                .findByUser_Id(profile.getId())
+                .map(UserRole::getRole)
+                .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
+        return new UserResponse(
+                profile.getId(), profile.getName(), profile.getEmail(), role, profile.isActive(), null);
+    }
+
+    private void assertNotLastAdmin(UUID userId, AppRole role) {
+        if (role == AppRole.admin && userRoleRepository.countByRole(AppRole.admin) <= 1) {
+            throw new BusinessRuleException("Cannot deactivate the last admin");
+        }
+    }
+}
