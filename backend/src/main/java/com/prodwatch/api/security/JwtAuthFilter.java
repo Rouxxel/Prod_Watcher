@@ -1,8 +1,16 @@
 package com.prodwatch.api.security;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.security.interfaces.ECPublicKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.UUID;
 
+import com.auth0.jwk.GuavaCachedJwkProvider;
+import com.auth0.jwk.Jwk;
+import com.auth0.jwk.JwkProvider;
+import com.auth0.jwk.UrlJwkProvider;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
@@ -32,15 +40,30 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final ProfileRepository profileRepository;
     private final UserRoleRepository userRoleRepository;
-    private final Algorithm algorithm;
+
+    /** Legacy shared secret (HS256) — used only when Supabase issues HS256 tokens. */
+    private final Algorithm hmacAlgorithm;
+
+    /** JWKS provider for asymmetric (ES256/RS256) Supabase signing keys. */
+    private final JwkProvider jwkProvider;
 
     public JwtAuthFilter(
             ProfileRepository profileRepository,
             UserRoleRepository userRoleRepository,
-            @Value("${SUPABASE_JWT_SECRET}") String jwtSecret) {
+            @Value("${SUPABASE_URL}") String supabaseUrl,
+            @Value("${SUPABASE_JWT_SECRET:}") String jwtSecret) {
         this.profileRepository = profileRepository;
         this.userRoleRepository = userRoleRepository;
-        this.algorithm = Algorithm.HMAC256(jwtSecret);
+        this.hmacAlgorithm =
+                (jwtSecret == null || jwtSecret.isBlank()) ? null : Algorithm.HMAC256(jwtSecret);
+
+        String baseUrl = supabaseUrl.replaceAll("/$", "");
+        URI jwksUri = URI.create(baseUrl + "/auth/v1/.well-known/jwks.json");
+        try {
+            this.jwkProvider = new GuavaCachedJwkProvider(new UrlJwkProvider(jwksUri.toURL()));
+        } catch (MalformedURLException ex) {
+            throw new IllegalStateException("Invalid SUPABASE_URL for JWKS: " + supabaseUrl, ex);
+        }
     }
 
     @Override
@@ -63,6 +86,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         try {
+            DecodedJWT decoded = JWT.decode(token);
+            Algorithm algorithm = resolveAlgorithm(decoded);
             DecodedJWT jwt = JWT.require(algorithm).build().verify(token);
             UUID userId = UUID.fromString(jwt.getSubject());
 
@@ -91,5 +116,37 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * Choose the verification algorithm based on the token header. Supabase projects using
+     * asymmetric signing keys issue ES256/RS256 (verified via JWKS); legacy projects issue
+     * HS256 (verified with the shared secret).
+     */
+    private Algorithm resolveAlgorithm(DecodedJWT decoded) {
+        String alg = decoded.getAlgorithm();
+        try {
+            switch (alg) {
+                case "ES256" -> {
+                    Jwk jwk = jwkProvider.get(decoded.getKeyId());
+                    return Algorithm.ECDSA256((ECPublicKey) jwk.getPublicKey(), null);
+                }
+                case "RS256" -> {
+                    Jwk jwk = jwkProvider.get(decoded.getKeyId());
+                    return Algorithm.RSA256((RSAPublicKey) jwk.getPublicKey(), null);
+                }
+                case "HS256" -> {
+                    if (hmacAlgorithm == null) {
+                        throw new JWTVerificationException("HS256 token received but no JWT secret configured");
+                    }
+                    return hmacAlgorithm;
+                }
+                default -> throw new JWTVerificationException("Unsupported JWT algorithm: " + alg);
+            }
+        } catch (JWTVerificationException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new JWTVerificationException("Unable to resolve signing key: " + ex.getMessage(), ex);
+        }
     }
 }

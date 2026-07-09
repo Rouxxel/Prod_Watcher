@@ -11,6 +11,7 @@ import com.prodwatch.api.repository.ProductRepository;
 import jakarta.persistence.EntityManager;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class InventoryBalanceService {
@@ -29,12 +30,12 @@ public class InventoryBalanceService {
     }
 
     public int getStock(UUID productId, UUID warehouseId) {
-        entityManager.flush();
+        flushIfInTransaction();
         return inventoryBalanceRepository.getStockForProduct(productId, warehouseId);
     }
 
     public int getStockAtDefaultWarehouse(UUID productId) {
-        entityManager.flush();
+        flushIfInTransaction();
         return productRepository
                 .findById(productId)
                 .map(p -> inventoryBalanceRepository.getStockForProduct(
@@ -54,5 +55,16 @@ public class InventoryBalanceService {
         return productRepository.findAll().stream()
                 .filter(p -> getStockAtDefaultWarehouse(p.getId()) <= p.getLowStockThreshold())
                 .toList();
+    }
+
+    /**
+     * Flush pending writes so the stock-balance view reflects them — but only when a transaction
+     * is active. Pure read paths (e.g. product/dashboard listings) run without a transaction and
+     * have nothing to flush; calling flush() there throws TransactionRequiredException.
+     */
+    private void flushIfInTransaction() {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            entityManager.flush();
+        }
     }
 }

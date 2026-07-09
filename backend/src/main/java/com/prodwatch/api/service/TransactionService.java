@@ -69,7 +69,9 @@ public class TransactionService {
     @Transactional(readOnly = true)
     public List<TransactionResponse> list(
             UUID cashierId, TransactionStatus status, Instant from, Instant to) {
-        return transactionRepository.findWithFilters(cashierId, status, from, to).stream()
+        return transactionRepository
+                .findWithFilters(cashierId, status == null ? null : status.name(), from, to)
+                .stream()
                 .map(this::toResponse)
                 .toList();
     }

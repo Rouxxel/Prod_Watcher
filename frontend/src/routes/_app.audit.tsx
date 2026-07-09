@@ -51,8 +51,10 @@ function AuditPage() {
                 {audit.data?.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell><Badge variant="outline" className="bg-primary/15 text-primary-foreground border-primary/30">{a.action}</Badge></TableCell>
-                    <TableCell className="text-muted-foreground">{a.entity} · {a.entityId}</TableCell>
-                    <TableCell>{shortId(a.userId)}</TableCell>
+                    <TableCell className="text-muted-foreground" title={a.entityId}>
+                      {a.entity} · {a.entityLabel ?? shortId(a.entityId)}
+                    </TableCell>
+                    <TableCell title={a.userId}>{a.userName ?? shortId(a.userId)}</TableCell>
                     <TableCell className="text-muted-foreground">{a.details ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{dateTime(a.timestamp)}</TableCell>
                   </TableRow>

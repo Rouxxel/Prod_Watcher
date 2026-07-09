@@ -77,9 +77,11 @@ export interface UserUpdateInput {
 export interface AuditEntry {
   id: string;
   userId: string;
+  userName?: string;
   action: string;
   entity: string;
   entityId: string;
+  entityLabel?: string;
   timestamp: string;
   details?: string;
 }

@@ -51,7 +51,7 @@ public class StockMovementService {
     public List<StockMovementResponse> list(
             UUID productId, UUID warehouseId, StockMovementType type, Instant from, Instant to) {
         return stockMovementRepository
-                .findWithFilters(productId, warehouseId, type, from, to)
+                .findWithFilters(productId, warehouseId, type == null ? null : type.name(), from, to)
                 .stream()
                 .map(this::toResponse)
                 .toList();
