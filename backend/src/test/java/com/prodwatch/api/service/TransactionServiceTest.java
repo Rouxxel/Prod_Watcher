@@ -98,7 +98,7 @@ class TransactionServiceTest extends AbstractIntegrationTest {
 
     private TransactionCreate checkoutRequest(int qty, BigDecimal subtotal, BigDecimal tax, BigDecimal total) {
         CartItemDto item = new CartItemDto(
-                product.getId(), product.getName(), product.getSku(), qty, product.getPrice());
+                product.getId(), product.getName(), product.getSku(), qty, product.getPrice(), warehouse.getId());
         return new TransactionCreate(List.of(item), subtotal, tax, total);
     }
 }

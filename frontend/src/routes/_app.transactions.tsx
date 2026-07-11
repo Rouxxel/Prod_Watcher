@@ -61,7 +61,9 @@ function TransactionsPage() {
                 {tx.data?.map((t) => (
                   <TableRow key={t.id}>
                     <TableCell className="font-medium">#{shortId(t.id)}</TableCell>
-                    <TableCell className="text-muted-foreground">{shortId(t.cashierId)}</TableCell>
+                    <TableCell className="text-muted-foreground" title={t.cashierId}>
+                      {t.cashierName ?? shortId(t.cashierId)}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {t.items.reduce((s, i) => s + i.qty, 0)}
                     </TableCell>

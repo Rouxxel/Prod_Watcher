@@ -243,7 +243,7 @@ class ApiIntegrationTest extends AbstractIntegrationTest {
 
         TransactionCreate checkout = new TransactionCreate(
                 List.of(new CartItemDto(
-                        product.getId(), product.getName(), product.getSku(), 2, product.getPrice())),
+                        product.getId(), product.getName(), product.getSku(), 2, product.getPrice(), warehouseId)),
                 new BigDecimal("20.00"),
                 new BigDecimal("3.20"),
                 new BigDecimal("23.20"));
@@ -275,7 +275,7 @@ class ApiIntegrationTest extends AbstractIntegrationTest {
 
         TransactionCreate checkout = new TransactionCreate(
                 List.of(new CartItemDto(
-                        product.getId(), product.getName(), product.getSku(), 5, product.getPrice())),
+                        product.getId(), product.getName(), product.getSku(), 5, product.getPrice(), warehouseId)),
                 new BigDecimal("50.00"),
                 new BigDecimal("8.00"),
                 new BigDecimal("58.00"));

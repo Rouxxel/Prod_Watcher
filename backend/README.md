@@ -32,11 +32,12 @@ Edit `.env` with your Supabase credentials:
 | Variable | Purpose |
 | --- | --- |
 | `DATABASE_URL` | JDBC URL to Supabase Postgres (see `.env.example` for direct vs pooler) |
-| `SUPABASE_URL` | Project URL (`https://<ref>.supabase.co`) |
-| `SUPABASE_JWT_SECRET` | Settings → API → JWT Secret |
+| `SUPABASE_URL` | Project URL (`https://<ref>.supabase.co`) — also used for JWKS (ES256 JWT) |
+| `SUPABASE_JWT_SECRET` | Legacy HS256 fallback (optional if project uses asymmetric signing) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Admin API (user provisioning) — **server only** |
 | `SUPABASE_ANON_KEY` | Auth sign-up/login proxy |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated frontend origins (no spaces) |
+| `DEV_SEED_PASSWORD` | Password applied when seeding auth users |
 
 Optional:
 
@@ -44,7 +45,7 @@ Optional:
 | --- | --- | --- |
 | `SERVER_PORT` | `8080` (config) | HTTP port |
 | `POS_TAX_RATE` | `0.16` | Checkout tax rate |
-| `POS_WAREHOUSE_ID` | — | Fixed warehouse for POS stock deduction |
+| `POS_WAREHOUSE_ID` | — | Fixed warehouse for POS when cart items omit `warehouseId` |
 
 ### 3. Run
 
@@ -56,7 +57,8 @@ Optional:
 
 `bootRun` and the start scripts load `backend/.env` automatically.
 
-On first run, Flyway applies migrations `V1`–`V12` against Supabase Postgres.
+On first run, Flyway applies migrations `V1`–`V15` against Supabase Postgres.
+Startup runs `flyway.repair()` then `migrate()` to heal checksum drift from line-ending edits on already-applied migrations.
 
 ### 4. Seed dev users (optional)
 
@@ -72,7 +74,8 @@ After migrations:
 bash scripts/seed-auth-users.sh
 ```
 
-Default password: `ProdWatchDev2024!` (override with `DEV_SEED_PASSWORD` in `.env`).
+Password is controlled by `DEV_SEED_PASSWORD` in `.env` (see `.env.example`).
+Existing Supabase users are **not** updated automatically — reset via Admin API if needed.
 
 Alternatively, use **owner bootstrap**: `GET /api/v1/auth/bootstrap-status` → `POST /api/v1/auth/signup` when no admin exists.
 
@@ -86,6 +89,48 @@ Alternatively, use **owner bootstrap**: `GET /api/v1/auth/bootstrap-status` → 
 | http://localhost:8080/actuator/health | Spring Actuator |
 
 Log in via `POST /api/v1/auth/login`, then call protected routes with `Authorization: Bearer <token>`. See [`API.md`](API.md).
+
+---
+
+## Domain behavior (integration notes)
+
+### Authentication
+
+- JWT verification supports **ES256/RS256** via Supabase JWKS (`{SUPABASE_URL}/auth/v1/.well-known/jwks.json`) and **HS256** via `SUPABASE_JWT_SECRET` when present.
+
+### Products & stock
+
+- `Product.stock` in API responses is computed from the `inventory_balances` view.
+- **`GET /products?warehouseId=`** — when `warehouseId` is set, `stock` is the quantity at that warehouse; otherwise stock at the product's **default warehouse**.
+- `product_stock_summary` view unchanged — still keyed to `default_warehouse_id`.
+
+### Stock movements
+
+| Type | Warehouses | Extra fields |
+| --- | --- | --- |
+| `IN` | `to_warehouse_id` required; `from_warehouse_id` null | **`provider`** (required) — external supplier |
+| `OUT` | `from_warehouse_id` required; `to_warehouse_id` null | **`recipient`** (required) — customer / third party |
+| `TRANSFER` | both warehouses, must differ | — |
+| `ADJUSTMENT` | exactly one of from/to | — |
+
+Migrations: `V14__stock_movement_provider.sql`, `V15__stock_movement_recipient.sql`.
+
+POS checkout creates `OUT` movements with `recipient = "POS customer"`. Refunds/voids create matching `IN` rows.
+
+### POS / transactions
+
+- Cart items may include **`warehouseId`**; checkout deducts stock at that warehouse per line.
+- `TransactionResponse` includes **`cashierName`** (profile name) alongside `cashierId`.
+- Transaction line items persist **`warehouseId`** in JSON for correct refund routing.
+
+### Audit
+
+- `AuditEntryResponse` includes **`userName`** and **`entityLabel`** (resolved product/warehouse/user names, movement product name, transaction total, etc.).
+
+### PostgreSQL / JPA
+
+- Native enum binding (`PostgreSQLEnumJdbcType`) for `app_role`, `stock_movement_type`, `transaction_status`.
+- Filter queries on movements, transactions, and audit use `COALESCE` for optional date bounds (avoids Postgres parameter type inference errors).
 
 ---
 
@@ -144,7 +189,7 @@ Alternatively, deploy via Docker using the included `Dockerfile`.
 ./gradlew clean bootJar # → build/libs/app.jar
 ```
 
-Test profile uses `src/test/resources/application-test.properties` and `schema-h2.sql`.
+Test profile uses `src/test/resources/application-test.properties` and `schema-h2.sql` (includes `provider` / `recipient` on `stock_movements`).
 
 API routes and rate limits are config-driven: `src/main/resources/core_specs/configuration/config_file.json`.
 
@@ -156,11 +201,19 @@ Logs are written to `logs/` via `CustomLogger` (configured in the same JSON file
 
 ```
 backend/
-├── API.md                 # REST contract (this doc's companion)
+├── API.md                 # REST contract
 ├── src/main/java/...      # com.prodwatch.api.*
 ├── src/main/resources/
-│   ├── db/migration/      # Flyway V1–V12
+│   ├── db/migration/      # Flyway V1–V15
 │   └── core_specs/        # config_file.json, general_data.json
 ├── scripts/               # seed-auth-users.*
 └── .env.example
 ```
+
+### Flyway migrations (recent)
+
+| Version | Purpose |
+| --- | --- |
+| V13 | Rename `transaction_status` enum label `void` → `void_` (Java keyword) |
+| V14 | Add `provider` on `stock_movements` (required for IN) |
+| V15 | Add `recipient` on `stock_movements` (required for OUT) |

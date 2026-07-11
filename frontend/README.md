@@ -1,20 +1,47 @@
 # ProdWatch — Inventory & POS Frontend
 
 ProdWatch is the **React frontend** for an inventory and point-of-sale system.
-It talks to the **Java Spring Boot API** on Render (`backend/`) for auth, data,
-and transactions. Product image uploads use **Supabase Storage** directly from
-the browser (optional env vars).
+It talks to the **Java Spring Boot API** (`backend/`) for auth, data, and transactions.
+Product image uploads use **Supabase Storage** directly from the browser (optional env vars).
 
 ---
 
 ## Features
 
+### Auth & shell
+
 - **Backend auth** — `/login` and owner `/signup` bootstrap via `POST /api/v1/auth/*`
 - **Two operating modes** — `inventory` and `selling`, switchable from the topbar
 - **Role-based sidebar** — menu items filter by the logged-in user's role
-- **Inventory** — Dashboard, Products (CRUD + filters), Warehouses, Stock Movements, Audit
-- **POS** — Cashier (search + cart), Cart, Transactions, Receipt dialog
-- **Admin** — User provisioning, password reset, Settings (static MVP placeholders)
+- **Global API errors** — toasts for 401/403/409/429/network; dev console logging via `error-capture.ts`
+
+### Inventory mode
+
+- **Dashboard** — KPIs, recent movements, low-stock highlights
+- **Products** — CRUD, search/category/stock-level filters, **warehouse filter** (stock shown at selected warehouse)
+- **Warehouses** — CRUD, per-warehouse product summary
+- **Stock movements** — record IN / OUT / TRANSFER / ADJUSTMENT
+  - **IN** — required **Provider** (external supplier); **To** = destination warehouse
+  - **OUT** — **From** = source warehouse; required **Recipient** (customer / third party)
+  - **ADJUSTMENT** — single warehouse + **Add stock** / **Remove stock** (not two warehouses)
+  - **TRANSFER** — from / to internal warehouses
+- **Audit** — immutable log with **user names** and **entity labels** (product name, warehouse, etc.)
+
+### Selling mode (POS)
+
+- **Cashier** — search/scan products with **warehouse filter** (stock at selected location)
+- **Multi-warehouse cart** — switch warehouse, add items; each line stores `warehouseId` and warehouse name
+- **Cart** — review lines before checkout
+- **Transactions** — history with **cashier names** (not UUIDs)
+- **Receipt** dialog after successful checkout
+
+### Admin
+
+- User provisioning, password reset, Settings (static MVP placeholders)
+
+### Other
+
+- **Product images** — URL list and optional file upload to Supabase `product-images` bucket
 - **Dark-only theme** with burgundy/vinotinto tokens in `src/styles.css`
 
 ---
@@ -34,7 +61,7 @@ the browser (optional env vars).
 
 ## Running locally
 
-**Ports:** frontend **8000**, backend **8080** (avoids conflict).
+**Ports:** frontend **8000**, backend **8080**.
 
 ```bash
 # Terminal 1 — backend (from backend/)
@@ -73,11 +100,11 @@ npm run lint      # ESLint
 ```text
 src/
   routes/              # File-based routes (_app.* layout, login, signup)
-  components/          # Layout, products, POS, users, ui
+  components/          # Layout, products, movements, POS, users, ui
   hooks/
     use-current-user.tsx   # Auth context (login/logout, GET /users/me)
-    queries.ts             # TanStack Query hooks
-    use-cart.tsx           # POS cart + checkout
+    queries.ts             # TanStack Query hooks (products accept warehouseId)
+    use-cart.tsx           # POS cart — per-warehouse lines + checkout
   services/            # HTTP clients → Java API (api.ts, *.service.ts)
   lib/
     auth-token.ts      # sessionStorage JWT
@@ -98,7 +125,25 @@ All data flows through `src/services/` using `apiGet` / `apiPost` / `apiPatch` /
 - **401** → clears token, redirects to `/login`
 - Errors surface via toasts (`toastApiError`) and dev console logs (`error-capture.ts`)
 
+### Notable API usage
+
+| Feature | Client | Notes |
+| --- | --- | --- |
+| Products list | `GET /products?warehouseId=` | When set, `stock` is quantity **at that warehouse** (default warehouse when omitted) |
+| Stock movement create | `POST /stock-movements` | Send `provider` for IN, `recipient` for OUT |
+| Checkout | `POST /transactions` | Each cart item includes `warehouseId` for stock deduction |
+| Audit | `GET /audit` | Responses include `userName`, `entityLabel` |
+| Transactions | `GET /transactions` | Responses include `cashierName` |
+
 Endpoint reference: [`backend/API.md`](../backend/API.md)
+
+---
+
+## Stock display behavior
+
+- **Products page (default)** — `stock` and status badges use each product's **default warehouse**
+- **Products page (warehouse filter)** — `stock` reflects the **selected warehouse**; list shows products stocked there or assigned as default
+- **Cashier** — catalog always scoped to the **selected warehouse**; cart can combine lines from multiple warehouses in one checkout
 
 ---
 

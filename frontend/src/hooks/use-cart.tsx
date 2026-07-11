@@ -11,7 +11,7 @@ import { toastApiError } from "@/lib/api-error";
 import { notify, validation } from "@/lib/notify";
 import { isApiError } from "@/services/api";
 import { transactionsService } from "@/services/transactions.service";
-import type { CartItem, Product, Transaction } from "@/types";
+import { cartLineKey, type CartItem, type Product, type Transaction } from "@/types";
 
 const TAX_RATE = 0.16;
 
@@ -19,12 +19,18 @@ type CheckoutResult =
   | { ok: true; transaction: Transaction }
   | { ok: false };
 
+export interface CartAddContext {
+  warehouseId: string;
+  warehouseName: string;
+  maxStock: number;
+}
+
 interface CartCtx {
   items: CartItem[];
   isCheckingOut: boolean;
-  add: (p: Product) => boolean;
-  setQty: (productId: string, qty: number, maxStock?: number) => void;
-  remove: (productId: string) => void;
+  add: (p: Product, context: CartAddContext) => boolean;
+  setQty: (productId: string, warehouseId: string, qty: number, maxStock?: number) => void;
+  remove: (productId: string, warehouseId: string) => void;
   clear: () => void;
   checkout: () => Promise<CheckoutResult>;
   subtotal: number;
@@ -44,44 +50,66 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const tax = subtotal * TAX_RATE;
   const total = subtotal + tax;
 
-  const add = useCallback((p: Product): boolean => {
-    if (p.stock <= 0) return false;
+  const add = useCallback((p: Product, context: CartAddContext): boolean => {
+    if (context.maxStock <= 0) return false;
 
     let allowed = true;
     setItems((prev) => {
-      const existing = prev.find((i) => i.productId === p.id);
+      const existing = prev.find(
+        (i) => i.productId === p.id && i.warehouseId === context.warehouseId,
+      );
       const nextQty = (existing?.qty ?? 0) + 1;
-      if (nextQty > p.stock) {
+      if (nextQty > context.maxStock) {
         allowed = false;
         return prev;
       }
       if (existing) {
         return prev.map((i) =>
-          i.productId === p.id ? { ...i, qty: i.qty + 1 } : i,
+          i.productId === p.id && i.warehouseId === context.warehouseId
+            ? { ...i, qty: i.qty + 1, maxStock: context.maxStock }
+            : i,
         );
       }
       return [
         ...prev,
-        { productId: p.id, name: p.name, sku: p.sku, qty: 1, unitPrice: p.price },
+        {
+          productId: p.id,
+          name: p.name,
+          sku: p.sku,
+          qty: 1,
+          unitPrice: p.price,
+          warehouseId: context.warehouseId,
+          warehouseName: context.warehouseName,
+          maxStock: context.maxStock,
+        },
       ];
     });
     return allowed;
   }, []);
 
-  const setQty = useCallback((productId: string, qty: number, maxStock?: number) => {
-    setItems((prev) => {
-      let nextQty = Math.max(0, qty);
-      if (maxStock !== undefined) {
-        nextQty = Math.min(nextQty, maxStock);
-      }
-      return prev
-        .map((i) => (i.productId === productId ? { ...i, qty: nextQty } : i))
-        .filter((i) => i.qty > 0);
-    });
-  }, []);
+  const setQty = useCallback(
+    (productId: string, warehouseId: string, qty: number, maxStock?: number) => {
+      setItems((prev) => {
+        let nextQty = Math.max(0, qty);
+        if (maxStock !== undefined) {
+          nextQty = Math.min(nextQty, maxStock);
+        }
+        return prev
+          .map((i) =>
+            i.productId === productId && i.warehouseId === warehouseId
+              ? { ...i, qty: nextQty, maxStock: maxStock ?? i.maxStock }
+              : i,
+          )
+          .filter((i) => i.qty > 0);
+      });
+    },
+    [],
+  );
 
-  const remove = useCallback((productId: string) => {
-    setItems((prev) => prev.filter((i) => i.productId !== productId));
+  const remove = useCallback((productId: string, warehouseId: string) => {
+    setItems((prev) =>
+      prev.filter((i) => !(i.productId === productId && i.warehouseId === warehouseId)),
+    );
   }, []);
 
   const clear = useCallback(() => setItems([]), []);
@@ -141,3 +169,5 @@ export function useCart() {
   if (!ctx) throw new Error("useCart must be used inside CartProvider");
   return ctx;
 }
+
+export { cartLineKey };

@@ -96,6 +96,14 @@ export interface CartItem {
   sku: string;
   qty: number;
   unitPrice: number;
+  warehouseId: string;
+  warehouseName?: string;
+  /** Present while building a cart in the cashier UI. */
+  maxStock?: number;
+}
+
+export function cartLineKey(productId: string, warehouseId: string) {
+  return `${productId}:${warehouseId}`;
 }
 
 export type TransactionStatus = "completed" | "refunded" | "void";
@@ -107,6 +115,7 @@ export interface Transaction {
   tax: number;
   total: number;
   cashierId: string;
+  cashierName?: string;
   status: TransactionStatus;
   timestamp: string;
 }
