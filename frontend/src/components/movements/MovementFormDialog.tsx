@@ -320,7 +320,7 @@ export function MovementFormDialog({
               </Select>
             </div>
           )}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 pt-6">
             <Label htmlFor="movement-note">Note (optional)</Label>
             <Textarea
               id="movement-note"

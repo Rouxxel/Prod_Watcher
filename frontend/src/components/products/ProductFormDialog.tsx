@@ -116,13 +116,13 @@ export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onS
           <DialogTitle>{initial ? "Edit product" : "Add product"}</DialogTitle>
         </DialogHeader>
         <form
-          className="space-y-3"
+          className="relative z-[1] space-y-3"
           onSubmit={(e) => {
             e.preventDefault();
             onSubmit(form);
           }}
         >
-          <div className="space-y-2">
+          <div className="space-y-2 pb-6">
             <Label>Photos</Label>
             <ProductImageCarousel
               images={form.images}
@@ -130,7 +130,19 @@ export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onS
               aspect="aspect-[4/3]"
               className="w-full"
             />
-            <div className="flex flex-wrap gap-2">
+            {uploadEnabled && (
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleFileUpload(file);
+                }}
+              />
+            )}
+            <div className="flex w-full flex-nowrap items-center gap-2">
               <Input
                 placeholder="Paste an image URL…"
                 value={imageUrl}
@@ -141,33 +153,22 @@ export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onS
                     addImage();
                   }
                 }}
-                className="min-w-[200px] flex-1"
+                className="min-w-0 flex-1"
               />
-              <Button type="button" variant="secondary" onClick={addImage}>
+              <Button type="button" variant="secondary" className="shrink-0" onClick={addImage}>
                 <Plus className="mr-1 h-4 w-4" /> Add URL
               </Button>
               {uploadEnabled && (
-                <>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) void handleFileUpload(file);
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={uploadingImage || pending}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="mr-1 h-4 w-4" />
-                    {uploadingImage ? "Uploading…" : "Upload file"}
-                  </Button>
-                </>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-w-0"
+                  disabled={uploadingImage || pending}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="mr-1 h-4 w-4" />
+                  {uploadingImage ? "Uploading…" : "Upload file"}
+                </Button>
               )}
             </div>
             {!uploadEnabled && (
@@ -227,8 +228,11 @@ export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onS
                 id="stock"
                 type="number"
                 value={form.stock}
-                onChange={(e) => set("stock", parseInt(e.target.value, 10) || 0)}
+                disabled
+                readOnly
+                className="bg-muted/50"
               />
+              <p className="text-xs text-muted-foreground">Only editable in Stock Movements</p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="low">Low at</Label>

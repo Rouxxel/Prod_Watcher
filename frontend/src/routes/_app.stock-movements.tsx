@@ -23,6 +23,7 @@ import {
 import { TableSkeleton } from "@/components/common/TableSkeleton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { MovementFormDialog } from "@/components/movements/MovementFormDialog";
+import { MovementDetailDialog } from "@/components/movements/MovementDetailDialog";
 import { useCreateMovement, useMovements, useProducts, useWarehouses } from "@/hooks/queries";
 import { dateTime } from "@/lib/format";
 import { toast } from "sonner";
@@ -46,6 +47,7 @@ function MovementsPage() {
   const createMut = useCreateMovement();
   const [filter, setFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selected, setSelected] = useState<StockMovement | null>(null);
 
   const data = (movements.data ?? []).filter((m) => filter === "all" || m.type === filter);
 
@@ -114,7 +116,11 @@ function MovementsPage() {
               </TableHeader>
               <TableBody>
                 {data.map((m) => (
-                  <TableRow key={m.id}>
+                  <TableRow
+                    key={m.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelected(m)}
+                  >
                     <TableCell className="font-medium">{productName(m)}</TableCell>
                     <TableCell><Badge variant="outline" className={typeColor[m.type]}>{m.type}</Badge></TableCell>
                     <TableCell className="text-right tabular-nums">{m.qty > 0 ? `+${m.qty}` : m.qty}</TableCell>
@@ -144,6 +150,14 @@ function MovementsPage() {
             },
           })
         }
+      />
+
+      <MovementDetailDialog
+        movement={selected}
+        open={selected !== null}
+        onOpenChange={(open) => !open && setSelected(null)}
+        products={products.data ?? []}
+        warehouses={warehouses.data ?? []}
       />
     </div>
   );

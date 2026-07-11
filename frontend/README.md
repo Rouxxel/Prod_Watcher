@@ -1,4 +1,4 @@
-# ProdWatch — Inventory & POS Frontend
+# ProdWatch - Inventory & POS Frontend
 
 ProdWatch is the **React frontend** for an inventory and point-of-sale system.
 It talks to the **Java Spring Boot API** (`backend/`) for auth, data, and transactions.
