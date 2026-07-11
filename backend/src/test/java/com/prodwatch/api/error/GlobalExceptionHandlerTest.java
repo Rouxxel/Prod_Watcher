@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
 class GlobalExceptionHandlerTest extends AbstractIntegrationTest {
 
@@ -93,5 +94,15 @@ class GlobalExceptionHandlerTest extends AbstractIntegrationTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(response.getBody().detail()).isEqualTo("An unexpected error occurred.");
+    }
+
+    @Test
+    void clientDisconnectDoesNotReturn500() {
+        ResponseEntity<ErrorResponse> response = handler.handleUnexpected(
+                new AsyncRequestNotUsableException(
+                        "ServletOutputStream failed to flush: java.io.IOException: "
+                                + "An established connection was aborted by the software in your host machine"));
+
+        assertThat(response).isNull();
     }
 }
