@@ -87,6 +87,10 @@ class SettingsServiceTest extends AbstractIntegrationTest {
         var response = settingsService.get();
 
         assertThat(response.taxRate()).isEqualByComparingTo("0.16");
+        assertThat(response.businessName()).isEmpty();
+        assertThat(response.contactEmail()).isEmpty();
+        assertThat(response.businessMode()).isEqualTo("auto");
+        assertThat(response.taxLabel()).isEqualTo("Tax");
         assertThat(workspaceSettingsRepository.findSingleton()).isPresent();
     }
 }
