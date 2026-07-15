@@ -1,6 +1,6 @@
 # ProdWatch Database Schema
 
-PostgreSQL schema on **Supabase** for ProdWatch inventory + POS. **Multi-tenant:** business data is scoped by `ecosystem_id` (see [`TASK_05_ecosystems.md`](TASK_05_ecosystems.md)).
+PostgreSQL schema on **Supabase** for ProdWatch inventory + POS. **Multi-tenant:** business data is scoped by `ecosystem_id`.
 
 Migrations live in `backend/src/main/resources/db/migration/` (Flyway V1–V26). Frontend domain types: `frontend/src/types/index.ts`.
 
@@ -303,7 +303,7 @@ POS sales (schema only).
 
 ### `workspace_settings`
 
-Per-ecosystem workspace configuration. See `docs/TASK_04_settings.md`.
+Per-ecosystem workspace configuration.
 
 | Column | Type | Constraints |
 | --- | --- | --- |

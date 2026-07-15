@@ -6,7 +6,7 @@ SQL migrations automate the storage bucket (`V11__storage_product_images.sql`, p
 
 **Not a single-shop model:** demo seed data (`seed-auth-users.ps1`) lives on the fixed **Acme Demo** ecosystem only. Production sign-ups create separate ecosystems automatically.
 
-See [`TASK_05_ecosystems.md`](TASK_05_ecosystems.md) and [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md).
+See [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md).
 
 ---
 
@@ -44,7 +44,7 @@ Example: `https://your-project.supabase.co/storage/v1/object/public/product-imag
 
 `V12__seed_data.sql` still uses external [picsum.photos](https://picsum.photos) URLs so demo data works without uploaded files. When ready:
 
-1. Upload images under the demo ecosystem prefix (see demo id in [`TASK_05_ecosystems.md`](TASK_05_ecosystems.md)).
+1. Upload images under the demo ecosystem prefix.
 2. Update `products.images` to Storage URLs (migration or admin script).
 
 ---

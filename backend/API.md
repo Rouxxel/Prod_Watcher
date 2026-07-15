@@ -825,5 +825,4 @@ Per-endpoint limits are defined in `src/main/resources/core_specs/configuration/
 - [`README.md`](README.md) — setup, env vars, Docker, Render
 - [`docs/DATABASE_SCHEMA.md`](../docs/DATABASE_SCHEMA.md) — Postgres schema reference
 - [`docs/SUPABASE_SETUP.md`](../docs/SUPABASE_SETUP.md) — Supabase project configuration
-- [`docs/TASK_05_ecosystems.md`](../docs/TASK_05_ecosystems.md) — multi-tenancy plan and migrations
 - [`frontend/README.md`](../frontend/README.md) — frontend deploy and CORS
