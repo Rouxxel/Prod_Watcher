@@ -1,11 +1,10 @@
 import { createFileRoute, Link, useNavigate, Navigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import logoUrl from "@/assets/prodwatch-logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { authService } from "@/services/auth.service";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -18,14 +17,6 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [signupAllowed, setSignupAllowed] = useState(false);
-
-  useEffect(() => {
-    authService
-      .bootstrapStatus()
-      .then((status) => setSignupAllowed(status.signupAllowed))
-      .catch(() => setSignupAllowed(false));
-  }, []);
 
   if (isLoading) {
     return (
@@ -112,18 +103,16 @@ function LoginPage() {
             </div>
           )}
           <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? "Signing in…" : "Log in"}
+            {submitting ? "Logging in…" : "Log in"}
+          </Button>
+          <Button type="button" variant="outline" className="w-full" asChild>
+            <Link to="/signup">Sign up</Link>
           </Button>
         </form>
 
-        {signupAllowed && (
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            First time here?{" "}
-            <Link to="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
-              Create owner account
-            </Link>
-          </p>
-        )}
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Staff accounts are created by your administrator. Ask your admin if you need access.
+        </p>
       </div>
     </div>
   );
