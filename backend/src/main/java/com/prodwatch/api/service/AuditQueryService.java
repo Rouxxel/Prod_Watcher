@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import com.prodwatch.api.dto.audit.AuditEntryResponse;
 import com.prodwatch.api.entity.AuditEntry;
+import com.prodwatch.api.entity.Profile;
 import com.prodwatch.api.error.ResourceNotFoundException;
 import com.prodwatch.api.repository.AuditEntryRepository;
 
@@ -44,10 +45,11 @@ public class AuditQueryService {
     }
 
     private AuditEntryResponse toResponse(AuditEntry entry, Map<String, String> labels) {
+        Profile user = entry.getUser();
         return new AuditEntryResponse(
                 entry.getId(),
-                entry.getUser().getId(),
-                entry.getUser().getName(),
+                user != null ? user.getId() : null,
+                user != null ? user.getName() : null,
                 entry.getAction(),
                 entry.getEntity(),
                 entry.getEntityId(),

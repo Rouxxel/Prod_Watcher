@@ -14,6 +14,7 @@ import com.prodwatch.api.entity.UserRole;
 import com.prodwatch.api.error.BusinessRuleException;
 import com.prodwatch.api.error.ResourceNotFoundException;
 import com.prodwatch.api.repository.ProfileRepository;
+import com.prodwatch.api.repository.TransactionRepository;
 import com.prodwatch.api.repository.UserRoleRepository;
 import com.prodwatch.api.security.CurrentUser;
 import com.prodwatch.api.security.RoleChecker;
@@ -26,16 +27,19 @@ public class UserService {
 
     private final ProfileRepository profileRepository;
     private final UserRoleRepository userRoleRepository;
+    private final TransactionRepository transactionRepository;
     private final SupabaseAuthService supabaseAuthService;
     private final AuditService auditService;
 
     public UserService(
             ProfileRepository profileRepository,
             UserRoleRepository userRoleRepository,
+            TransactionRepository transactionRepository,
             SupabaseAuthService supabaseAuthService,
             AuditService auditService) {
         this.profileRepository = profileRepository;
         this.userRoleRepository = userRoleRepository;
+        this.transactionRepository = transactionRepository;
         this.supabaseAuthService = supabaseAuthService;
         this.auditService = auditService;
     }
@@ -185,6 +189,33 @@ public class UserService {
         supabaseAuthService.enableUser(id);
         profileRepository.save(profile);
         return toResponse(profile);
+    }
+
+    @Transactional
+    public void delete(UUID id, CurrentUser admin) {
+        RoleChecker.requireAdmin(admin);
+        if (admin.getUserId().equals(id)) {
+            throw new BusinessRuleException("You cannot delete your own account");
+        }
+
+        Profile profile = loadProfile(id);
+        UserRole userRole = userRoleRepository
+                .findByUser_Id(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
+
+        if (userRole.getRole() == AppRole.admin) {
+            throw new BusinessRuleException("Cannot delete an admin account");
+        }
+
+        if (transactionRepository.existsByCashier_Id(id)) {
+            throw new BusinessRuleException(
+                    "Cannot delete user with POS transaction history. Deactivate the account instead.");
+        }
+
+        auditService.log(admin.getUserId(), "USER_DELETED", "user", id, profile.getEmail());
+        userRoleRepository.delete(userRole);
+        profileRepository.delete(profile);
+        supabaseAuthService.deleteUser(id);
     }
 
     private Profile loadProfile(UUID id) {

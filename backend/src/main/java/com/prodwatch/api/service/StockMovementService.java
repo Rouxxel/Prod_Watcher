@@ -177,6 +177,7 @@ public class StockMovementService {
     }
 
     private StockMovementResponse toResponse(StockMovement movement) {
+        Profile user = movement.getUser();
         return new StockMovementResponse(
                 movement.getId(),
                 movement.getType(),
@@ -187,8 +188,8 @@ public class StockMovementService {
                 movement.getToWarehouse() != null ? movement.getToWarehouse().getId() : null,
                 movement.getProvider(),
                 movement.getRecipient(),
-                movement.getUser().getId(),
-                movement.getUser().getName(),
+                user != null ? user.getId() : null,
+                user != null ? user.getName() : null,
                 movement.getCreatedAt(),
                 movement.getNote());
     }

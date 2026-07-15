@@ -108,6 +108,18 @@ public class SupabaseAuthService {
         putJson(adminClient, "/auth/v1/admin/users/{id}", userId.toString(), Map.of("ban_duration", "none"));
     }
 
+    public void deleteUser(UUID userId) {
+        try {
+            adminClient
+                    .delete()
+                    .uri("/auth/v1/admin/users/{id}", userId.toString())
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientResponseException ex) {
+            throw mapAuthError(ex);
+        }
+    }
+
     public AuthSession verifySignupToken(String token) {
         JsonNode body = postJson(anonClient, "/auth/v1/verify", Map.of("type", "signup", "token", token));
         return parseSession(body);

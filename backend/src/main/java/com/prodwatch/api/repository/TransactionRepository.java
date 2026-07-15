@@ -15,6 +15,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     List<Transaction> findByCashier_IdOrderByCreatedAtDesc(UUID cashierId);
 
+    boolean existsByCashier_Id(UUID cashierId);
+
     List<Transaction> findByStatusOrderByCreatedAtDesc(TransactionStatus status);
 
     List<Transaction> findByCreatedAtBetweenOrderByCreatedAtDesc(Instant from, Instant to);

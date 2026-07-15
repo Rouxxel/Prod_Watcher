@@ -19,6 +19,7 @@ import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -110,5 +111,12 @@ public class UsersController {
     @PostMapping("/{id}/reactivate")
     public UserResponse reactivate(@PathVariable UUID id, @AuthenticationPrincipal CurrentUser user) {
         return userService.reactivate(id, user);
+    }
+
+    @RateLimit("users_endpoint")
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable UUID id, @AuthenticationPrincipal CurrentUser user) {
+        userService.delete(id, user);
     }
 }

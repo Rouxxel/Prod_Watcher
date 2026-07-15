@@ -47,8 +47,8 @@ public class StockMovement {
     @JoinColumn(name = "to_warehouse_id")
     private Warehouse toWarehouse;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     private Profile user;
 
     @Column(name = "note")
