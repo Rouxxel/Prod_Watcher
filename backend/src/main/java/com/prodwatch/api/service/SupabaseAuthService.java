@@ -18,13 +18,17 @@ public class SupabaseAuthService {
 
     private final RestClient anonClient;
     private final RestClient adminClient;
+    private final String emailRedirectTo;
 
     public SupabaseAuthService(
             RestClient.Builder builder,
             @Value("${SUPABASE_URL}") String supabaseUrl,
             @Value("${SUPABASE_ANON_KEY}") String anonKey,
-            @Value("${SUPABASE_SERVICE_ROLE_KEY}") String serviceRoleKey) {
+            @Value("${SUPABASE_SERVICE_ROLE_KEY}") String serviceRoleKey,
+            @Value("${FRONTEND_URL:}") String frontendUrl) {
         String baseUrl = supabaseUrl.replaceAll("/$", "");
+        this.emailRedirectTo =
+                frontendUrl.isBlank() ? null : frontendUrl.replaceAll("/$", "") + "/confirm-email";
         this.anonClient = builder
                 .baseUrl(baseUrl)
                 .defaultHeader("apikey", anonKey)
@@ -38,10 +42,17 @@ public class SupabaseAuthService {
     }
 
     public AuthSession signUp(String email, String password, String name) {
-        JsonNode body = postJson(
-                anonClient,
-                "/auth/v1/signup",
-                Map.of("email", email, "password", password, "data", Map.of("name", name)));
+        Map<String, Object> payload;
+        if (emailRedirectTo != null && !emailRedirectTo.isBlank()) {
+            payload = Map.of(
+                    "email", email,
+                    "password", password,
+                    "data", Map.of("name", name),
+                    "options", Map.of("emailRedirectTo", emailRedirectTo.trim()));
+        } else {
+            payload = Map.of("email", email, "password", password, "data", Map.of("name", name));
+        }
+        JsonNode body = postJson(anonClient, "/auth/v1/signup", payload);
         return parseSession(body);
     }
 
