@@ -1,36 +1,71 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useSettings } from "@/hooks/use-settings";
+import type { BusinessModePreference } from "@/types";
 
-export type BusinessMode = "auto" | "single" | "multi";
+/** @deprecated Use `BusinessModePreference` from `@/types` — kept for existing imports. */
+export type BusinessMode = BusinessModePreference;
 
 interface Ctx {
-  /** User preference. */
+  /** User preference — server-synced from workspace settings when authenticated. */
   preference: BusinessMode;
   setPreference: (v: BusinessMode) => void;
   /** Resolved effective mode for the UI, factoring auto-detection. */
   isSingleLocation: boolean;
   /** Inform the provider of the current warehouse count for "auto". */
   setDetectedWarehouseCount: (n: number) => void;
+  /** True once workspace settings have been applied (or user is logged out). */
+  isSynced: boolean;
 }
 
 const Ctx = createContext<Ctx | null>(null);
-const KEY = "prodwatch:business-mode";
+const CACHE_KEY = "prodwatch:business-mode";
+
+function isBusinessMode(value: string | null): value is BusinessMode {
+  return value === "auto" || value === "single" || value === "multi";
+}
+
+function readCachedMode(): BusinessMode {
+  if (typeof window === "undefined") return "auto";
+  const stored = window.localStorage.getItem(CACHE_KEY);
+  return isBusinessMode(stored) ? stored : "auto";
+}
+
+function writeCachedMode(mode: BusinessMode) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(CACHE_KEY, mode);
+}
 
 export function BusinessModeProvider({ children }: { children: React.ReactNode }) {
-  const [preference, setPreferenceState] = useState<BusinessMode>("auto");
-  const [detected, setDetected] = useState<number>(1);
+  const { user } = useCurrentUser();
+  const { data: settings } = useSettings(!!user);
+  const [preference, setPreferenceState] = useState<BusinessMode>(readCachedMode);
+  const [detected, setDetected] = useState(1);
+  const [isSynced, setIsSynced] = useState(!user);
 
+  // Server is source of truth — sync on login and after settings refresh.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem(KEY) as BusinessMode | null;
-    if (stored === "auto" || stored === "single" || stored === "multi") {
-      setPreferenceState(stored);
+    if (!user) {
+      setIsSynced(true);
+      return;
     }
-  }, []);
+    if (!settings?.businessMode) return;
+    setPreferenceState(settings.businessMode);
+    writeCachedMode(settings.businessMode);
+    setIsSynced(true);
+  }, [user, settings?.businessMode, settings?.updatedAt]);
 
-  const setPreference = (v: BusinessMode) => {
+  const setPreference = useCallback((v: BusinessMode) => {
     setPreferenceState(v);
-    if (typeof window !== "undefined") window.localStorage.setItem(KEY, v);
-  };
+    writeCachedMode(v);
+  }, []);
 
   const isSingleLocation = useMemo(() => {
     if (preference === "single") return true;
@@ -40,7 +75,13 @@ export function BusinessModeProvider({ children }: { children: React.ReactNode }
 
   return (
     <Ctx.Provider
-      value={{ preference, setPreference, isSingleLocation, setDetectedWarehouseCount: setDetected }}
+      value={{
+        preference,
+        setPreference,
+        isSingleLocation,
+        setDetectedWarehouseCount: setDetected,
+        isSynced,
+      }}
     >
       {children}
     </Ctx.Provider>

@@ -21,7 +21,7 @@ import { useSettings, useUpdateSettings } from "@/hooks/use-settings";
 import { toastApiError } from "@/lib/api-error";
 import { dateTime } from "@/lib/format";
 import { isValidEmail, notify, validation } from "@/lib/notify";
-import type { BusinessModePreference, WorkspaceSettings, WorkspaceSettingsUpdate } from "@/types";
+import type { WorkspaceSettings, WorkspaceSettingsUpdate } from "@/types";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -34,7 +34,6 @@ interface SettingsForm {
   taxLabel: string;
   receiptFooter: string;
   receiptLogoUrl: string;
-  businessMode: BusinessModePreference;
 }
 
 function settingsToForm(settings: WorkspaceSettings): SettingsForm {
@@ -45,7 +44,6 @@ function settingsToForm(settings: WorkspaceSettings): SettingsForm {
     taxLabel: settings.taxLabel,
     receiptFooter: settings.receiptFooter ?? "",
     receiptLogoUrl: settings.receiptLogoUrl ?? "",
-    businessMode: settings.businessMode,
   };
 }
 
@@ -74,7 +72,7 @@ function isFormDirty(form: SettingsForm, settings: WorkspaceSettings): boolean {
 function SettingsPage() {
   const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
-  const { setPreference, isSingleLocation } = useBusinessMode();
+  const { preference, setPreference, isSingleLocation } = useBusinessMode();
   const warehouses = useWarehouses();
   const count = warehouses.data?.length ?? 0;
 
@@ -84,9 +82,8 @@ function SettingsPage() {
   useEffect(() => {
     if (!settings) return;
     setForm(settingsToForm(settings));
-    setPreference(settings.businessMode);
     setLogoPreviewError(false);
-  }, [settings, setPreference]);
+  }, [settings]);
 
   const dirty = useMemo(
     () => (form && settings ? isFormDirty(form, settings) : false),
@@ -94,13 +91,16 @@ function SettingsPage() {
   );
 
   const handleBusinessModeChange = (mode: BusinessMode) => {
-    setForm((prev) => (prev ? { ...prev, businessMode: mode } : prev));
+    const previous = preference;
     setPreference(mode);
     updateSettings.mutate(
       { businessMode: mode },
       {
         onSuccess: () => notify.success("Business mode updated"),
-        onError: (err) => toastApiError(err, "Could not update business mode"),
+        onError: (err) => {
+          setPreference(previous);
+          toastApiError(err, "Could not update business mode");
+        },
       },
     );
   };
@@ -181,7 +181,7 @@ function SettingsPage() {
             <div className="space-y-1.5">
               <Label>Operating mode</Label>
               <Select
-                value={form.businessMode}
+                value={preference}
                 onValueChange={(v) => handleBusinessModeChange(v as BusinessMode)}
                 disabled={updateSettings.isPending}
               >
