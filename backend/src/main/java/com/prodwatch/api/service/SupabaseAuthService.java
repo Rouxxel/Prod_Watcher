@@ -125,6 +125,30 @@ public class SupabaseAuthService {
         return parseSession(body);
     }
 
+    /** Checks Supabase Auth (auth.users) via the admin API. */
+    public boolean emailExistsInAuth(String email) {
+        try {
+            JsonNode body = adminClient
+                    .get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/auth/v1/admin/users")
+                            .queryParam("page", 1)
+                            .queryParam("per_page", 1)
+                            .queryParam("filter", "email=eq." + email)
+                            .build())
+                    .retrieve()
+                    .body(JsonNode.class);
+            if (body == null || !body.has("users")) {
+                return false;
+            }
+            JsonNode users = body.get("users");
+            return users != null && users.isArray() && !users.isEmpty();
+        } catch (RestClientResponseException ex) {
+            CustomLogger.debug("Supabase email lookup failed " + ex.getStatusCode());
+            return false;
+        }
+    }
+
     private JsonNode postJson(RestClient client, String uri, Object payload) {
         try {
             return client.post()
@@ -176,8 +200,26 @@ public class SupabaseAuthService {
     }
 
     private BusinessRuleException mapAuthError(RestClientResponseException ex) {
-        CustomLogger.debug("Supabase auth error " + ex.getStatusCode() + ": " + ex.getResponseBodyAsString());
+        String responseBody = ex.getResponseBodyAsString();
+        CustomLogger.debug("Supabase auth error " + ex.getStatusCode() + ": " + responseBody);
+        if (isDuplicateEmailError(ex.getStatusCode().value(), responseBody)) {
+            return new BusinessRuleException(SignupEmailService.EMAIL_TAKEN_MESSAGE);
+        }
         return new BusinessRuleException("Authentication request failed: " + ex.getStatusCode().value());
+    }
+
+    private static boolean isDuplicateEmailError(int status, String responseBody) {
+        if (status != 400 && status != 422) {
+            return false;
+        }
+        if (responseBody == null) {
+            return false;
+        }
+        String lower = responseBody.toLowerCase();
+        return lower.contains("already registered")
+                || lower.contains("already exists")
+                || lower.contains("user already")
+                || lower.contains("duplicate");
     }
 
     public record AuthSession(

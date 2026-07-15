@@ -77,7 +77,7 @@ public class UserService {
         Profile profile = ensureProfile(userId, dto.email(), dto.name(), dto.active());
         userRoleRepository.save(new UserRole(profile, dto.role()));
 
-        auditService.log(admin.getUserId(), "USER_PROVISIONED", "user", userId, dto.email());
+        auditService.log(admin.getUserId(), "USER_PROVISIONED", "user", userId, dto.email(), dto.name().trim());
         return toResponse(profile);
     }
 
@@ -105,7 +105,8 @@ public class UserService {
             }
             userRole.setRole(dto.role());
             userRoleRepository.save(userRole);
-            auditService.log(admin.getUserId(), "ROLE_CHANGED", "user", id, dto.role().name());
+            auditService.log(
+                    admin.getUserId(), "ROLE_CHANGED", "user", id, dto.role().name(), profile.getName());
         }
 
         profileRepository.save(profile);
@@ -126,7 +127,8 @@ public class UserService {
 
         userRole.setRole(AppRole.admin);
         userRoleRepository.save(userRole);
-        auditService.log(admin.getUserId(), "ROLE_PROMOTED_TO_ADMIN", "user", id, profile.getEmail());
+        auditService.log(
+                admin.getUserId(), "ROLE_PROMOTED_TO_ADMIN", "user", id, profile.getEmail(), profile.getName());
         return toResponse(profile);
     }
 
@@ -156,7 +158,12 @@ public class UserService {
         userRole.setRole(dto.role());
         userRoleRepository.save(userRole);
         auditService.log(
-                actor.getUserId(), "ROLE_STEPPED_DOWN_FROM_ADMIN", "user", actor.getUserId(), dto.role().name());
+                actor.getUserId(),
+                "ROLE_STEPPED_DOWN_FROM_ADMIN",
+                "user",
+                actor.getUserId(),
+                dto.role().name(),
+                profile.getName());
         return toResponse(profile);
     }
 
@@ -166,10 +173,10 @@ public class UserService {
         UserRole userRole = userRoleRepository
                 .findByUser_Id(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
+        Profile profile = loadProfile(id);
         assertCanResetPassword(admin.getUserId(), id, userRole.getRole());
-        loadProfile(id);
         supabaseAuthService.updatePassword(id, dto.newPassword());
-        auditService.log(admin.getUserId(), "PASSWORD_RESET_BY_ADMIN", "user", id, null);
+        auditService.log(admin.getUserId(), "PASSWORD_RESET_BY_ADMIN", "user", id, null, profile.getName());
     }
 
     @Transactional
@@ -217,7 +224,7 @@ public class UserService {
                     "Cannot delete user with POS transaction history. Deactivate the account instead.");
         }
 
-        auditService.log(admin.getUserId(), "USER_DELETED", "user", id, profile.getEmail());
+        auditService.log(admin.getUserId(), "USER_DELETED", "user", id, profile.getEmail(), profile.getName());
 
         // Supabase auth delete cascades to profiles + user_roles in Postgres.
         supabaseAuthService.deleteUser(id);
