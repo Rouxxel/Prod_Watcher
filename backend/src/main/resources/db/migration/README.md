@@ -35,7 +35,7 @@ V{version}__{snake_case_description}.sql
 
 ---
 
-## Migration catalog (V1–V17)
+## Migration catalog (V1–V18)
 
 | Version | File | Purpose |
 | --- | --- | --- |
@@ -56,6 +56,7 @@ V{version}__{snake_case_description}.sql
 | **V15** | `V15__stock_movement_recipient.sql` | `recipient` on OUT movements |
 | **V16** | `V16__user_delete_references.sql` | Nullable `user_id` on audit/movements; ON DELETE SET NULL |
 | **V17** | `V17__audit_entity_label.sql` | `entity_label` on audit; backfill user names |
+| **V18** | `V18__workspace_settings.sql` | Singleton workspace settings (tax, receipts, business mode) + RLS |
 
 ---
 
@@ -65,13 +66,13 @@ See [`docs/TASK_05_ecosystems.md`](../../../../docs/TASK_05_ecosystems.md).
 
 | Version | Purpose |
 | --- | --- |
-| **V18** | `ecosystems` table |
-| **V19** | Add nullable `ecosystem_id` to tenant tables |
-| **V20** | Backfill demo ecosystem for existing Alex/seed data |
-| **V21** | NOT NULL + FKs + per-ecosystem unique indexes (e.g. SKU) |
-| **V22** | RLS + view updates for ecosystem scope |
+| **V19** | `ecosystems` table |
+| **V20** | Add nullable `ecosystem_id` to tenant tables (incl. `workspace_settings`) |
+| **V21** | Backfill demo ecosystem for existing Alex/seed data |
+| **V22** | NOT NULL + FKs + per-ecosystem unique indexes (e.g. SKU) |
+| **V23** | RLS + view updates for ecosystem scope |
 
-Until V18–V22 ship, **public sign-up on a shared database exposes all tenants' data** to every admin.
+Until V19–V23 ship, **public sign-up on a shared database exposes all tenants' data** to every admin.
 
 ---
 
