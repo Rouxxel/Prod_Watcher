@@ -85,7 +85,7 @@ public class AuthController {
             throw new UnauthorizedException("Invalid credentials");
         }
         authBootstrapService.ensureAdminRoleFromSignup(session.userId());
-        UserResponse user = userService.get(session.userId());
+        UserResponse user = userService.getForAuthSession(session.userId());
         if (!user.active()) {
             throw new UnauthorizedException("Account is inactive");
         }
@@ -112,7 +112,7 @@ public class AuthController {
             throw new BusinessRuleException("Invalid confirmation token");
         }
         authBootstrapService.ensureAdminRoleFromSignup(session.userId());
-        UserResponse user = userService.get(session.userId());
+        UserResponse user = userService.getForAuthSession(session.userId());
         return new LoginResponse(
                 session.accessToken(),
                 session.refreshToken(),
