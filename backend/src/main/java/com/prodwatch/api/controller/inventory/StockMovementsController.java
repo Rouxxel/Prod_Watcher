@@ -48,14 +48,15 @@ public class StockMovementsController {
             @RequestParam(required = false) UUID warehouseId,
             @RequestParam(required = false) StockMovementType type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
-        return stockMovementService.list(productId, warehouseId, type, from, to);
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @AuthenticationPrincipal CurrentUser user) {
+        return stockMovementService.list(productId, warehouseId, type, from, to, user);
     }
 
     @RateLimit("movements_endpoint")
     @GetMapping("/{id}")
-    public StockMovementResponse get(@PathVariable UUID id) {
-        return stockMovementService.get(id);
+    public StockMovementResponse get(@PathVariable UUID id, @AuthenticationPrincipal CurrentUser user) {
+        return stockMovementService.get(id, user);
     }
 
     @RateLimit("movements_endpoint")

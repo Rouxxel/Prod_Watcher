@@ -47,14 +47,15 @@ public class ProductsController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean lowStock,
-            @RequestParam(required = false) UUID warehouseId) {
-        return productService.list(category, search, lowStock, warehouseId);
+            @RequestParam(required = false) UUID warehouseId,
+            @AuthenticationPrincipal CurrentUser user) {
+        return productService.list(category, search, lowStock, warehouseId, user);
     }
 
     @RateLimit("products_endpoint")
     @GetMapping("/{id}")
-    public ProductResponse get(@PathVariable UUID id) {
-        return productService.get(id);
+    public ProductResponse get(@PathVariable UUID id, @AuthenticationPrincipal CurrentUser user) {
+        return productService.get(id, user);
     }
 
     @RateLimit("products_endpoint")

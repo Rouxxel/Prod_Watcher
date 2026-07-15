@@ -42,14 +42,14 @@ public class WarehousesController {
 
     @RateLimit("warehouses_endpoint")
     @GetMapping
-    public List<WarehouseResponse> list() {
-        return warehouseService.list();
+    public List<WarehouseResponse> list(@AuthenticationPrincipal CurrentUser user) {
+        return warehouseService.list(user);
     }
 
     @RateLimit("warehouses_endpoint")
     @GetMapping("/{id}")
-    public WarehouseResponse get(@PathVariable UUID id) {
-        return warehouseService.get(id);
+    public WarehouseResponse get(@PathVariable UUID id, @AuthenticationPrincipal CurrentUser user) {
+        return warehouseService.get(id, user);
     }
 
     @RateLimit("warehouses_endpoint")

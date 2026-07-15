@@ -32,8 +32,8 @@ public class SettingsController {
 
     @RateLimit("settings_endpoint")
     @GetMapping
-    public SettingsResponse get() {
-        return settingsService.get();
+    public SettingsResponse get(@AuthenticationPrincipal CurrentUser user) {
+        return settingsService.get(user);
     }
 
     @RateLimit("settings_endpoint")
