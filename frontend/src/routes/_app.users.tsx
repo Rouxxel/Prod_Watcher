@@ -255,7 +255,7 @@ function UsersPage() {
         onSubmit={(input) =>
           provisionMut.mutate(input, {
             onSuccess: () => {
-              toast.success(`User ${input.email} provisioned`);
+              toast.success(`User ${input.name} provisioned`);
               setProvisionOpen(false);
             },
           })

@@ -22,6 +22,8 @@ import com.prodwatch.api.security.RoleChecker;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+
 @Service
 public class UserService {
 
@@ -30,18 +32,21 @@ public class UserService {
     private final TransactionRepository transactionRepository;
     private final SupabaseAuthService supabaseAuthService;
     private final AuditService auditService;
+    private final EntityManager entityManager;
 
     public UserService(
             ProfileRepository profileRepository,
             UserRoleRepository userRoleRepository,
             TransactionRepository transactionRepository,
             SupabaseAuthService supabaseAuthService,
-            AuditService auditService) {
+            AuditService auditService,
+            EntityManager entityManager) {
         this.profileRepository = profileRepository;
         this.userRoleRepository = userRoleRepository;
         this.transactionRepository = transactionRepository;
         this.supabaseAuthService = supabaseAuthService;
         this.auditService = auditService;
+        this.entityManager = entityManager;
     }
 
     public List<UserResponse> list() {
@@ -213,9 +218,18 @@ public class UserService {
         }
 
         auditService.log(admin.getUserId(), "USER_DELETED", "user", id, profile.getEmail());
-        userRoleRepository.delete(userRole);
-        profileRepository.delete(profile);
+
+        // Supabase auth delete cascades to profiles + user_roles in Postgres.
         supabaseAuthService.deleteUser(id);
+
+        entityManager.detach(profile);
+        entityManager.detach(userRole);
+
+        // H2 tests have no auth.users — remove app rows when cascade did not run.
+        if (profileRepository.existsById(id)) {
+            userRoleRepository.findByUser_Id(id).ifPresent(userRoleRepository::delete);
+            profileRepository.deleteById(id);
+        }
     }
 
     private Profile loadProfile(UUID id) {
