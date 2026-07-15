@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -108,9 +109,8 @@ export function ProvisionUserDialog({ open, onOpenChange, onSubmit, pending }: P
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="provision-password">Password</Label>
-            <Input
+            <PasswordInput
               id="provision-password"
-              type="password"
               autoComplete="new-password"
               value={form.password}
               onChange={(e) => set("password", e.target.value)}
@@ -119,9 +119,8 @@ export function ProvisionUserDialog({ open, onOpenChange, onSubmit, pending }: P
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="provision-confirm">Confirm password</Label>
-            <Input
+            <PasswordInput
               id="provision-confirm"
-              type="password"
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
