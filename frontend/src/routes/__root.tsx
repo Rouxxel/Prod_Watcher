@@ -14,6 +14,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { CurrentUserProvider } from "@/hooks/use-current-user";
 import { CartProvider } from "@/hooks/use-cart";
 import { BusinessModeProvider } from "@/hooks/use-business-mode";
+import { SettingsProvider } from "@/hooks/use-settings";
 import { AppModeProvider } from "@/hooks/use-app-mode";
 
 function NotFoundComponent() {
@@ -104,10 +105,12 @@ function RootComponent() {
       <CurrentUserProvider>
         <AppModeProvider>
           <BusinessModeProvider>
-            <CartProvider>
-              <Outlet />
-              <Toaster richColors position="top-right" />
-            </CartProvider>
+            <SettingsProvider>
+              <CartProvider>
+                <Outlet />
+                <Toaster richColors position="top-right" />
+              </CartProvider>
+            </SettingsProvider>
           </BusinessModeProvider>
         </AppModeProvider>
       </CurrentUserProvider>
