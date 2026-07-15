@@ -49,14 +49,14 @@ public class TransactionsController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @AuthenticationPrincipal CurrentUser user) {
-        RoleChecker.requireRole(user, AppRole.admin, AppRole.warehouse_manager, AppRole.cashier);
+        RoleChecker.requireRole(user, AppRole.admin, AppRole.warehouse_manager, AppRole.cashier, AppRole.inspector);
         return transactionService.list(cashierId, status, from, to);
     }
 
     @RateLimit("transactions_endpoint")
     @GetMapping("/{id}")
     public TransactionResponse get(@PathVariable UUID id, @AuthenticationPrincipal CurrentUser user) {
-        RoleChecker.requireRole(user, AppRole.admin, AppRole.warehouse_manager, AppRole.cashier);
+        RoleChecker.requireRole(user, AppRole.admin, AppRole.warehouse_manager, AppRole.cashier, AppRole.inspector);
         return transactionService.get(id);
     }
 

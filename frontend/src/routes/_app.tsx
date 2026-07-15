@@ -8,7 +8,8 @@ import { CRTOverlay } from "@/components/layout/CRTOverlay";
 import { useAppMode } from "@/hooks/use-app-mode";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { getAccessToken } from "@/lib/auth-token";
-import { allowedModesForRole, canUseAppMode, defaultAppModeForRole } from "@/lib/role-modes";
+import { allowedModesForRole, canUseAppMode, defaultAppModeForRole, defaultPathForRole } from "@/lib/role-modes";
+import { canUsePosCheckout, isAdminOnlyPath, isAdminRole } from "@/lib/role-access";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: () => {
@@ -66,7 +67,19 @@ function AppLayout() {
   const inSelling = SELLING_PATHS.some((p) => path.startsWith(p));
 
   if (!canUseAppMode(user.role, "selling") && (mode === "selling" || inSelling)) {
-    return <Navigate to="/" />;
+    return <Navigate to={defaultPathForRole(user.role)} />;
+  }
+
+  if (!canUseAppMode(user.role, "inventory") && (mode === "inventory" || inInventory)) {
+    return <Navigate to={defaultPathForRole(user.role)} />;
+  }
+
+  if (!isAdminRole(user.role) && isAdminOnlyPath(path)) {
+    return <Navigate to={defaultPathForRole(user.role)} />;
+  }
+
+  if (!canUsePosCheckout(user.role) && path.startsWith("/cart")) {
+    return <Navigate to="/cashier" />;
   }
 
   if (!isAdmin) {

@@ -78,7 +78,7 @@ Errors use a uniform shape:
 | Stock movements | CRU | CRU | CRU | R | R |
 | Audit | R | R | R | R | R |
 | Users | full | — | — | — | — |
-| Transactions | CRUD + refund/void | R | — | — | checkout + R |
+| Transactions | CRUD + refund/void | R | — | R | checkout + R |
 
 Legend: **C** create, **R** read, **U** update, **D** delete.
 

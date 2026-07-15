@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { useProducts, useWarehouses } from "@/hooks/queries";
 import { cartLineKey, useCart } from "@/hooks/use-cart";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { canUsePosCheckout } from "@/lib/role-access";
 import { currency, dateTime } from "@/lib/format";
 import { validation } from "@/lib/notify";
 import { toast } from "sonner";
@@ -33,6 +35,8 @@ export const Route = createFileRoute("/_app/cashier")({
 });
 
 function CashierPage() {
+  const { user } = useCurrentUser();
+  const readOnly = user ? !canUsePosCheckout(user.role) : false;
   const warehouses = useWarehouses();
   const [warehouseId, setWarehouseId] = useState<string>("");
   const products = useProducts(warehouseId || undefined);
@@ -83,17 +87,23 @@ function CashierPage() {
     <div>
       <PageHeader
         title="Cashier"
-        description="Scan or search products, build the cart, and complete the sale."
+        description={
+          readOnly
+            ? "Read-only product catalog and pricing at each warehouse."
+            : "Scan or search products, build the cart, and complete the sale."
+        }
         actions={
-          <Button asChild variant="outline">
-            <Link to="/cart">
-              <ShoppingCart className="mr-2 h-4 w-4" /> View cart ({cart.items.length})
-            </Link>
-          </Button>
+          !readOnly ? (
+            <Button asChild variant="outline">
+              <Link to="/cart">
+                <ShoppingCart className="mr-2 h-4 w-4" /> View cart ({cart.items.length})
+              </Link>
+            </Button>
+          ) : undefined
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+      <div className={`grid gap-4 ${readOnly ? "" : "lg:grid-cols-[1fr_360px]"}`}>
         <Card className="p-4">
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <div className="relative min-w-[220px] flex-1">
@@ -122,8 +132,15 @@ function CashierPage() {
 
           {selectedWarehouse && (
             <p className="mb-3 text-xs text-muted-foreground">
-              Showing stock available at <span className="font-medium text-foreground">{selectedWarehouse.name}</span>.
-              Switch warehouse to add items from another location.
+              {readOnly ? (
+                <>Viewing stock at <span className="font-medium text-foreground">{selectedWarehouse.name}</span>.</>
+              ) : (
+                <>
+                  Showing stock available at{" "}
+                  <span className="font-medium text-foreground">{selectedWarehouse.name}</span>. Switch warehouse to
+                  add items from another location.
+                </>
+              )}
             </p>
           )}
 
@@ -140,30 +157,49 @@ function CashierPage() {
             </div>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  disabled={p.stock <= 0}
-                  onClick={() => handleAdd(p)}
-                  className="group flex flex-col gap-1 rounded-md border border-border bg-card p-3 text-left transition hover:border-primary/50 hover:shadow-[var(--shadow-soft)] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <div className="text-sm font-medium">{p.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {p.sku} · {p.category}
+              {filtered.map((p) =>
+                readOnly ? (
+                  <div
+                    key={p.id}
+                    className="flex flex-col gap-1 rounded-md border border-border bg-card p-3 text-left"
+                  >
+                    <div className="text-sm font-medium">{p.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {p.sku} · {p.category}
+                    </div>
+                    <div className="mt-1 flex items-center justify-between">
+                      <span className="text-sm font-semibold tabular-nums">{currency(p.price)}</span>
+                      <Badge variant="outline" className="text-[10px]">
+                        {p.stock} in stock
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="mt-1 flex items-center justify-between">
-                    <span className="text-sm font-semibold tabular-nums">{currency(p.price)}</span>
-                    <Badge variant="outline" className="text-[10px]">
-                      {p.stock} in stock
-                    </Badge>
-                  </div>
-                </button>
-              ))}
+                ) : (
+                  <button
+                    key={p.id}
+                    type="button"
+                    disabled={p.stock <= 0}
+                    onClick={() => handleAdd(p)}
+                    className="group flex flex-col gap-1 rounded-md border border-border bg-card p-3 text-left transition hover:border-primary/50 hover:shadow-[var(--shadow-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <div className="text-sm font-medium">{p.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {p.sku} · {p.category}
+                    </div>
+                    <div className="mt-1 flex items-center justify-between">
+                      <span className="text-sm font-semibold tabular-nums">{currency(p.price)}</span>
+                      <Badge variant="outline" className="text-[10px]">
+                        {p.stock} in stock
+                      </Badge>
+                    </div>
+                  </button>
+                ),
+              )}
             </div>
           )}
         </Card>
 
+        {!readOnly && (
         <Card className="flex flex-col p-4">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Cart</h2>
           {cart.items.length === 0 ? (
@@ -254,6 +290,7 @@ function CashierPage() {
             {cart.isCheckingOut ? "Processing…" : "Checkout"}
           </Button>
         </Card>
+        )}
       </div>
 
       <Dialog open={receiptOpen} onOpenChange={setReceiptOpen}>

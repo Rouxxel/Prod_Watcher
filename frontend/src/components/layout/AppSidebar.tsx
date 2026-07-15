@@ -38,13 +38,13 @@ const inventoryItems: Item[] = [
   { title: "Products", url: "/products", icon: Package },
   { title: "Warehouses", url: "/warehouses", icon: Warehouse },
   { title: "Stock Movements", url: "/stock-movements", icon: ArrowLeftRight },
-  { title: "Inventory Audit", url: "/audit", icon: ClipboardCheck, roles: ["admin", "inspector", "warehouse_manager"] },
+  { title: "Inventory Audit", url: "/audit", icon: ClipboardCheck, roles: ["admin", "inspector", "warehouse_manager", "warehouse_worker"] },
 ];
 
 const sellingItems: Item[] = [
-  { title: "Cashier", url: "/cashier", icon: ScanBarcode, roles: ["admin", "cashier"] },
+  { title: "Cashier", url: "/cashier", icon: ScanBarcode, roles: ["admin", "cashier", "inspector"] },
   { title: "Cart", url: "/cart", icon: ShoppingCart, roles: ["admin", "cashier"] },
-  { title: "Transactions", url: "/transactions", icon: Receipt, roles: ["admin", "cashier", "warehouse_manager"] },
+  { title: "Transactions", url: "/transactions", icon: Receipt, roles: ["admin", "cashier", "warehouse_manager", "inspector"] },
 ];
 
 const adminItems: Item[] = [
