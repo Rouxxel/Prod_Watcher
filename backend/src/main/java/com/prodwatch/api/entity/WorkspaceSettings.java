@@ -56,7 +56,11 @@ public class WorkspaceSettings {
     public static WorkspaceSettings createDefault(BigDecimal taxRate) {
         WorkspaceSettings settings = new WorkspaceSettings();
         settings.id = SINGLETON_ID;
+        settings.businessName = "";
+        settings.contactEmail = "";
         settings.taxRate = taxRate;
+        settings.taxLabel = "Tax";
+        settings.businessMode = "auto";
         settings.updatedAt = Instant.now();
         return settings;
     }

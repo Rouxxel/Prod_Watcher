@@ -37,12 +37,12 @@ public class SettingsService {
         this.defaultTaxRate = defaultTaxRate;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public SettingsResponse get() {
         return toResponse(getOrBootstrap());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public BigDecimal getTaxRate() {
         return getOrBootstrap().getTaxRate();
     }
