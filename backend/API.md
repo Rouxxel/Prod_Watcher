@@ -589,6 +589,14 @@ Admin-only except `GET /users/me`.
 
 ---
 
+### DELETE `/api/v1/users/{id}`
+
+**Roles:** admin. Permanently removes a non-admin user (Supabase auth + profile + role). Cannot delete admins, yourself, or cashiers with POS transaction history.
+
+**Response 204**.
+
+---
+
 ## Transactions (POS)
 
 Tax rate defaults to **16%** (`POS_TAX_RATE=0.16`). Server validates line prices against the product catalog and recalculates tax/total.
