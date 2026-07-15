@@ -11,6 +11,7 @@ import { Boxes, ScanBarcode, LogOut } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useAppMode, type AppMode } from "@/hooks/use-app-mode";
 import { useNavigate } from "@tanstack/react-router";
+import { canSwitchAppMode } from "@/lib/role-modes";
 
 export function Topbar() {
   const { user, logout } = useCurrentUser();
@@ -37,29 +38,30 @@ export function Topbar() {
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <Select
-          value={mode ?? undefined}
-          onValueChange={(v) => setMode(v as AppMode)}
-        >
-          <SelectTrigger className="h-8 w-[160px] gap-1.5" aria-label="Switch mode">
-            <SelectValue placeholder="Select mode" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="inventory">
-              <span className="flex items-center gap-2">
-                <Boxes className="h-3.5 w-3.5" />
-                Inventory mode
-              </span>
-            </SelectItem>
-            <SelectItem value="selling">
-              <span className="flex items-center gap-2">
-                <ScanBarcode className="h-3.5 w-3.5" />
-                Selling mode
-              </span>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-
+        {canSwitchAppMode(user.role) && (
+          <Select
+            value={mode ?? undefined}
+            onValueChange={(v) => setMode(v as AppMode)}
+          >
+            <SelectTrigger className="h-8 w-[160px] gap-1.5" aria-label="Switch mode">
+              <SelectValue placeholder="Select mode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="inventory">
+                <span className="flex items-center gap-2">
+                  <Boxes className="h-3.5 w-3.5" />
+                  Inventory mode
+                </span>
+              </SelectItem>
+              <SelectItem value="selling">
+                <span className="flex items-center gap-2">
+                  <ScanBarcode className="h-3.5 w-3.5" />
+                  Selling mode
+                </span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        )}
 
         <Button
           variant="outline"
