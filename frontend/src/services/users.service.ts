@@ -36,6 +36,11 @@ export const usersService = {
     return mapUser(row);
   },
 
+  async stepDownAdmin(role: Role): Promise<User> {
+    const row = await apiPost<ApiUserResponse>("/users/me/step-down-admin", { role });
+    return mapUser(row);
+  },
+
   async resetPassword(id: string, newPassword: string): Promise<void> {
     await apiPost(`/users/${id}/reset-password`, { newPassword });
   },

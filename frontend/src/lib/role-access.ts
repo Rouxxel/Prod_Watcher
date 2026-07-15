@@ -37,6 +37,19 @@ export function canAdminResetPassword(
   return !isAdminRole(target.role) || target.id === actorId;
 }
 
+export function countActiveAdmins(users: { role: Role; active: boolean }[]): number {
+  return users.filter((u) => isAdminRole(u.role) && u.active).length;
+}
+
+/** Self-service only: requires 2+ active admins so one always remains. */
+export function canAdminStepDown(
+  currentUser: { id: string; role: Role; active: boolean } | null,
+  users: { role: Role; active: boolean }[],
+): boolean {
+  if (!currentUser || !isAdminRole(currentUser.role) || !currentUser.active) return false;
+  return countActiveAdmins(users) >= 2;
+}
+
 export const ADMIN_ONLY_PATHS = ["/users", "/settings"] as const;
 
 export function isAdminOnlyPath(path: string): boolean {

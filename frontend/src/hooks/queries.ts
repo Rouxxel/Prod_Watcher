@@ -7,6 +7,7 @@ import { usersService } from "@/services/users.service";
 import { warehousesService } from "@/services/warehouses.service";
 import type {
   ProductInput,
+  Role,
   StockMovementInput,
   UserProvisionInput,
   UserUpdateInput,
@@ -120,6 +121,14 @@ export const usePromoteAdmin = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => usersService.promoteAdmin(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+};
+
+export const useStepDownAdmin = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (role: Role) => usersService.stepDownAdmin(role),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });
 };
