@@ -46,6 +46,10 @@ public class AuditQueryService {
 
     private AuditEntryResponse toResponse(AuditEntry entry, Map<String, String> labels) {
         Profile user = entry.getUser();
+        String entityLabel = entry.getEntityLabel();
+        if (entityLabel == null || entityLabel.isBlank()) {
+            entityLabel = entityLabelResolver.resolveLabel(entry, labels);
+        }
         return new AuditEntryResponse(
                 entry.getId(),
                 user != null ? user.getId() : null,
@@ -53,7 +57,7 @@ public class AuditQueryService {
                 entry.getAction(),
                 entry.getEntity(),
                 entry.getEntityId(),
-                entityLabelResolver.resolveLabel(entry, labels),
+                entityLabel,
                 entry.getCreatedAt(),
                 entry.getDetails());
     }

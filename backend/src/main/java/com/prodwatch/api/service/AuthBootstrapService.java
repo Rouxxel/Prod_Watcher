@@ -23,16 +23,13 @@ public class AuthBootstrapService {
         this.profileRepository = profileRepository;
     }
 
-    /** Owner sign-up is allowed only while no admin exists in the workspace. */
+    /** Public sign-up is always available; each confirmed sign-up receives the admin role. */
     public boolean isSignupAllowed() {
-        return !userRoleRepository.existsByRole(AppRole.admin);
+        return true;
     }
 
     @Transactional
-    public void assignAdminIfFirstUser(UUID userId) {
-        if (!isSignupAllowed()) {
-            throw new BusinessRuleException("An admin already exists");
-        }
+    public void assignAdminFromSignup(UUID userId) {
         Profile profile = profileRepository
                 .findById(userId)
                 .orElseThrow(() -> new BusinessRuleException("Profile not found for user"));
@@ -45,5 +42,14 @@ public class AuthBootstrapService {
                             userRoleRepository.save(existing);
                         },
                         () -> userRoleRepository.save(new UserRole(profile, AppRole.admin)));
+    }
+
+    /** Public sign-up users receive admin; idempotent if role already exists. */
+    @Transactional
+    public void ensureAdminRoleFromSignup(UUID userId) {
+        if (userRoleRepository.findByUser_Id(userId).isPresent()) {
+            return;
+        }
+        assignAdminFromSignup(userId);
     }
 }

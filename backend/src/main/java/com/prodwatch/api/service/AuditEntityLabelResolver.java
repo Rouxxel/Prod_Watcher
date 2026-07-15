@@ -62,8 +62,12 @@ public class AuditEntityLabelResolver {
         if (label != null && !label.isBlank()) {
             return label;
         }
-        if (entry.getDetails() != null && !entry.getDetails().isBlank()) {
-            return entry.getDetails();
+        if (!"user".equals(entry.getEntity())) {
+            if (entry.getDetails() != null && !entry.getDetails().isBlank()) {
+                return entry.getDetails();
+            }
+        } else {
+            return "Deleted user";
         }
         return shortId(entry.getEntityId());
     }

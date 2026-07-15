@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS audit_entries (
     entity      VARCHAR(255) NOT NULL,
     entity_id   UUID         NOT NULL,
     details     VARCHAR(255),
+    entity_label VARCHAR(255),
     created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
