@@ -25,6 +25,8 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { MovementFormDialog } from "@/components/movements/MovementFormDialog";
 import { MovementDetailDialog } from "@/components/movements/MovementDetailDialog";
 import { useCreateMovement, useMovements, useProducts, useWarehouses } from "@/hooks/queries";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { canMutateInventory } from "@/lib/role-access";
 import { dateTime } from "@/lib/format";
 import { toast } from "sonner";
 import type { StockMovement } from "@/types";
@@ -41,6 +43,8 @@ const typeColor: Record<string, string> = {
 };
 
 function MovementsPage() {
+  const { user } = useCurrentUser();
+  const readOnly = user ? !canMutateInventory(user.role) : false;
   const movements = useMovements();
   const products = useProducts();
   const warehouses = useWarehouses();
@@ -65,11 +69,17 @@ function MovementsPage() {
     <div>
       <PageHeader
         title="Stock Movements"
-        description="Every IN, OUT, transfer, and adjustment across the network."
+        description={
+          readOnly
+            ? "Read-only history of IN, OUT, transfer, and adjustment activity."
+            : "Every IN, OUT, transfer, and adjustment across the network."
+        }
         actions={
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Record movement
-          </Button>
+          !readOnly ? (
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Record movement
+            </Button>
+          ) : undefined
         }
       />
       <Card className="p-4">
@@ -95,9 +105,11 @@ function MovementsPage() {
             title="No movements"
             description="No records match this filter."
             action={
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Record movement
-              </Button>
+              !readOnly ? (
+                <Button onClick={() => setDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Record movement
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -136,21 +148,23 @@ function MovementsPage() {
         )}
       </Card>
 
-      <MovementFormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        products={products.data ?? []}
-        warehouses={warehouses.data ?? []}
-        pending={createMut.isPending}
-        onSubmit={(input) =>
-          createMut.mutate(input, {
-            onSuccess: () => {
-              toast.success("Movement recorded");
-              setDialogOpen(false);
-            },
-          })
-        }
-      />
+      {!readOnly && (
+        <MovementFormDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          products={products.data ?? []}
+          warehouses={warehouses.data ?? []}
+          pending={createMut.isPending}
+          onSubmit={(input) =>
+            createMut.mutate(input, {
+              onSuccess: () => {
+                toast.success("Movement recorded");
+                setDialogOpen(false);
+              },
+            })
+          }
+        />
+      )}
 
       <MovementDetailDialog
         movement={selected}

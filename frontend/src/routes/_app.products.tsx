@@ -33,6 +33,8 @@ import {
   useUpdateProduct,
   useDeleteProduct,
 } from "@/hooks/queries";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { canMutateInventory } from "@/lib/role-access";
 import { currency } from "@/lib/format";
 import type { Product, ProductInput } from "@/types";
 import { toast } from "sonner";
@@ -52,6 +54,8 @@ export const Route = createFileRoute("/_app/products")({
 });
 
 function ProductsPage() {
+  const { user } = useCurrentUser();
+  const readOnly = user ? !canMutateInventory(user.role) : false;
   const warehouses = useWarehouses();
   const [warehouseFilter, setWarehouseFilter] = useState("all");
   const stockWarehouseId = warehouseFilter === "all" ? undefined : warehouseFilter;
@@ -132,11 +136,17 @@ function ProductsPage() {
     <div>
       <PageHeader
         title="Products"
-        description="Manage your catalog, pricing, and stock levels."
+        description={
+          readOnly
+            ? "Read-only catalog view — pricing and stock levels across locations."
+            : "Manage your catalog, pricing, and stock levels."
+        }
         actions={
-          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" /> Add product
-          </Button>
+          !readOnly ? (
+            <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+              <Plus className="mr-2 h-4 w-4" /> Add product
+            </Button>
+          ) : undefined
         }
       />
 
@@ -190,9 +200,11 @@ function ProductsPage() {
             title="No products found"
             description="Try adjusting filters or add your first product."
             action={
-              <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-                <Plus className="mr-2 h-4 w-4" /> Add product
-              </Button>
+              !readOnly ? (
+                <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+                  <Plus className="mr-2 h-4 w-4" /> Add product
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -208,7 +220,7 @@ function ProductsPage() {
                   <TableHead className="text-right">{stockColumnLabel}</TableHead>
                   <TableHead>Status</TableHead>
                   {!isSingleLocation && <TableHead>Warehouse</TableHead>}
-                  <TableHead className="w-[100px]" />
+                  {!readOnly && <TableHead className="w-[100px]" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -232,16 +244,18 @@ function ProductsPage() {
                     {!isSingleLocation && (
                       <TableCell className="text-muted-foreground">{warehouseName(p.warehouseId)}</TableCell>
                     )}
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => { setEditing(p); setDialogOpen(true); }}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => setToDelete(p)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    {!readOnly && (
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          <Button size="icon" variant="ghost" onClick={() => { setEditing(p); setDialogOpen(true); }}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" onClick={() => setToDelete(p)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -250,41 +264,45 @@ function ProductsPage() {
         )}
       </Card>
 
-      <ProductFormDialog
-        open={dialogOpen}
-        onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditing(null); }}
-        initial={editing}
-        warehouses={warehouses.data ?? []}
-        onSubmit={handleSubmit}
-        pending={createMut.isPending || updateMut.isPending}
-      />
+      {!readOnly && (
+        <>
+          <ProductFormDialog
+            open={dialogOpen}
+            onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditing(null); }}
+            initial={editing}
+            warehouses={warehouses.data ?? []}
+            onSubmit={handleSubmit}
+            pending={createMut.isPending || updateMut.isPending}
+          />
 
-      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this product?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {toDelete?.name} ({toDelete?.sku}) will be permanently removed from the catalog.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (!toDelete) return;
-                deleteMut.mutate(toDelete.id, {
-                  onSuccess: () => {
-                    toast.success("Product deleted");
-                    setToDelete(null);
-                  },
-                });
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this product?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {toDelete?.name} ({toDelete?.sku}) will be permanently removed from the catalog.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    if (!toDelete) return;
+                    deleteMut.mutate(toDelete.id, {
+                      onSuccess: () => {
+                        toast.success("Product deleted");
+                        setToDelete(null);
+                      },
+                    });
+                  }}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </div>
   );
 }

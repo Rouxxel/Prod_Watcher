@@ -24,6 +24,11 @@ export function canViewCashierCatalog(role: Role): boolean {
   return canUsePosCheckout(role) || role === "inspector";
 }
 
+/** Create/update/delete products, warehouses, and stock movements. */
+export function canMutateInventory(role: Role): boolean {
+  return role !== "inspector";
+}
+
 export const ADMIN_ONLY_PATHS = ["/users", "/settings"] as const;
 
 export function isAdminOnlyPath(path: string): boolean {

@@ -15,6 +15,8 @@ import {
   useWarehouses,
 } from "@/hooks/queries";
 import { useBusinessMode } from "@/hooks/use-business-mode";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { canMutateInventory } from "@/lib/role-access";
 import { currency } from "@/lib/format";
 import { toast } from "sonner";
 import type { Warehouse, WarehouseInput } from "@/types";
@@ -34,6 +36,8 @@ export const Route = createFileRoute("/_app/warehouses")({
 });
 
 function WarehousesPage() {
+  const { user } = useCurrentUser();
+  const readOnly = user ? !canMutateInventory(user.role) : false;
   const warehouses = useWarehouses();
   const products = useProducts();
   const createMut = useCreateWarehouse();
@@ -86,14 +90,20 @@ function WarehousesPage() {
       <PageHeader
         title={isSingleLocation ? "Location" : "Warehouses"}
         description={
-          isSingleLocation
-            ? "You're running in single-location mode — perfect for a small shop or studio."
-            : "Stock distribution across your locations."
+          readOnly
+            ? isSingleLocation
+              ? "Read-only view of your shop location and stock distribution."
+              : "Read-only view of stock distribution across your locations."
+            : isSingleLocation
+              ? "You're running in single-location mode — perfect for a small shop or studio."
+              : "Stock distribution across your locations."
         }
         actions={
-          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" /> Add warehouse
-          </Button>
+          !readOnly ? (
+            <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+              <Plus className="mr-2 h-4 w-4" /> Add warehouse
+            </Button>
+          ) : undefined
         }
       />
       {isSingleLocation && (
@@ -122,9 +132,11 @@ function WarehousesPage() {
           title="No warehouses"
           description="Add your first location to start tracking inventory."
           action={
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Add warehouse
-            </Button>
+            !readOnly ? (
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Add warehouse
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -151,12 +163,16 @@ function WarehousesPage() {
                           <AlertTriangle className="h-3 w-3" /> {s.low} low
                         </div>
                       )}
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditing(w); setDialogOpen(true); }}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setToDelete(w)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {!readOnly && (
+                        <>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditing(w); setDialogOpen(true); }}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setToDelete(w)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="mt-5 grid grid-cols-3 gap-2 text-center">
@@ -191,40 +207,44 @@ function WarehousesPage() {
         </div>
       )}
 
-      <WarehouseFormDialog
-        open={dialogOpen}
-        onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditing(null); }}
-        initial={editing}
-        onSubmit={handleSubmit}
-        pending={createMut.isPending || updateMut.isPending}
-      />
+      {!readOnly && (
+        <>
+          <WarehouseFormDialog
+            open={dialogOpen}
+            onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditing(null); }}
+            initial={editing}
+            onSubmit={handleSubmit}
+            pending={createMut.isPending || updateMut.isPending}
+          />
 
-      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {toDelete?.name}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Deletion is blocked if this warehouse has stock, movements, or is a product default location.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (!toDelete) return;
-                deleteMut.mutate(toDelete.id, {
-                  onSuccess: () => {
-                    toast.success("Warehouse deleted");
-                    setToDelete(null);
-                  },
-                });
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {toDelete?.name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Deletion is blocked if this warehouse has stock, movements, or is a product default location.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    if (!toDelete) return;
+                    deleteMut.mutate(toDelete.id, {
+                      onSuccess: () => {
+                        toast.success("Warehouse deleted");
+                        setToDelete(null);
+                      },
+                    });
+                  }}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </div>
   );
 }
