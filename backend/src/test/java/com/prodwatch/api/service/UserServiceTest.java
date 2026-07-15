@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import java.util.UUID;
 
 import com.prodwatch.api.dto.user.UserProvisionRequest;
+import com.prodwatch.api.dto.user.UserResetPasswordRequest;
 import com.prodwatch.api.dto.user.UserUpdateRequest;
 import com.prodwatch.api.entity.AppRole;
 import com.prodwatch.api.entity.Profile;
@@ -111,5 +112,23 @@ class UserServiceTest extends AbstractIntegrationTest {
         assertThatThrownBy(() -> userService.deactivate(TestFixtures.ADMIN_ID, admin))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("last admin");
+    }
+
+    @Test
+    void adminCanResetOwnPassword() {
+        userService.resetPassword(
+                TestFixtures.ADMIN_ID, new UserResetPasswordRequest("NewPassword123!"), admin);
+    }
+
+    @Test
+    void adminCannotResetOtherAdminPassword() {
+        UUID otherAdminId = UUID.fromString("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+        profileRepository.save(Profile.create(otherAdminId, "other-admin@test.local", "Other Admin", true));
+        userRoleRepository.save(new UserRole(profileRepository.getReferenceById(otherAdminId), AppRole.admin));
+
+        assertThatThrownBy(() -> userService.resetPassword(
+                        otherAdminId, new UserResetPasswordRequest("NewPassword123!"), admin))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("another admin");
     }
 }

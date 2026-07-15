@@ -29,6 +29,14 @@ export function canMutateInventory(role: Role): boolean {
   return role !== "inspector";
 }
 
+/** Admins may reset their own password or any non-admin user — not other admins. */
+export function canAdminResetPassword(
+  actorId: string,
+  target: { id: string; role: Role },
+): boolean {
+  return !isAdminRole(target.role) || target.id === actorId;
+}
+
 export const ADMIN_ONLY_PATHS = ["/users", "/settings"] as const;
 
 export function isAdminOnlyPath(path: string): boolean {

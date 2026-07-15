@@ -45,6 +45,8 @@ import {
   useUpdateUser,
   useUsers,
 } from "@/hooks/queries";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { canAdminResetPassword } from "@/lib/role-access";
 import { roleLabel } from "@/lib/format";
 import { toast } from "sonner";
 import type { Role, User } from "@/types";
@@ -61,6 +63,7 @@ const ASSIGNABLE_ROLES: Role[] = [
 ];
 
 function UsersPage() {
+  const { user: currentUser } = useCurrentUser();
   const users = useUsers();
   const provisionMut = useProvisionUser();
   const updateMut = useUpdateUser();
@@ -185,15 +188,17 @@ function UsersPage() {
                               Grant admin
                             </Button>
                           )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={busy}
-                            onClick={() => setResetUser(u)}
-                          >
-                            <KeyRound className="mr-1 h-3.5 w-3.5" />
-                            Reset password
-                          </Button>
+                          {currentUser && canAdminResetPassword(currentUser.id, u) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={busy}
+                              onClick={() => setResetUser(u)}
+                            >
+                              <KeyRound className="mr-1 h-3.5 w-3.5" />
+                              Reset password
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

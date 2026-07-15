@@ -123,6 +123,10 @@ public class UserService {
     @Transactional
     public void resetPassword(UUID id, UserResetPasswordRequest dto, CurrentUser admin) {
         RoleChecker.requireAdmin(admin);
+        UserRole userRole = userRoleRepository
+                .findByUser_Id(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
+        assertCanResetPassword(admin.getUserId(), id, userRole.getRole());
         loadProfile(id);
         supabaseAuthService.updatePassword(id, dto.newPassword());
         auditService.log(admin.getUserId(), "PASSWORD_RESET_BY_ADMIN", "user", id, null);
@@ -173,6 +177,12 @@ public class UserService {
     private void assertNotLastAdmin(UUID userId, AppRole role) {
         if (role == AppRole.admin && userRoleRepository.countByRole(AppRole.admin) <= 1) {
             throw new BusinessRuleException("Cannot deactivate the last admin");
+        }
+    }
+
+    private void assertCanResetPassword(UUID actorId, UUID targetId, AppRole targetRole) {
+        if (targetRole == AppRole.admin && !actorId.equals(targetId)) {
+            throw new BusinessRuleException("Cannot reset password for another admin");
         }
     }
 }
