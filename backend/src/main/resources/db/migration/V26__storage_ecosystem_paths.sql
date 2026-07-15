@@ -1,32 +1,10 @@
--- Supabase Storage: product-images bucket (public read, inventory-role write).
--- Public URL pattern: {SUPABASE_URL}/storage/v1/object/public/product-images/{path}
--- Path prefix enforced per ecosystem in V26__storage_ecosystem_paths.sql.
--- Seed products still use external picsum URLs until images are uploaded to this bucket.
-
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-    'product-images',
-    'product-images',
-    true,
-    5242880,
-    ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-)
-ON CONFLICT (id) DO UPDATE
-SET
-    public = EXCLUDED.public,
-    file_size_limit = EXCLUDED.file_size_limit,
-    allowed_mime_types = EXCLUDED.allowed_mime_types;
+-- Product image storage: paths must be scoped by ecosystem.
+-- Layout: {ecosystem_id}/{product_id|draft-*}/{filename}
+-- Public read unchanged (catalog URLs). Writes restricted to caller's ecosystem prefix.
 
 -- ---------------------------------------------------------------------------
--- storage.objects RLS (bucket policies)
+-- storage.objects RLS — replace V11 inventory policies
 -- ---------------------------------------------------------------------------
-
-DROP POLICY IF EXISTS product_images_public_read ON storage.objects;
-CREATE POLICY product_images_public_read
-    ON storage.objects
-    FOR SELECT
-    TO public
-    USING (bucket_id = 'product-images');
 
 DROP POLICY IF EXISTS product_images_inventory_insert ON storage.objects;
 CREATE POLICY product_images_inventory_insert
@@ -36,6 +14,8 @@ CREATE POLICY product_images_inventory_insert
     WITH CHECK (
         bucket_id = 'product-images'
         AND public.is_active_user(auth.uid())
+        AND public.current_user_ecosystem_id() IS NOT NULL
+        AND split_part(name, '/', 1) = public.current_user_ecosystem_id()::text
         AND (
             public.has_role(auth.uid(), 'admin')
             OR public.has_role(auth.uid(), 'warehouse_manager')
@@ -51,6 +31,8 @@ CREATE POLICY product_images_inventory_update
     USING (
         bucket_id = 'product-images'
         AND public.is_active_user(auth.uid())
+        AND public.current_user_ecosystem_id() IS NOT NULL
+        AND split_part(name, '/', 1) = public.current_user_ecosystem_id()::text
         AND (
             public.has_role(auth.uid(), 'admin')
             OR public.has_role(auth.uid(), 'warehouse_manager')
@@ -59,6 +41,8 @@ CREATE POLICY product_images_inventory_update
     )
     WITH CHECK (
         bucket_id = 'product-images'
+        AND public.current_user_ecosystem_id() IS NOT NULL
+        AND split_part(name, '/', 1) = public.current_user_ecosystem_id()::text
         AND (
             public.has_role(auth.uid(), 'admin')
             OR public.has_role(auth.uid(), 'warehouse_manager')
@@ -74,9 +58,13 @@ CREATE POLICY product_images_inventory_delete
     USING (
         bucket_id = 'product-images'
         AND public.is_active_user(auth.uid())
+        AND public.current_user_ecosystem_id() IS NOT NULL
+        AND split_part(name, '/', 1) = public.current_user_ecosystem_id()::text
         AND (
             public.has_role(auth.uid(), 'admin')
             OR public.has_role(auth.uid(), 'warehouse_manager')
             OR public.has_role(auth.uid(), 'warehouse_worker')
         )
     );
+
+-- product_images_public_read (V11) unchanged — public catalog URLs

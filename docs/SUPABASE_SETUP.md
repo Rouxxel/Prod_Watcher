@@ -4,33 +4,46 @@ SQL migrations automate the storage bucket (`V12__storage_product_images.sql`) a
 
 ---
 
-## Storage — `product-images` bucket (Phase 5.3)
+SQL migrations automate the storage bucket (`V11__storage_product_images.sql`, ecosystem path RLS in `V26`) and auth triggers (`V3__profiles_and_roles.sql`). Dashboard steps below must be applied once per Supabase project.
 
-### Applied by Flyway (`V12`)
+---
+
+## Storage — `product-images` bucket
+
+### Applied by Flyway (`V11` + `V26`)
 
 | Setting | Value |
 | --- | --- |
 | Bucket ID | `product-images` |
-| Public read | Yes |
+| Public read | Yes (catalog URLs) |
 | Max file size | 5 MB |
 | Allowed MIME types | `image/jpeg`, `image/png`, `image/webp`, `image/gif` |
 | Write access | `admin`, `warehouse_manager`, `warehouse_worker` (active users only) |
+| Path scope (V26) | First path segment must equal caller's `profiles.ecosystem_id` |
+
+### Path layout (multi-tenant)
+
+```
+{ecosystem_id}/{product_id}/{timestamp}.{ext}
+{ecosystem_id}/draft-{sku}/{timestamp}.{ext}   # new product before save
+```
+
+The frontend upload helper (`frontend/src/lib/storage.ts`) builds these paths automatically using `ecosystemId` from `GET /users/me`. Storage RLS rejects writes outside the user's ecosystem prefix.
 
 ### Public URL pattern
 
 ```
-{SUPABASE_URL}/storage/v1/object/public/product-images/{path}
+{SUPABASE_URL}/storage/v1/object/public/product-images/{ecosystem_id}/{product_id}/{file}
 ```
 
-Example: `https://your-project.supabase.co/storage/v1/object/public/product-images/kettle-1.jpg`
+Example: `https://your-project.supabase.co/storage/v1/object/public/product-images/33333333-3333-4333-8333-333333333301/22222222-2222-4222-8222-222222222201/1730000000000.jpg`
 
 ### Seed product images
 
-`V11__seed_data.sql` still uses external [picsum.photos](https://picsum.photos) URLs so demo data works without uploaded files. When ready:
+`V12__seed_data.sql` still uses external [picsum.photos](https://picsum.photos) URLs so demo data works without uploaded files. When ready:
 
-1. Upload images to the `product-images` bucket.
+1. Upload images under the demo ecosystem prefix (see demo id in [`TASK_05_ecosystems.md`](TASK_05_ecosystems.md)).
 2. Update `products.images` to Storage URLs (migration or admin script).
-3. Optional path convention: `{sku}/{index}.jpg` (e.g. `KTL-001/1.jpg`).
 
 ---
 

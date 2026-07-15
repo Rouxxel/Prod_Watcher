@@ -11,6 +11,9 @@ const ALLOWED_MIME_TYPES = new Set([
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function supabaseUrl(): string {
   const url = import.meta.env.VITE_SUPABASE_URL;
   if (!url) {
@@ -65,13 +68,38 @@ function sanitizePathSegment(value: string): string {
     .slice(0, 64);
 }
 
-export function buildProductImagePath(file: File, sku?: string): string {
-  const ext = extensionFor(file);
-  const index = Date.now();
-  if (sku?.trim()) {
-    return `${sanitizePathSegment(sku)}/${index}.${ext}`;
+export interface ProductImagePathOptions {
+  ecosystemId: string;
+  /** Set when editing an existing product; omitted on create uses draft-{sku|uuid} */
+  productId?: string;
+  sku?: string;
+}
+
+/**
+ * Object path under product-images bucket.
+ * Must match storage RLS (V26): first segment = ecosystem_id.
+ */
+export function buildProductImagePath(file: File, options: ProductImagePathOptions): string {
+  const ecosystemId = options.ecosystemId.trim();
+  if (!UUID_RE.test(ecosystemId)) {
+    throw new Error("Invalid workspace id for image upload.");
   }
-  return `${crypto.randomUUID()}.${ext}`;
+
+  const ext = extensionFor(file);
+  const filename = `${Date.now()}.${ext}`;
+
+  if (options.productId?.trim()) {
+    const productId = options.productId.trim();
+    if (!UUID_RE.test(productId)) {
+      throw new Error("Invalid product id for image upload.");
+    }
+    return `${ecosystemId}/${productId}/${filename}`;
+  }
+
+  const draftKey = options.sku?.trim()
+    ? `draft-${sanitizePathSegment(options.sku)}`
+    : `draft-${crypto.randomUUID()}`;
+  return `${ecosystemId}/${draftKey}/${filename}`;
 }
 
 export function validateProductImageFile(file: File): string | null {
@@ -87,6 +115,7 @@ export function validateProductImageFile(file: File): string | null {
 /**
  * Upload a product image to Supabase Storage using the logged-in user's JWT.
  * Requires VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY and an active session token.
+ * Path must start with the user's ecosystem_id (enforced by storage RLS V26).
  */
 export async function uploadProductImage(file: File, objectPath?: string): Promise<string> {
   const validationError = validateProductImageFile(file);
@@ -99,7 +128,11 @@ export async function uploadProductImage(file: File, objectPath?: string): Promi
     throw new Error("You must be logged in to upload images.");
   }
 
-  const path = (objectPath ?? buildProductImagePath(file)).replace(/^\/+/, "");
+  const path = (objectPath ?? "").replace(/^\/+/, "");
+  if (!path) {
+    throw new Error("Image path is required.");
+  }
+
   const encodedPath = path
     .split("/")
     .map((segment) => encodeURIComponent(segment))
