@@ -87,22 +87,22 @@ function SignupPage() {
             <img src={logoUrl} alt="ProdWatch logo" className="h-14 w-14 object-contain" />
           </div>
           <h1 className="font-display vw-text-glow mt-4 text-2xl font-semibold uppercase tracking-wide">
-            {allowed ? "Owner sign-up" : "Sign up"}
+            {allowed ? "Owner sign-up" : "Owner sign-up closed"}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {allowed
-              ? "Create the first admin account for this workspace."
-              : "Owner registration is already complete for this workspace."}
+              ? "Create the first admin account for this workspace. After you confirm your email, you can log in and provision staff."
+              : "An admin already exists for this workspace. Staff accounts are created by an admin — not via public sign-up."}
           </p>
         </div>
 
         {!allowed ? (
           <div className="space-y-4 text-center">
             <div className="rounded-md border border-border bg-background/50 px-4 py-3 text-sm text-muted-foreground">
-              If you need access, ask your administrator or log in with your existing account.
+              Log in with the email and password your administrator gave you.
             </div>
             <Button asChild className="w-full">
-              <Link to="/login">Back to login</Link>
+              <Link to="/login">Go to login</Link>
             </Button>
           </div>
         ) : successMessage ? (
@@ -168,7 +168,7 @@ function SignupPage() {
                 </div>
               )}
               <Button type="submit" className="w-full" disabled={submitting}>
-                {submitting ? "Creating account…" : "Create account"}
+                {submitting ? "Creating account…" : "Create owner account"}
               </Button>
             </form>
 

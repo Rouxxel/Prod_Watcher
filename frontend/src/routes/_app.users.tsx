@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { KeyRound, Shield, UserPlus, Users as UsersIcon } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ArrowDown, KeyRound, Shield, UserPlus, Users as UsersIcon } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,17 +36,20 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { RoleBadge } from "@/components/layout/RoleBadge";
 import { ProvisionUserDialog } from "@/components/users/ProvisionUserDialog";
 import { ResetPasswordDialog } from "@/components/users/ResetPasswordDialog";
+import { StepDownAdminDialog } from "@/components/users/StepDownAdminDialog";
 import {
   useDeactivateUser,
   usePromoteAdmin,
   useProvisionUser,
   useReactivateUser,
   useResetPassword,
+  useStepDownAdmin,
   useUpdateUser,
   useUsers,
 } from "@/hooks/queries";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { canAdminResetPassword } from "@/lib/role-access";
+import { canAdminResetPassword, canAdminStepDown } from "@/lib/role-access";
+import { defaultPathForRole } from "@/lib/role-modes";
 import { roleLabel } from "@/lib/format";
 import { toast } from "sonner";
 import type { Role, User } from "@/types";
@@ -63,11 +66,13 @@ const ASSIGNABLE_ROLES: Role[] = [
 ];
 
 function UsersPage() {
-  const { user: currentUser } = useCurrentUser();
+  const navigate = useNavigate();
+  const { user: currentUser, refreshUser } = useCurrentUser();
   const users = useUsers();
   const provisionMut = useProvisionUser();
   const updateMut = useUpdateUser();
   const promoteMut = usePromoteAdmin();
+  const stepDownMut = useStepDownAdmin();
   const resetMut = useResetPassword();
   const deactivateMut = useDeactivateUser();
   const reactivateMut = useReactivateUser();
@@ -75,6 +80,10 @@ function UsersPage() {
   const [provisionOpen, setProvisionOpen] = useState(false);
   const [resetUser, setResetUser] = useState<User | null>(null);
   const [promoteUser, setPromoteUser] = useState<User | null>(null);
+  const [stepDownOpen, setStepDownOpen] = useState(false);
+
+  const userList = users.data ?? [];
+  const showStepDown = canAdminStepDown(currentUser, userList);
 
   const toggleActive = (user: User, active: boolean) => {
     if (active) {
@@ -128,8 +137,10 @@ function UsersPage() {
                   const busy =
                     updateMut.isPending ||
                     promoteMut.isPending ||
+                    stepDownMut.isPending ||
                     deactivateMut.isPending ||
                     reactivateMut.isPending;
+                  const isSelf = currentUser?.id === u.id;
                   return (
                     <TableRow key={u.id}>
                       <TableCell>
@@ -188,6 +199,17 @@ function UsersPage() {
                               Grant admin
                             </Button>
                           )}
+                          {isSelf && showStepDown && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={busy}
+                              onClick={() => setStepDownOpen(true)}
+                            >
+                              <ArrowDown className="mr-1 h-3.5 w-3.5" />
+                              Step down as admin
+                            </Button>
+                          )}
                           {currentUser && canAdminResetPassword(currentUser.id, u) && (
                             <Button
                               size="sm"
@@ -241,6 +263,25 @@ function UsersPage() {
             },
           );
         }}
+      />
+
+      <StepDownAdminDialog
+        open={stepDownOpen}
+        onOpenChange={setStepDownOpen}
+        pending={stepDownMut.isPending}
+        onSubmit={(role) =>
+          stepDownMut.mutate(role, {
+            onSuccess: async () => {
+              toast.success(`You are now a ${roleLabel(role)}`);
+              setStepDownOpen(false);
+              if (typeof window !== "undefined") {
+                window.localStorage.removeItem("prodwatch:app-mode");
+              }
+              await refreshUser();
+              navigate({ to: defaultPathForRole(role) });
+            },
+          })
+        }
       />
 
       <AlertDialog open={!!promoteUser} onOpenChange={(open) => !open && setPromoteUser(null)}>

@@ -22,6 +22,7 @@ interface CurrentUserCtx {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<User | null>;
 }
 
 const Ctx = createContext<CurrentUserCtx | null>(null);
@@ -89,9 +90,26 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const token = getAccessToken();
+    if (!token) {
+      setUser(null);
+      return null;
+    }
+    try {
+      const me = await authService.getMe();
+      setUser(me);
+      return me;
+    } catch {
+      clearAccessToken();
+      setUser(null);
+      return null;
+    }
+  }, []);
+
   const value = useMemo<CurrentUserCtx>(
-    () => ({ user, isLoading, login, logout }),
-    [user, isLoading, login, logout],
+    () => ({ user, isLoading, login, logout, refreshUser }),
+    [user, isLoading, login, logout, refreshUser],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
