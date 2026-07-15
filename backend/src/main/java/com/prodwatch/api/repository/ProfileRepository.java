@@ -1,5 +1,6 @@
 package com.prodwatch.api.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,4 +15,8 @@ public interface ProfileRepository extends JpaRepository<Profile, UUID> {
     boolean existsByEmail(String email);
 
     boolean existsByEmailIgnoreCase(String email);
+
+    List<Profile> findAllByEcosystem_Id(UUID ecosystemId);
+
+    Optional<Profile> findByIdAndEcosystem_Id(UUID id, UUID ecosystemId);
 }

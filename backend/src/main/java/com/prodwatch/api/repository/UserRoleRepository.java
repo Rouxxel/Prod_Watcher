@@ -20,4 +20,10 @@ public interface UserRoleRepository extends JpaRepository<UserRole, UUID> {
 
     @Query("SELECT COUNT(ur) FROM UserRole ur WHERE ur.role = :role AND ur.user.active = true")
     long countActiveByRole(@Param("role") AppRole role);
+
+    @Query("""
+            SELECT COUNT(ur) FROM UserRole ur
+            WHERE ur.role = :role AND ur.user.active = true AND ur.user.ecosystem.id = :ecosystemId
+            """)
+    long countActiveByRoleAndEcosystemId(@Param("role") AppRole role, @Param("ecosystemId") UUID ecosystemId);
 }
