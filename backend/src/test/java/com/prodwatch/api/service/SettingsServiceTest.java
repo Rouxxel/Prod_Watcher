@@ -86,7 +86,8 @@ class SettingsServiceTest extends AbstractIntegrationTest {
         workspaceSettingsRepository.deleteById(TestFixtures.WORKSPACE_SETTINGS_ID);
         entityManager.flush();
         entityManager.clear();
-        assertThat(workspaceSettingsRepository.findSingleton()).isEmpty();
+        assertThat(workspaceSettingsRepository.findByEcosystem_Id(TestFixtures.DEMO_ECOSYSTEM_ID))
+                .isEmpty();
 
         var response = settingsService.get(admin);
 
@@ -95,6 +96,7 @@ class SettingsServiceTest extends AbstractIntegrationTest {
         assertThat(response.contactEmail()).isEmpty();
         assertThat(response.businessMode()).isEqualTo("auto");
         assertThat(response.taxLabel()).isEqualTo("Tax");
-        assertThat(workspaceSettingsRepository.findSingleton()).isPresent();
+        assertThat(workspaceSettingsRepository.findByEcosystem_Id(TestFixtures.DEMO_ECOSYSTEM_ID))
+                .isPresent();
     }
 }

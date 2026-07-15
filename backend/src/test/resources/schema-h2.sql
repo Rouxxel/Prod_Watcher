@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     name          VARCHAR(255) NOT NULL,
     email         VARCHAR(255) NOT NULL UNIQUE,
     active        BOOLEAN      NOT NULL DEFAULT TRUE,
-    ecosystem_id  UUID         NOT NULL DEFAULT '33333333-3333-4333-8333-333333333301' REFERENCES ecosystems (id),
+    ecosystem_id  UUID         REFERENCES ecosystems (id),
     created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

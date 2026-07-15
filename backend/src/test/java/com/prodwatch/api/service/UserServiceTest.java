@@ -81,6 +81,13 @@ class UserServiceTest extends AbstractIntegrationTest {
         assertThat(response.email()).isEqualTo("worker@test.local");
         assertThat(response.role()).isEqualTo(AppRole.warehouse_worker);
         assertThat(response.active()).isTrue();
+        assertThat(response.ecosystemId()).isEqualTo(TestFixtures.DEMO_ECOSYSTEM_ID);
+        assertThat(response.ecosystemName()).isEqualTo("Acme Demo Test");
+        assertThat(profileRepository
+                        .findById(UUID.fromString("cccccccc-cccc-4ccc-8ccc-ccccccccccc1"))
+                        .orElseThrow()
+                        .getEcosystemId())
+                .isEqualTo(TestFixtures.DEMO_ECOSYSTEM_ID);
     }
 
     @Test

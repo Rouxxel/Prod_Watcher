@@ -131,6 +131,13 @@ public class AuthController {
 
     private static UserResponse withEmailConfirmed(UserResponse user, Boolean emailConfirmed) {
         return new UserResponse(
-                user.id(), user.name(), user.email(), user.role(), user.active(), emailConfirmed);
+                user.id(),
+                user.name(),
+                user.email(),
+                user.role(),
+                user.active(),
+                emailConfirmed,
+                user.ecosystemId(),
+                user.ecosystemName());
     }
 }

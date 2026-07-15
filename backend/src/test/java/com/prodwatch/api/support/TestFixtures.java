@@ -32,6 +32,12 @@ public final class TestFixtures {
     public static final UUID DEMO_ECOSYSTEM_ID =
             UUID.fromString("33333333-3333-4333-8333-333333333301");
 
+    /** Second tenant for cross-ecosystem isolation tests. */
+    public static final UUID OTHER_ECOSYSTEM_ID =
+            UUID.fromString("44444444-4444-4444-8444-444444444401");
+
+    public static final UUID OTHER_ADMIN_ID = UUID.fromString("cccccccc-cccc-4ccc-8ccc-ccccccccccc1");
+
     private TestFixtures() {}
 
     public static String bearerToken(UUID userId) {
@@ -46,6 +52,12 @@ public final class TestFixtures {
         return ecosystems
                 .findById(DEMO_ECOSYSTEM_ID)
                 .orElseGet(() -> ecosystems.save(Ecosystem.withId(DEMO_ECOSYSTEM_ID, "Acme Demo Test")));
+    }
+
+    public static Ecosystem otherEcosystem(EcosystemRepository ecosystems) {
+        return ecosystems
+                .findById(OTHER_ECOSYSTEM_ID)
+                .orElseGet(() -> ecosystems.save(Ecosystem.withId(OTHER_ECOSYSTEM_ID, "Other Tenant")));
     }
 
     public static Profile seedUser(
@@ -69,13 +81,41 @@ public final class TestFixtures {
         return savedProfile;
     }
 
+    public static Profile seedUserInEcosystem(
+            ProfileRepository profiles,
+            UserRoleRepository roles,
+            Ecosystem ecosystem,
+            UUID id,
+            AppRole role) {
+        Profile profile = profiles.findById(id).orElseGet(() -> profiles.save(
+                Profile.create(id, role.name() + "@other.local", "Other " + role, true, ecosystem)));
+        if (profile.getEcosystem() == null) {
+            profile.setEcosystem(ecosystem);
+            profile = profiles.save(profile);
+        }
+        Profile savedProfile = profile;
+        roles.findByUser_Id(id).orElseGet(() -> {
+            roles.save(new UserRole(savedProfile, role));
+            return null;
+        });
+        return savedProfile;
+    }
+
     public static CurrentUser currentUser(UUID id, AppRole role) {
-        return new CurrentUser(id, DEMO_ECOSYSTEM_ID, role.name() + "@test.local", role, true);
+        return currentUser(id, DEMO_ECOSYSTEM_ID, role);
+    }
+
+    public static CurrentUser currentUser(UUID id, UUID ecosystemId, AppRole role) {
+        return new CurrentUser(id, ecosystemId, role.name() + "@test.local", role, true);
     }
 
     public static Warehouse saveWarehouse(
             WarehouseRepository warehouses, EcosystemRepository ecosystems, String name, String location) {
-        return warehouses.save(Warehouse.create(name, location, demoEcosystem(ecosystems)));
+        return saveWarehouse(warehouses, demoEcosystem(ecosystems), name, location);
+    }
+
+    public static Warehouse saveWarehouse(WarehouseRepository warehouses, Ecosystem ecosystem, String name, String location) {
+        return warehouses.save(Warehouse.create(name, location, ecosystem));
     }
 
     public static Profile saveProfile(

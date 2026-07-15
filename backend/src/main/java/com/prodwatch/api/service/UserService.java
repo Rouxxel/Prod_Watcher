@@ -285,8 +285,16 @@ public class UserService {
                 .findByUser_Id(profile.getId())
                 .map(UserRole::getRole)
                 .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
+        Ecosystem ecosystem = profile.getEcosystem();
         return new UserResponse(
-                profile.getId(), profile.getName(), profile.getEmail(), role, profile.isActive(), null);
+                profile.getId(),
+                profile.getName(),
+                profile.getEmail(),
+                role,
+                profile.isActive(),
+                null,
+                ecosystem != null ? ecosystem.getId() : null,
+                ecosystem != null ? ecosystem.getName() : null);
     }
 
     private void assertNotLastAdmin(UUID userId, AppRole role, UUID ecosystemId) {

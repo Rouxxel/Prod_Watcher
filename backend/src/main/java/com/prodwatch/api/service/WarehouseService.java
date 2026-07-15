@@ -86,8 +86,7 @@ public class WarehouseService {
         if (productRepository.existsByEcosystem_IdAndDefaultWarehouse_Id(ecosystemId, id)) {
             throw new BusinessRuleException("Cannot delete warehouse assigned as default on products");
         }
-        if (stockMovementRepository.existsByEcosystem_IdAndFromWarehouse_IdOrEcosystem_IdAndToWarehouse_Id(
-                ecosystemId, id, id)) {
+        if (stockMovementRepository.existsByEcosystemIdAndWarehouseId(ecosystemId, id)) {
             throw new BusinessRuleException("Cannot delete warehouse with stock movement history");
         }
         if (inventoryBalanceRepository.findById_WarehouseId(id).stream()

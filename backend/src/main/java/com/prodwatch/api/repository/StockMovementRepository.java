@@ -45,8 +45,16 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, UU
             @Param("from") Instant from,
             @Param("to") Instant to);
 
-    boolean existsByEcosystem_IdAndFromWarehouse_IdOrEcosystem_IdAndToWarehouse_Id(
-            UUID ecosystemId, UUID fromWarehouseId, UUID toWarehouseId);
+    boolean existsByFromWarehouse_IdOrToWarehouse_Id(UUID fromWarehouseId, UUID toWarehouseId);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(sm) > 0 THEN true ELSE false END
+            FROM StockMovement sm
+            WHERE sm.ecosystem.id = :ecosystemId
+              AND (sm.fromWarehouse.id = :warehouseId OR sm.toWarehouse.id = :warehouseId)
+            """)
+    boolean existsByEcosystemIdAndWarehouseId(
+            @Param("ecosystemId") UUID ecosystemId, @Param("warehouseId") UUID warehouseId);
 
     @Query("SELECT sm FROM StockMovement sm JOIN FETCH sm.product WHERE sm.id IN :ids")
     List<StockMovement> findAllWithProductByIdIn(@Param("ids") Collection<UUID> ids);
