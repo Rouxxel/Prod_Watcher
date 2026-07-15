@@ -50,7 +50,7 @@ async function parseErrorBody(res: Response): Promise<{ error: string; detail: s
 function redirectToLogin(): void {
   if (typeof window === "undefined") return;
   const path = window.location.pathname;
-  if (path === "/login" || path === "/signup") return;
+  if (path === "/login" || path === "/signup" || path === "/confirm-email") return;
   window.location.assign("/login");
 }
 

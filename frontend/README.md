@@ -10,7 +10,10 @@ Product image uploads use **Supabase Storage** directly from the browser (option
 
 ### Auth & shell
 
-- **Backend auth** — `/login` and owner `/signup` bootstrap via `POST /api/v1/auth/*`
+- **Login-first** — unauthenticated visitors are sent to `/login`; the app dashboard requires a session
+- **Log in** — email + password via `POST /api/v1/auth/login`
+- **Sign up** — always linked from login; creates the **first admin only** (owner bootstrap). After an admin exists, the sign-up page shows a closed-registration message; staff are provisioned by an admin on `/users`
+- **Email confirm** — `/confirm-email` completes owner bootstrap after the Supabase confirmation link (then log in manually)
 - **Two operating modes** — `inventory` and `selling`, switchable from the topbar
 - **Role-based sidebar** — menu items filter by the logged-in user's role
 - **Global API errors** — toasts for 401/403/409/429/network; dev console logging via `error-capture.ts`
@@ -83,7 +86,17 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 Copy Supabase values from `backend/.env`. Ensure backend `CORS_ALLOWED_ORIGINS`
-includes `http://localhost:8000`.
+includes `http://localhost:8000`, and set backend `FRONTEND_URL=http://localhost:8000`
+so owner sign-up emails redirect to `/confirm-email`.
+
+### Auth flow (summary)
+
+| User | How to get an account |
+| --- | --- |
+| **First owner (admin)** | `/signup` on a fresh database → confirm email → `/login` |
+| **Staff** | Admin creates account on **Users** → staff logs in at `/login` |
+
+Demo databases seeded with `seed-auth-users.ps1` already have an admin — sign-up shows closed registration; use seeded credentials or provision staff as admin.
 
 ### Scripts
 
@@ -99,7 +112,7 @@ npm run lint      # ESLint
 
 ```text
 src/
-  routes/              # File-based routes (_app.* layout, login, signup)
+  routes/              # File-based routes (_app.* layout, login, signup, confirm-email)
   components/          # Layout, products, movements, POS, users, ui
   hooks/
     use-current-user.tsx   # Auth context (login/logout, GET /users/me)
@@ -154,7 +167,7 @@ Endpoint reference: [`backend/API.md`](../backend/API.md)
 1. Connect repo; set **Root Directory** to `frontend/`
 2. Env: `VITE_API_BASE_URL` → your Render API URL (`…/api/v1`)
 3. Optional: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` for image uploads
-4. Add Vercel URL to backend `CORS_ALLOWED_ORIGINS` and Supabase Auth redirect URLs
+4. Add Vercel URL to backend `CORS_ALLOWED_ORIGINS`, `FRONTEND_URL`, and Supabase Auth redirect URLs (include `/confirm-email`)
 
 `frontend/vercel.json` configures build output (`dist/client`) and SPA rewrites.
 

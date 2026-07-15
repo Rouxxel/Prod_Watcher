@@ -1,4 +1,4 @@
-import { Outlet, createFileRoute, useRouterState, Navigate } from "@tanstack/react-router";
+import { Outlet, createFileRoute, useRouterState, Navigate, redirect } from "@tanstack/react-router";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
@@ -6,8 +6,14 @@ import { ModeSelectScreen } from "@/components/layout/ModeSelectScreen";
 import { CRTOverlay } from "@/components/layout/CRTOverlay";
 import { useAppMode } from "@/hooks/use-app-mode";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { getAccessToken } from "@/lib/auth-token";
 
 export const Route = createFileRoute("/_app")({
+  beforeLoad: () => {
+    if (typeof window !== "undefined" && !getAccessToken()) {
+      throw redirect({ to: "/login" });
+    }
+  },
   component: AppLayout,
 });
 

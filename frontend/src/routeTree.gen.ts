@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ConfirmEmailRouteImport } from './routes/confirm-email'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppWarehousesRouteImport } from './routes/_app.warehouses'
@@ -31,6 +32,11 @@ const SignupRoute = SignupRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfirmEmailRoute = ConfirmEmailRouteImport.update({
+  id: '/confirm-email',
+  path: '/confirm-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -90,6 +96,7 @@ const AppAuditRoute = AppAuditRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/confirm-email': typeof ConfirmEmailRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/audit': typeof AppAuditRoute
@@ -103,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/warehouses': typeof AppWarehousesRoute
 }
 export interface FileRoutesByTo {
+  '/confirm-email': typeof ConfirmEmailRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/audit': typeof AppAuditRoute
@@ -119,6 +127,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/confirm-email': typeof ConfirmEmailRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/_app/audit': typeof AppAuditRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/confirm-email'
     | '/login'
     | '/signup'
     | '/audit'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/warehouses'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/confirm-email'
     | '/login'
     | '/signup'
     | '/audit'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/confirm-email'
     | '/login'
     | '/signup'
     | '/_app/audit'
@@ -180,6 +192,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  ConfirmEmailRoute: typeof ConfirmEmailRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
 }
@@ -198,6 +211,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/confirm-email': {
+      id: '/confirm-email'
+      path: '/confirm-email'
+      fullPath: '/confirm-email'
+      preLoaderRoute: typeof ConfirmEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -310,6 +330,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  ConfirmEmailRoute: ConfirmEmailRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
 }

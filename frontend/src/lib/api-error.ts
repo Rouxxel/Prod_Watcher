@@ -13,7 +13,7 @@ export function toastApiError(
     if (err.status === 401) {
       if (typeof window !== "undefined") {
         const path = window.location.pathname;
-        if (path !== "/login" && path !== "/signup") {
+        if (path !== "/login" && path !== "/signup" && path !== "/confirm-email") {
           notify.warning("Session expired", "Please sign in again.");
         }
       }
