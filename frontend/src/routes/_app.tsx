@@ -1,4 +1,5 @@
-import { Outlet, createFileRoute, useRouterState, Navigate } from "@tanstack/react-router";
+import { Outlet, createFileRoute, useRouterState, Navigate, redirect } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
@@ -6,8 +7,16 @@ import { ModeSelectScreen } from "@/components/layout/ModeSelectScreen";
 import { CRTOverlay } from "@/components/layout/CRTOverlay";
 import { useAppMode } from "@/hooks/use-app-mode";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { getAccessToken } from "@/lib/auth-token";
+import { allowedModesForRole, canUseAppMode, defaultAppModeForRole, defaultPathForRole } from "@/lib/role-modes";
+import { canUsePosCheckout, isAdminOnlyPath, isAdminRole } from "@/lib/role-access";
 
 export const Route = createFileRoute("/_app")({
+  beforeLoad: () => {
+    if (typeof window !== "undefined" && !getAccessToken()) {
+      throw redirect({ to: "/login" });
+    }
+  },
   component: AppLayout,
 });
 
@@ -16,16 +25,62 @@ const SELLING_PATHS = ["/cashier", "/cart", "/transactions"];
 const ADMIN_PATHS = ["/users", "/settings"];
 
 function AppLayout() {
-  const { user } = useCurrentUser();
-  const { mode } = useAppMode();
+  const { user, isLoading } = useCurrentUser();
+  const { mode, setMode } = useAppMode();
   const path = useRouterState({ select: (s) => s.location.pathname });
 
+  useEffect(() => {
+    if (!user) return;
+    const allowed = allowedModesForRole(user.role);
+    if (allowed.length === 1) {
+      if (mode !== allowed[0]) setMode(allowed[0]);
+      return;
+    }
+    if (mode && !canUseAppMode(user.role, mode)) {
+      setMode(defaultAppModeForRole(user.role));
+    }
+  }, [user, mode, setMode]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </div>
+    );
+  }
+
   if (!user) return <Navigate to="/login" />;
-  if (!mode) return <ModeSelectScreen />;
+  if (!mode) {
+    const allowed = allowedModesForRole(user.role);
+    if (allowed.length === 1) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        </div>
+      );
+    }
+    return <ModeSelectScreen />;
+  }
 
   const isAdmin = ADMIN_PATHS.some((p) => path === p || path.startsWith(p + "/"));
   const inInventory = INVENTORY_PATHS.some((p) => (p === "/" ? path === "/" : path.startsWith(p)));
   const inSelling = SELLING_PATHS.some((p) => path.startsWith(p));
+
+  if (!canUseAppMode(user.role, "selling") && (mode === "selling" || inSelling)) {
+    return <Navigate to={defaultPathForRole(user.role)} />;
+  }
+
+  if (!canUseAppMode(user.role, "inventory") && (mode === "inventory" || inInventory)) {
+    return <Navigate to={defaultPathForRole(user.role)} />;
+  }
+
+  if (!isAdminRole(user.role) && isAdminOnlyPath(path)) {
+    return <Navigate to={defaultPathForRole(user.role)} />;
+  }
+
+  if (!canUsePosCheckout(user.role) && path.startsWith("/cart")) {
+    return <Navigate to="/cashier" />;
+  }
 
   if (!isAdmin) {
     if (mode === "inventory" && inSelling) return <Navigate to="/" />;

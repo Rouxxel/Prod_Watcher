@@ -56,7 +56,7 @@ public class SecurityConfig {
                                 "/favicon.ico",
                                 "/favicon.png")
                         .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/bootstrap-status", "/api/v1/health")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/bootstrap-status", "/api/v1/auth/signup-email-available", "/api/v1/health")
                         .permitAll()
                         .requestMatchers(
                                 HttpMethod.POST,

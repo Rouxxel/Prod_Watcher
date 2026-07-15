@@ -1,21 +1,53 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { Warehouse as WarehouseIcon, MapPin, Package, AlertTriangle, Store } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Pencil, Plus, Trash2, Warehouse as WarehouseIcon, MapPin, Package, AlertTriangle, Store } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useProducts, useWarehouses } from "@/hooks/queries";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/common/EmptyState";
+import { WarehouseFormDialog } from "@/components/warehouses/WarehouseFormDialog";
+import {
+  useCreateWarehouse,
+  useDeleteWarehouse,
+  useProducts,
+  useUpdateWarehouse,
+  useWarehouses,
+} from "@/hooks/queries";
 import { useBusinessMode } from "@/hooks/use-business-mode";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { canMutateInventory } from "@/lib/role-access";
 import { currency } from "@/lib/format";
+import { toast } from "sonner";
+import type { Warehouse, WarehouseInput } from "@/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_app/warehouses")({
   component: WarehousesPage,
 });
 
 function WarehousesPage() {
+  const { user } = useCurrentUser();
+  const readOnly = user ? !canMutateInventory(user.role) : false;
   const warehouses = useWarehouses();
   const products = useProducts();
+  const createMut = useCreateWarehouse();
+  const updateMut = useUpdateWarehouse();
+  const deleteMut = useDeleteWarehouse();
   const { isSingleLocation, setDetectedWarehouseCount } = useBusinessMode();
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Warehouse | null>(null);
+  const [toDelete, setToDelete] = useState<Warehouse | null>(null);
 
   useEffect(() => {
     if (warehouses.data) setDetectedWarehouseCount(warehouses.data.length);
@@ -31,14 +63,47 @@ function WarehousesPage() {
     };
   };
 
+  const handleSubmit = (input: WarehouseInput) => {
+    if (editing) {
+      updateMut.mutate(
+        { id: editing.id, input },
+        {
+          onSuccess: () => {
+            toast.success("Warehouse updated");
+            setDialogOpen(false);
+            setEditing(null);
+          },
+        },
+      );
+    } else {
+      createMut.mutate(input, {
+        onSuccess: () => {
+          toast.success("Warehouse created");
+          setDialogOpen(false);
+        },
+      });
+    }
+  };
+
   return (
     <div>
       <PageHeader
         title={isSingleLocation ? "Location" : "Warehouses"}
         description={
-          isSingleLocation
-            ? "You're running in single-location mode — perfect for a small shop or studio."
-            : "Stock distribution across your locations."
+          readOnly
+            ? isSingleLocation
+              ? "Read-only view of your shop location and stock distribution."
+              : "Read-only view of stock distribution across your locations."
+            : isSingleLocation
+              ? "You're running in single-location mode — perfect for a small shop or studio."
+              : "Stock distribution across your locations."
+        }
+        actions={
+          !readOnly ? (
+            <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+              <Plus className="mr-2 h-4 w-4" /> Add warehouse
+            </Button>
+          ) : undefined
         }
       />
       {isSingleLocation && (
@@ -57,8 +122,23 @@ function WarehousesPage() {
       )}
       {warehouses.isLoading || products.isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-44" />)}
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-44" />
+          ))}
         </div>
+      ) : (warehouses.data?.length ?? 0) === 0 ? (
+        <EmptyState
+          icon={WarehouseIcon}
+          title="No warehouses"
+          description="Add your first location to start tracking inventory."
+          action={
+            !readOnly ? (
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Add warehouse
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {warehouses.data?.map((w) => {
@@ -67,21 +147,33 @@ function WarehousesPage() {
               <Card key={w.id} className="overflow-hidden">
                 <div className="h-1.5" style={{ background: "var(--gradient-primary)" }} />
                 <CardContent className="p-5">
-                  <div className="flex items-start justify-between">
-                    <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <WarehouseIcon className="h-4 w-4 text-primary-foreground" />
-                        <h3 className="font-semibold">{w.name}</h3>
+                        <WarehouseIcon className="h-4 w-4 shrink-0 text-primary-foreground" />
+                        <h3 className="truncate font-semibold">{w.name}</h3>
                       </div>
                       <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                        <MapPin className="h-3 w-3" /> {w.location}
+                        <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{w.location}</span>
                       </div>
                     </div>
-                    {s.low > 0 && (
-                      <div className="flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-xs text-warning">
-                        <AlertTriangle className="h-3 w-3" /> {s.low} low
-                      </div>
-                    )}
+                    <div className="flex shrink-0 gap-1">
+                      {s.low > 0 && (
+                        <div className="flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-xs text-warning">
+                          <AlertTriangle className="h-3 w-3" /> {s.low} low
+                        </div>
+                      )}
+                      {!readOnly && (
+                        <>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditing(w); setDialogOpen(true); }}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setToDelete(w)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div className="mt-5 grid grid-cols-3 gap-2 text-center">
                     {[
@@ -113,6 +205,45 @@ function WarehousesPage() {
             );
           })}
         </div>
+      )}
+
+      {!readOnly && (
+        <>
+          <WarehouseFormDialog
+            open={dialogOpen}
+            onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditing(null); }}
+            initial={editing}
+            onSubmit={handleSubmit}
+            pending={createMut.isPending || updateMut.isPending}
+          />
+
+          <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {toDelete?.name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Deletion is blocked if this warehouse has stock, movements, or is a product default location.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    if (!toDelete) return;
+                    deleteMut.mutate(toDelete.id, {
+                      onSuccess: () => {
+                        toast.success("Warehouse deleted");
+                        setToDelete(null);
+                      },
+                    });
+                  }}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
       )}
     </div>
   );

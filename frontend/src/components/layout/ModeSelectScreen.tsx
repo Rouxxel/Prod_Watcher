@@ -4,6 +4,7 @@ import { useAppMode, type AppMode } from "@/hooks/use-app-mode";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Button } from "@/components/ui/button";
 import { roleLabel } from "@/lib/format";
+import { allowedModesForRole } from "@/lib/role-modes";
 
 const cards: Array<{
   mode: AppMode;
@@ -36,6 +37,7 @@ const cards: Array<{
 export function ModeSelectScreen() {
   const { setMode } = useAppMode();
   const { user } = useCurrentUser();
+  const visibleCards = cards.filter((c) => user && allowedModesForRole(user.role).includes(c.mode));
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10">
@@ -85,8 +87,8 @@ export function ModeSelectScreen() {
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          {cards.map((c) => (
+        <div className={`grid gap-4 ${visibleCards.length > 1 ? "sm:grid-cols-2" : "max-w-md mx-auto"}`}>
+          {visibleCards.map((c) => (
             <button
               key={c.mode}
               onClick={() => setMode(c.mode)}

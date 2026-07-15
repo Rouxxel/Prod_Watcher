@@ -23,7 +23,13 @@ public class AuditService {
 
     @Transactional
     public void log(UUID userId, String action, String entity, UUID entityId, String details) {
+        log(userId, action, entity, entityId, details, null);
+    }
+
+    @Transactional
+    public void log(
+            UUID userId, String action, String entity, UUID entityId, String details, String entityLabel) {
         Profile user = profileRepository.getReferenceById(userId);
-        auditEntryRepository.save(AuditEntry.create(user, action, entity, entityId, details));
+        auditEntryRepository.save(AuditEntry.create(user, action, entity, entityId, details, entityLabel));
     }
 }

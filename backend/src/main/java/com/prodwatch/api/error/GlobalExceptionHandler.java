@@ -23,15 +23,23 @@ package com.prodwatch.api.error;
 import com.prodwatch.api.util.CustomLogger;
 import com.prodwatch.api.util.Validators;
 
+import java.io.IOException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public void handleAsyncClientDisconnect(AsyncRequestNotUsableException ex) {
+        CustomLogger.debug("Client disconnected before response completed: " + ex.getMessage());
+    }
 
     @ExceptionHandler(RateLimitExceededException.class)
     public ResponseEntity<ErrorResponse> handleRateLimit(RateLimitExceededException ex) {
@@ -89,8 +97,36 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
+        if (isClientDisconnect(ex)) {
+            CustomLogger.debug("Client disconnected: " + ex.getMessage());
+            return null;
+        }
         CustomLogger.error("Unhandled exception: " + ex.getMessage());
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
+    }
+
+    private static boolean isClientDisconnect(Throwable ex) {
+        for (Throwable current = ex; current != null; current = current.getCause()) {
+            if (current instanceof AsyncRequestNotUsableException) {
+                return true;
+            }
+            if (current instanceof IOException ioe) {
+                String message = ioe.getMessage();
+                if (message != null) {
+                    String lower = message.toLowerCase();
+                    if (lower.contains("connection reset")
+                            || lower.contains("broken pipe")
+                            || lower.contains("connection aborted")
+                            || lower.contains("aborted by the software")) {
+                        return true;
+                    }
+                }
+            }
+            if ("ClientAbortException".equals(current.getClass().getSimpleName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String detail) {

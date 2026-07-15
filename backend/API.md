@@ -16,7 +16,7 @@ Protected routes require a Supabase access token:
 Authorization: Bearer <accessToken>
 ```
 
-Obtain a token via `POST /api/v1/auth/login` or `POST /api/v1/auth/confirm-email`. The backend validates the JWT with `SUPABASE_JWT_SECRET`, loads the user from `profiles` + `user_roles`, and rejects inactive accounts.
+Obtain a token via `POST /api/v1/auth/login` or `POST /api/v1/auth/confirm-email`. The backend validates the JWT using Supabase **ES256/RS256** keys from `{SUPABASE_URL}/auth/v1/.well-known/jwks.json`, with optional **HS256** fallback via `SUPABASE_JWT_SECRET`. It loads the user from `profiles` + `user_roles` and rejects inactive accounts.
 
 ### Public routes (no JWT)
 
@@ -78,7 +78,7 @@ Errors use a uniform shape:
 | Stock movements | CRU | CRU | CRU | R | R |
 | Audit | R | R | R | R | R |
 | Users | full | — | — | — | — |
-| Transactions | CRUD + refund/void | R | — | — | checkout + R |
+| Transactions | CRUD + refund/void | R | — | R | checkout + R |
 
 Legend: **C** create, **R** read, **U** update, **D** delete.
 
@@ -96,11 +96,13 @@ Public. Returns whether owner sign-up is allowed (no admin exists yet).
 { "signupAllowed": true }
 ```
 
+When `false`, an admin already exists — staff must be provisioned by an admin on `/users`.
+
 ---
 
 ### POST `/api/v1/auth/signup`
 
-Public. Owner bootstrap only (when `signupAllowed` is true).
+Public. **Owner bootstrap only** (when `signupAllowed` is true). Creates the first admin after email confirmation.
 
 **Body**
 
@@ -206,7 +208,9 @@ Public.
 
 **Roles:** any authenticated user.
 
-**Query:** `category`, `search`, `lowStock` (optional).
+**Query:** `category`, `search`, `lowStock` (optional), `warehouseId` (optional UUID).
+
+When **`warehouseId`** is omitted, `stock` is the on-hand quantity at the product's **default warehouse** (`warehouseId` field). When **`warehouseId`** is set, `stock` is the quantity **at that warehouse** (any location in the network). The `warehouseId` on each product row is always the catalog default, not the query filter.
 
 **Response 200** — array of:
 
@@ -224,7 +228,7 @@ Public.
 }
 ```
 
-`stock` is computed from stock movements at the product's default warehouse.
+`stock` is computed from the `inventory_balances` view (ledger-derived, not a stored column).
 
 ---
 
@@ -330,12 +334,14 @@ Blocked if warehouse has stock, movements, or is a product default warehouse.
 
 Movements are **immutable** (no update/delete). Corrections use a new `ADJUSTMENT`.
 
-| Type | Required warehouses | Effect |
-| --- | --- | --- |
-| `IN` | `toWarehouseId` | Increases stock |
-| `OUT` | `fromWarehouseId` | Decreases stock (409 if insufficient) |
-| `TRANSFER` | both (must differ) | Moves qty between warehouses |
-| `ADJUSTMENT` | exactly one of from/to | Increase or decrease |
+| Type | Warehouses | Extra fields | Effect |
+| --- | --- | --- | --- |
+| `IN` | `toWarehouseId` required; `fromWarehouseId` null | **`provider`** required (non-empty string) — external supplier | Increases stock at destination |
+| `OUT` | `fromWarehouseId` required; `toWarehouseId` null | **`recipient`** required (non-empty string) — customer / third party | Decreases stock (409 if insufficient) |
+| `TRANSFER` | both (must differ) | `provider` and `recipient` must be null | Moves qty between warehouses |
+| `ADJUSTMENT` | exactly one of from/to | `provider` and `recipient` must be null | Increase (to) or decrease (from) |
+
+`provider` and `recipient` are free-text columns on `stock_movements` (not warehouse FKs). POS checkout creates `OUT` rows with `recipient = "POS customer"`.
 
 ### GET `/api/v1/stock-movements`
 
@@ -355,13 +361,32 @@ Movements are **immutable** (no update/delete). Corrections use a new `ADJUSTMEN
     "qty": 50,
     "fromWarehouseId": null,
     "toWarehouseId": "11111111-1111-4111-8111-111111111101",
+    "provider": "Acme Steel Co.",
+    "recipient": null,
     "userId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3",
     "userName": "Jordan Lee",
     "timestamp": "2026-07-08T10:00:00Z",
     "note": "Initial receipt"
+  },
+  {
+    "id": "33333333-3333-4333-8333-333333333302",
+    "type": "OUT",
+    "productId": "22222222-2222-4222-8222-222222222202",
+    "productName": "Walnut Cutting Board",
+    "qty": 2,
+    "fromWarehouseId": "11111111-1111-4111-8111-111111111101",
+    "toWarehouseId": null,
+    "provider": null,
+    "recipient": "BuildRight Contractors",
+    "userId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3",
+    "userName": "Jordan Lee",
+    "timestamp": "2026-07-09T14:00:00Z",
+    "note": null
   }
 ]
 ```
+
+**UI mapping:** for `IN`, display `provider` in the "From" column; for `OUT`, display `recipient` in the "To" column; warehouse columns show internal warehouse names for the other side.
 
 ---
 
@@ -375,7 +400,7 @@ Movements are **immutable** (no update/delete). Corrections use a new `ADJUSTMEN
 
 **Roles:** admin, warehouse_manager, warehouse_worker.
 
-**Body**
+**Body (IN — receive from supplier)**
 
 ```json
 {
@@ -384,11 +409,45 @@ Movements are **immutable** (no update/delete). Corrections use a new `ADJUSTMEN
   "qty": 10,
   "fromWarehouseId": null,
   "toWarehouseId": "11111111-1111-4111-8111-111111111101",
+  "provider": "Acme Steel Co.",
+  "recipient": null,
   "note": "Restock"
 }
 ```
 
-**Response 201** — `StockMovementResponse`.
+**Body (OUT — issue to customer)**
+
+```json
+{
+  "type": "OUT",
+  "productId": "22222222-2222-4222-8222-222222222202",
+  "qty": 2,
+  "fromWarehouseId": "11111111-1111-4111-8111-111111111101",
+  "toWarehouseId": null,
+  "provider": null,
+  "recipient": "BuildRight Contractors",
+  "note": null
+}
+```
+
+**Body (ADJUSTMENT — add stock at one warehouse)**
+
+```json
+{
+  "type": "ADJUSTMENT",
+  "productId": "22222222-2222-4222-8222-222222222201",
+  "qty": 5,
+  "fromWarehouseId": null,
+  "toWarehouseId": "11111111-1111-4111-8111-111111111101",
+  "provider": null,
+  "recipient": null,
+  "note": "Cycle count found extra"
+}
+```
+
+Returns **422** if `provider`/`recipient` are sent on the wrong type, missing when required, or if warehouse rules are violated.
+
+**Response 201** — `StockMovementResponse` (same fields as list item above).
 
 ---
 
@@ -409,14 +468,22 @@ Read-only append-only log.
   {
     "id": "44444444-4444-4444-8444-444444444401",
     "userId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
+    "userName": "Alex Owner",
     "action": "PRODUCT_CREATED",
     "entity": "product",
     "entityId": "22222222-2222-4222-8222-222222222201",
+    "entityLabel": "Ceramic Pour-Over Kettle",
     "timestamp": "2026-07-08T10:05:00Z",
     "details": "KTL-001"
   }
 ]
 ```
+
+| Field | Description |
+| --- | --- |
+| `userName` | Profile name of the actor (from `profiles.name`) |
+| `entityLabel` | Human-readable target resolved by entity type: product name, warehouse name, user name, movement's product name, transaction total (`$124.50`), etc. Falls back to `details` or a short id if the record was deleted |
+| `details` | Free-text context stored at write time (often SKU, email, or change summary) |
 
 ---
 
@@ -476,6 +543,20 @@ Admin-only except `GET /users/me`.
 
 ---
 
+### POST `/api/v1/users/me/step-down-admin`
+
+**Roles:** admin (self only). Demote your own account to a non-admin role when at least two admins are active.
+
+**Body**
+
+```json
+{ "role": "warehouse_manager" }
+```
+
+**Response 200** — `UserResponse` with the new role.
+
+---
+
 ### POST `/api/v1/users/{id}/promote-admin`
 
 **Roles:** admin.
@@ -498,7 +579,7 @@ Admin-only except `GET /users/me`.
 
 ### POST `/api/v1/users/{id}/deactivate`
 
-**Roles:** admin. Cannot deactivate the last admin.
+**Roles:** admin. Cannot deactivate the last active admin.
 
 ---
 
@@ -508,9 +589,19 @@ Admin-only except `GET /users/me`.
 
 ---
 
+### DELETE `/api/v1/users/{id}`
+
+**Roles:** admin. Permanently removes a non-admin user (Supabase auth + profile + role). Cannot delete admins, yourself, or cashiers with POS transaction history.
+
+**Response 204**.
+
+---
+
 ## Transactions (POS)
 
-Tax rate defaults to **16%** (`POS_TAX_RATE=0.16`). Server validates line prices against product catalog and recalculates tax/total.
+Tax rate defaults to **16%** (`POS_TAX_RATE=0.16`). Server validates line prices against the product catalog and recalculates tax/total.
+
+Checkout creates one **`OUT`** stock movement per line. Stock is deducted from **`warehouseId` on each cart item** when present; otherwise from `POS_WAREHOUSE_ID` (if configured) or the product's default warehouse. Each persisted line item stores `warehouseId` in transaction JSON so refunds/voids restore stock to the correct warehouse.
 
 ### GET `/api/v1/transactions`
 
@@ -535,17 +626,24 @@ Tax rate defaults to **16%** (`POS_TAX_RATE=0.16`). Server validates line prices
       "name": "Walnut Cutting Board",
       "sku": "WCB-220",
       "qty": 2,
-      "unitPrice": 54.50
+      "unitPrice": 54.50,
+      "warehouseId": "11111111-1111-4111-8111-111111111101"
     }
   ],
   "subtotal": 109.00,
   "tax": 17.44,
   "total": 126.44,
   "cashierId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4",
+  "cashierName": "Sam Rivera",
   "status": "completed",
   "timestamp": "2026-07-08T12:00:00Z"
 }
 ```
+
+| Field | Description |
+| --- | --- |
+| `cashierName` | Cashier profile name (display); `cashierId` remains the UUID FK |
+| `items[].warehouseId` | Warehouse stock was drawn from; `null` on legacy rows (refund uses default/POS warehouse) |
 
 ---
 
@@ -563,16 +661,27 @@ Tax rate defaults to **16%** (`POS_TAX_RATE=0.16`). Server validates line prices
       "name": "Walnut Cutting Board",
       "sku": "WCB-220",
       "qty": 2,
-      "unitPrice": 54.50
+      "unitPrice": 54.50,
+      "warehouseId": "11111111-1111-4111-8111-111111111101"
+    },
+    {
+      "productId": "22222222-2222-4222-8222-222222222201",
+      "name": "Ceramic Pour-Over Kettle",
+      "sku": "KTL-001",
+      "qty": 1,
+      "unitPrice": 78.00,
+      "warehouseId": "11111111-1111-4111-8111-111111111102"
     }
   ],
-  "subtotal": 109.00,
-  "tax": 17.44,
-  "total": 126.44
+  "subtotal": 187.00,
+  "tax": 29.92,
+  "total": 216.92
 }
 ```
 
-**Response 201** — `TransactionResponse`. Returns **409** on oversell.
+A single checkout may include lines from **multiple warehouses**. `warehouseId` per line is optional; omit only when `POS_WAREHOUSE_ID` or default-warehouse fallback is intended.
+
+**Response 201** — `TransactionResponse`. Returns **409** on oversell at the resolved warehouse for any line.
 
 ---
 

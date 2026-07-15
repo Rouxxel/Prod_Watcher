@@ -95,7 +95,7 @@ class RbacIntegrationTest extends AbstractIntegrationTest {
     @Test
     void cashierCannotCreateStockMovement() throws Exception {
         StockMovementCreate body = new StockMovementCreate(
-                StockMovementType.IN, productId, 1, null, warehouseId, null);
+                StockMovementType.IN, productId, 1, null, warehouseId, "Test Supplier", null, null);
 
         mockMvc.perform(post("/api/v1/stock-movements")
                         .header("Authorization", TestFixtures.bearerHeader(TestFixtures.CASHIER_ID))

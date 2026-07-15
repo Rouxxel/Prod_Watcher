@@ -1,6 +1,16 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { users } from "@/mock/seed";
-import type { Role, User } from "@/types";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { clearAccessToken, getAccessToken, setAccessToken } from "@/lib/auth-token";
+import { isApiError } from "@/services/api";
+import { authService } from "@/services/auth.service";
+import type { User } from "@/types";
 
 interface LoginResult {
   ok: boolean;
@@ -9,60 +19,97 @@ interface LoginResult {
 
 interface CurrentUserCtx {
   user: User | null;
-  login: (email: string, password: string, role: Role) => LoginResult;
-  logout: () => void;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<LoginResult>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<User | null>;
 }
 
 const Ctx = createContext<CurrentUserCtx | null>(null);
-const KEY = "prodwatch:current-user";
-// Mock shared password for all seed users.
-const MOCK_PASSWORD = "demo1234";
+const APP_MODE_KEY = "prodwatch:app-mode";
 
 export function CurrentUserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const raw = window.localStorage.getItem(KEY);
-    if (!raw) return;
+    if (typeof window === "undefined") {
+      setIsLoading(false);
+      return;
+    }
+
+    const token = getAccessToken();
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+
+    authService
+      .getMe()
+      .then(setUser)
+      .catch(() => {
+        clearAccessToken();
+        setUser(null);
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
     try {
-      const parsed = JSON.parse(raw) as User;
-      const match = users.find((u) => u.id === parsed.id && u.active);
-      if (match) setUser(match);
+      const session = await authService.login({
+        email: email.trim(),
+        password,
+      });
+      setAccessToken(session.accessToken);
+      const me = await authService.getMe();
+      setUser(me);
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(APP_MODE_KEY);
+      }
+      return { ok: true };
+    } catch (err) {
+      clearAccessToken();
+      setUser(null);
+      if (isApiError(err)) {
+        return { ok: false, error: err.message };
+      }
+      return { ok: false, error: "Unable to log in." };
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await authService.logout();
     } catch {
-      /* ignore */
+      /* best-effort */
+    }
+    clearAccessToken();
+    setUser(null);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(APP_MODE_KEY);
+    }
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const token = getAccessToken();
+    if (!token) {
+      setUser(null);
+      return null;
+    }
+    try {
+      const me = await authService.getMe();
+      setUser(me);
+      return me;
+    } catch {
+      clearAccessToken();
+      setUser(null);
+      return null;
     }
   }, []);
 
   const value = useMemo<CurrentUserCtx>(
-    () => ({
-      user,
-      login: (email, password, role) => {
-        const normalized = email.trim().toLowerCase();
-        const match = users.find((u) => u.email.toLowerCase() === normalized);
-        if (!match) return { ok: false, error: "No account found for that email." };
-        if (!match.active) return { ok: false, error: "This account is disabled." };
-        if (password !== MOCK_PASSWORD) return { ok: false, error: "Incorrect password." };
-        if (match.role !== role) {
-          return { ok: false, error: "Selected role doesn't match this account." };
-        }
-        setUser(match);
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem(KEY, JSON.stringify(match));
-          // Force landing/mode picker after a fresh login.
-          window.localStorage.removeItem("prodwatch:app-mode");
-        }
-        return { ok: true };
-      },
-      logout: () => {
-        setUser(null);
-        if (typeof window !== "undefined") {
-          window.localStorage.removeItem(KEY);
-          window.localStorage.removeItem("prodwatch:app-mode");
-        }
-      },
-    }),
-    [user],
+    () => ({ user, isLoading, login, logout, refreshUser }),
+    [user, isLoading, login, logout, refreshUser],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -73,5 +120,3 @@ export function useCurrentUser() {
   if (!ctx) throw new Error("useCurrentUser must be used inside CurrentUserProvider");
   return ctx;
 }
-
-export const MOCK_LOGIN_PASSWORD = MOCK_PASSWORD;

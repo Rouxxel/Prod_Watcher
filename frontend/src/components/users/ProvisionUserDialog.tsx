@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -18,67 +19,77 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Role } from "@/types";
-
-interface InviteUserInput {
-  name: string;
-  email: string;
-  role: Role;
-  active: boolean;
-}
+import { notify, validation } from "@/lib/notify";
+import type { Role, UserProvisionInput } from "@/types";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (input: InviteUserInput) => void;
+  onSubmit: (input: UserProvisionInput) => void;
   pending?: boolean;
 }
 
 const ROLES: { value: Role; label: string }[] = [
-  { value: "admin", label: "Admin" },
   { value: "warehouse_manager", label: "Warehouse manager" },
   { value: "warehouse_worker", label: "Warehouse worker" },
   { value: "inspector", label: "Inspector" },
   { value: "cashier", label: "Cashier" },
 ];
 
-const empty: InviteUserInput = {
+const empty: UserProvisionInput = {
   name: "",
   email: "",
+  password: "",
   role: "warehouse_worker",
   active: true,
 };
 
-export function InviteUserDialog({ open, onOpenChange, onSubmit, pending }: Props) {
-  const [form, setForm] = useState<InviteUserInput>(empty);
+export function ProvisionUserDialog({ open, onOpenChange, onSubmit, pending }: Props) {
+  const [form, setForm] = useState<UserProvisionInput>(empty);
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
-    if (open) setForm(empty);
+    if (open) {
+      setForm(empty);
+      setConfirmPassword("");
+    }
   }, [open]);
 
-  const set = <K extends keyof InviteUserInput>(key: K, value: InviteUserInput[K]) =>
+  const set = <K extends keyof UserProvisionInput>(key: K, value: UserProvisionInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Invite user</DialogTitle>
+          <DialogTitle>Provision user</DialogTitle>
           <DialogDescription>
-            Send an invite so they can join the workspace with the chosen role.
+            Create a confirmed account — the employee can log in immediately with the password you set.
           </DialogDescription>
         </DialogHeader>
         <form
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            onSubmit(form);
+            if (form.password !== confirmPassword) {
+              notify.error("Passwords do not match");
+              return;
+            }
+            if (form.password.length < 8) {
+              validation.passwordTooShort();
+              return;
+            }
+            onSubmit({
+              ...form,
+              name: form.name.trim(),
+              email: form.email.trim(),
+            });
           }}
         >
           <div className="space-y-1.5">
-            <Label htmlFor="invite-name">Name</Label>
+            <Label htmlFor="provision-name">Name</Label>
             <Input
-              id="invite-name"
+              id="provision-name"
               value={form.name}
               onChange={(e) => set("name", e.target.value)}
               placeholder="Jane Doe"
@@ -86,13 +97,33 @@ export function InviteUserDialog({ open, onOpenChange, onSubmit, pending }: Prop
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="invite-email">Email</Label>
+            <Label htmlFor="provision-email">Email</Label>
             <Input
-              id="invite-email"
+              id="provision-email"
               type="email"
               value={form.email}
               onChange={(e) => set("email", e.target.value)}
               placeholder="jane@company.com"
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="provision-password">Password</Label>
+            <PasswordInput
+              id="provision-password"
+              autoComplete="new-password"
+              value={form.password}
+              onChange={(e) => set("password", e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="provision-confirm">Confirm password</Label>
+            <PasswordInput
+              id="provision-confirm"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               required
             />
           </div>
@@ -113,15 +144,15 @@ export function InviteUserDialog({ open, onOpenChange, onSubmit, pending }: Prop
           </div>
           <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2">
             <div>
-              <Label htmlFor="invite-active" className="cursor-pointer">
-                Activate immediately
+              <Label htmlFor="provision-active" className="cursor-pointer">
+                Active
               </Label>
               <p className="text-xs text-muted-foreground">
-                If off, the account will be created but disabled.
+                Inactive users cannot log in until reactivated.
               </p>
             </div>
             <Switch
-              id="invite-active"
+              id="provision-active"
               checked={form.active}
               onCheckedChange={(v) => set("active", v)}
             />
@@ -131,7 +162,7 @@ export function InviteUserDialog({ open, onOpenChange, onSubmit, pending }: Prop
               Cancel
             </Button>
             <Button type="submit" disabled={pending}>
-              Send invite
+              Create user
             </Button>
           </DialogFooter>
         </form>

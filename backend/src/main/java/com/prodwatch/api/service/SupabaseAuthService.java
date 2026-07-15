@@ -18,13 +18,17 @@ public class SupabaseAuthService {
 
     private final RestClient anonClient;
     private final RestClient adminClient;
+    private final String emailRedirectTo;
 
     public SupabaseAuthService(
             RestClient.Builder builder,
             @Value("${SUPABASE_URL}") String supabaseUrl,
             @Value("${SUPABASE_ANON_KEY}") String anonKey,
-            @Value("${SUPABASE_SERVICE_ROLE_KEY}") String serviceRoleKey) {
+            @Value("${SUPABASE_SERVICE_ROLE_KEY}") String serviceRoleKey,
+            @Value("${FRONTEND_URL:}") String frontendUrl) {
         String baseUrl = supabaseUrl.replaceAll("/$", "");
+        this.emailRedirectTo =
+                frontendUrl.isBlank() ? null : frontendUrl.replaceAll("/$", "") + "/confirm-email";
         this.anonClient = builder
                 .baseUrl(baseUrl)
                 .defaultHeader("apikey", anonKey)
@@ -38,10 +42,17 @@ public class SupabaseAuthService {
     }
 
     public AuthSession signUp(String email, String password, String name) {
-        JsonNode body = postJson(
-                anonClient,
-                "/auth/v1/signup",
-                Map.of("email", email, "password", password, "data", Map.of("name", name)));
+        Map<String, Object> payload;
+        if (emailRedirectTo != null && !emailRedirectTo.isBlank()) {
+            payload = Map.of(
+                    "email", email,
+                    "password", password,
+                    "data", Map.of("name", name),
+                    "options", Map.of("emailRedirectTo", emailRedirectTo.trim()));
+        } else {
+            payload = Map.of("email", email, "password", password, "data", Map.of("name", name));
+        }
+        JsonNode body = postJson(anonClient, "/auth/v1/signup", payload);
         return parseSession(body);
     }
 
@@ -97,9 +108,45 @@ public class SupabaseAuthService {
         putJson(adminClient, "/auth/v1/admin/users/{id}", userId.toString(), Map.of("ban_duration", "none"));
     }
 
+    public void deleteUser(UUID userId) {
+        try {
+            adminClient
+                    .delete()
+                    .uri("/auth/v1/admin/users/{id}", userId.toString())
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientResponseException ex) {
+            throw mapAuthError(ex);
+        }
+    }
+
     public AuthSession verifySignupToken(String token) {
         JsonNode body = postJson(anonClient, "/auth/v1/verify", Map.of("type", "signup", "token", token));
         return parseSession(body);
+    }
+
+    /** Checks Supabase Auth (auth.users) via the admin API. */
+    public boolean emailExistsInAuth(String email) {
+        try {
+            JsonNode body = adminClient
+                    .get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/auth/v1/admin/users")
+                            .queryParam("page", 1)
+                            .queryParam("per_page", 1)
+                            .queryParam("filter", "email=eq." + email)
+                            .build())
+                    .retrieve()
+                    .body(JsonNode.class);
+            if (body == null || !body.has("users")) {
+                return false;
+            }
+            JsonNode users = body.get("users");
+            return users != null && users.isArray() && !users.isEmpty();
+        } catch (RestClientResponseException ex) {
+            CustomLogger.debug("Supabase email lookup failed " + ex.getStatusCode());
+            return false;
+        }
     }
 
     private JsonNode postJson(RestClient client, String uri, Object payload) {
@@ -153,8 +200,26 @@ public class SupabaseAuthService {
     }
 
     private BusinessRuleException mapAuthError(RestClientResponseException ex) {
-        CustomLogger.debug("Supabase auth error " + ex.getStatusCode() + ": " + ex.getResponseBodyAsString());
+        String responseBody = ex.getResponseBodyAsString();
+        CustomLogger.debug("Supabase auth error " + ex.getStatusCode() + ": " + responseBody);
+        if (isDuplicateEmailError(ex.getStatusCode().value(), responseBody)) {
+            return new BusinessRuleException(SignupEmailService.EMAIL_TAKEN_MESSAGE);
+        }
         return new BusinessRuleException("Authentication request failed: " + ex.getStatusCode().value());
+    }
+
+    private static boolean isDuplicateEmailError(int status, String responseBody) {
+        if (status != 400 && status != 422) {
+            return false;
+        }
+        if (responseBody == null) {
+            return false;
+        }
+        String lower = responseBody.toLowerCase();
+        return lower.contains("already registered")
+                || lower.contains("already exists")
+                || lower.contains("user already")
+                || lower.contains("duplicate");
     }
 
     public record AuthSession(

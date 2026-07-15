@@ -20,12 +20,14 @@ public interface AuditEntryRepository extends JpaRepository<AuditEntry, UUID> {
 
     List<AuditEntry> findByCreatedAtBetweenOrderByCreatedAtDesc(Instant from, Instant to);
 
+    // Date bounds use COALESCE so the timestamp params carry a determinable type on Postgres
+    // (a bare ":from IS NULL" triggers "could not determine data type of parameter").
     @Query("""
             SELECT ae FROM AuditEntry ae
             WHERE (:entity IS NULL OR ae.entity = :entity)
               AND (:userId IS NULL OR ae.user.id = :userId)
-              AND (:from IS NULL OR ae.createdAt >= :from)
-              AND (:to IS NULL OR ae.createdAt <= :to)
+              AND ae.createdAt >= COALESCE(:from, ae.createdAt)
+              AND ae.createdAt <= COALESCE(:to, ae.createdAt)
             ORDER BY ae.createdAt DESC
             """)
     List<AuditEntry> findWithFilters(

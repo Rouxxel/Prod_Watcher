@@ -6,12 +6,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcType;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 import org.hibernate.type.SqlTypes;
 
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -46,7 +49,11 @@ public class Transaction {
     @JoinColumn(name = "cashier_id", nullable = false)
     private Profile cashier;
 
-    @Convert(converter = TransactionStatusConverter.class)
+    // Native transaction_status enum binding (see V13 migration: the 'void' label is renamed to
+    // 'void_' so it matches the Java constant name). The REST contract still uses "void" via the
+    // @JsonValue/@JsonCreator mapping on TransactionStatus.
+    @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "status", nullable = false)
     private TransactionStatus status = TransactionStatus.completed;
 

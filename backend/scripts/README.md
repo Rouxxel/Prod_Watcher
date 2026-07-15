@@ -4,7 +4,7 @@ Dev utilities for seeding Supabase auth users and demo activity data.
 
 **Prerequisites**
 
-- Flyway migrations **V1–V12** applied (see root [`README.md`](../../README.md))
+- Flyway migrations **V1–V15** applied (see [`backend/README.md`](../README.md))
 - `backend/.env` copied from [`backend/.env.example`](../.env.example) with real Supabase values
 
 **Required env vars** (in `backend/.env`):

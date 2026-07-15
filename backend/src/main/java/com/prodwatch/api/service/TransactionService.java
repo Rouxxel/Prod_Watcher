@@ -69,7 +69,9 @@ public class TransactionService {
     @Transactional(readOnly = true)
     public List<TransactionResponse> list(
             UUID cashierId, TransactionStatus status, Instant from, Instant to) {
-        return transactionRepository.findWithFilters(cashierId, status, from, to).stream()
+        return transactionRepository
+                .findWithFilters(cashierId, status == null ? null : status.name(), from, to)
+                .stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -112,6 +114,8 @@ public class TransactionService {
                     line.warehouse(),
                     null,
                     cashierProfile,
+                    null,
+                    "POS customer",
                     "POS sale " + transaction.getId()));
         }
 
@@ -148,7 +152,11 @@ public class TransactionService {
             Product product = productRepository
                     .findById(item.productId())
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
-            Warehouse warehouse = warehouseForProduct(product, posWarehouse);
+            Warehouse warehouse = item.warehouseId() != null
+                    ? warehouseRepository
+                            .findById(item.warehouseId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"))
+                    : warehouseForProduct(product, posWarehouse);
 
             stockMovementRepository.save(com.prodwatch.api.entity.StockMovement.create(
                     StockMovementType.IN,
@@ -157,6 +165,8 @@ public class TransactionService {
                     null,
                     warehouse,
                     actor,
+                    "POS return",
+                    null,
                     newStatus + " " + transaction.getId()));
         }
 
@@ -178,7 +188,7 @@ public class TransactionService {
                 throw new BusinessRuleException("Price mismatch for product " + product.getSku());
             }
 
-            Warehouse warehouse = warehouseForProduct(product, posWarehouse);
+            Warehouse warehouse = resolveWarehouse(item, product, posWarehouse);
             inventoryBalanceService.assertSufficientStock(product.getId(), warehouse.getId(), item.qty());
 
             BigDecimal lineTotal = item.unitPrice()
@@ -187,6 +197,15 @@ public class TransactionService {
             lines.add(new ValidatedLine(item, product, warehouse, lineTotal));
         }
         return lines;
+    }
+
+    private Warehouse resolveWarehouse(CartItemDto item, Product product, Warehouse posWarehouse) {
+        if (item.warehouseId() != null) {
+            return warehouseRepository
+                    .findById(item.warehouseId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"));
+        }
+        return warehouseForProduct(product, posWarehouse);
     }
 
     private Warehouse warehouseForProduct(Product product, Warehouse posWarehouse) {
@@ -220,7 +239,8 @@ public class TransactionService {
 
     private TransactionResponse toResponse(Transaction transaction) {
         List<CartItemDto> items = transaction.getItems().stream()
-                .map(i -> new CartItemDto(i.productId(), i.name(), i.sku(), i.qty(), i.unitPrice()))
+                .map(i -> new CartItemDto(
+                        i.productId(), i.name(), i.sku(), i.qty(), i.unitPrice(), i.warehouseId()))
                 .toList();
         return new TransactionResponse(
                 transaction.getId(),
@@ -229,6 +249,7 @@ public class TransactionService {
                 transaction.getTax(),
                 transaction.getTotal(),
                 transaction.getCashier().getId(),
+                transaction.getCashier().getName(),
                 transaction.getStatus(),
                 transaction.getCreatedAt());
     }
@@ -236,7 +257,12 @@ public class TransactionService {
     private record ValidatedLine(CartItemDto item, Product product, Warehouse warehouse, BigDecimal lineTotal) {
         TransactionLineItem toLineItem() {
             return new TransactionLineItem(
-                    item.productId(), product.getName(), product.getSku(), item.qty(), item.unitPrice());
+                    item.productId(),
+                    product.getName(),
+                    product.getSku(),
+                    item.qty(),
+                    item.unitPrice(),
+                    warehouse.getId());
         }
     }
 }

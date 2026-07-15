@@ -42,19 +42,52 @@ export interface StockMovement {
   qty: number;
   fromWarehouseId?: string;
   toWarehouseId?: string;
+  provider?: string;
+  recipient?: string;
   userId: string;
   timestamp: string;
   note?: string;
+  /** Present on API list/detail responses */
+  productName?: string;
+  userName?: string;
+}
+
+export interface StockMovementInput {
+  type: StockMovementType;
+  productId: string;
+  qty: number;
+  fromWarehouseId?: string | null;
+  toWarehouseId?: string | null;
+  provider?: string | null;
+  recipient?: string | null;
+  note?: string | null;
+}
+
+export type WarehouseInput = Omit<Warehouse, "id">;
+
+export interface UserProvisionInput {
+  name: string;
+  email: string;
+  password: string;
+  role: Role;
+  active: boolean;
+}
+
+export interface UserUpdateInput {
+  role?: Role;
+  active?: boolean;
 }
 
 export interface AuditEntry {
   id: string;
-  userId: string;
+  userId?: string | null;
+  userName?: string | null;
   action: string;
   entity: string;
   entityId: string;
+  entityLabel?: string | null;
   timestamp: string;
-  details?: string;
+  details?: string | null;
 }
 
 export interface CartItem {
@@ -63,6 +96,14 @@ export interface CartItem {
   sku: string;
   qty: number;
   unitPrice: number;
+  warehouseId: string;
+  warehouseName?: string;
+  /** Present while building a cart in the cashier UI. */
+  maxStock?: number;
+}
+
+export function cartLineKey(productId: string, warehouseId: string) {
+  return `${productId}:${warehouseId}`;
 }
 
 export type TransactionStatus = "completed" | "refunded" | "void";
@@ -74,6 +115,14 @@ export interface Transaction {
   tax: number;
   total: number;
   cashierId: string;
+  cashierName?: string;
   status: TransactionStatus;
   timestamp: string;
+}
+
+export interface TransactionCreateInput {
+  items: CartItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
 }

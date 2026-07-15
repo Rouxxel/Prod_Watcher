@@ -9,7 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ConfirmEmailRouteImport } from './routes/confirm-email'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppWarehousesRouteImport } from './routes/_app.warehouses'
@@ -22,9 +24,19 @@ import { Route as AppCashierRouteImport } from './routes/_app.cashier'
 import { Route as AppCartRouteImport } from './routes/_app.cart'
 import { Route as AppAuditRouteImport } from './routes/_app.audit'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfirmEmailRoute = ConfirmEmailRouteImport.update({
+  id: '/confirm-email',
+  path: '/confirm-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -84,7 +96,9 @@ const AppAuditRoute = AppAuditRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/confirm-email': typeof ConfirmEmailRoute
   '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
   '/audit': typeof AppAuditRoute
   '/cart': typeof AppCartRoute
   '/cashier': typeof AppCashierRoute
@@ -96,7 +110,9 @@ export interface FileRoutesByFullPath {
   '/warehouses': typeof AppWarehousesRoute
 }
 export interface FileRoutesByTo {
+  '/confirm-email': typeof ConfirmEmailRoute
   '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
   '/audit': typeof AppAuditRoute
   '/cart': typeof AppCartRoute
   '/cashier': typeof AppCashierRoute
@@ -111,7 +127,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/confirm-email': typeof ConfirmEmailRoute
   '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
   '/_app/audit': typeof AppAuditRoute
   '/_app/cart': typeof AppCartRoute
   '/_app/cashier': typeof AppCashierRoute
@@ -127,7 +145,9 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/confirm-email'
     | '/login'
+    | '/signup'
     | '/audit'
     | '/cart'
     | '/cashier'
@@ -139,7 +159,9 @@ export interface FileRouteTypes {
     | '/warehouses'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/confirm-email'
     | '/login'
+    | '/signup'
     | '/audit'
     | '/cart'
     | '/cashier'
@@ -153,7 +175,9 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/confirm-email'
     | '/login'
+    | '/signup'
     | '/_app/audit'
     | '/_app/cart'
     | '/_app/cashier'
@@ -168,16 +192,32 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  ConfirmEmailRoute: typeof ConfirmEmailRoute
   LoginRoute: typeof LoginRoute
+  SignupRoute: typeof SignupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/confirm-email': {
+      id: '/confirm-email'
+      path: '/confirm-email'
+      fullPath: '/confirm-email'
+      preLoaderRoute: typeof ConfirmEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -290,7 +330,9 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  ConfirmEmailRoute: ConfirmEmailRoute,
   LoginRoute: LoginRoute,
+  SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

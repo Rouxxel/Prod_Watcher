@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { ClipboardCheck } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -13,8 +14,10 @@ import {
 } from "@/components/ui/table";
 import { TableSkeleton } from "@/components/common/TableSkeleton";
 import { EmptyState } from "@/components/common/EmptyState";
-import { useAudit, useUsers } from "@/hooks/queries";
-import { dateTime } from "@/lib/format";
+import { AuditDetailDialog } from "@/components/audit/AuditDetailDialog";
+import { useAudit } from "@/hooks/queries";
+import { auditUserLabel, dateTime, shortId } from "@/lib/format";
+import type { AuditEntry } from "@/types";
 
 export const Route = createFileRoute("/_app/audit")({
   component: AuditPage,
@@ -22,8 +25,7 @@ export const Route = createFileRoute("/_app/audit")({
 
 function AuditPage() {
   const audit = useAudit();
-  const users = useUsers();
-  const userName = (id: string) => users.data?.find((u) => u.id === id)?.name ?? "—";
+  const [selected, setSelected] = useState<AuditEntry | null>(null);
 
   return (
     <div>
@@ -40,17 +42,23 @@ function AuditPage() {
                 <TableRow>
                   <TableHead>Action</TableHead>
                   <TableHead>Entity</TableHead>
-                  <TableHead>User</TableHead>
+                  <TableHead>By User</TableHead>
                   <TableHead>Details</TableHead>
                   <TableHead>When</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {audit.data?.map((a) => (
-                  <TableRow key={a.id}>
+                  <TableRow
+                    key={a.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelected(a)}
+                  >
                     <TableCell><Badge variant="outline" className="bg-primary/15 text-primary-foreground border-primary/30">{a.action}</Badge></TableCell>
-                    <TableCell className="text-muted-foreground">{a.entity} · {a.entityId}</TableCell>
-                    <TableCell>{userName(a.userId)}</TableCell>
+                    <TableCell className="text-muted-foreground" title={a.entityId}>
+                      {a.entity} · {a.entityLabel ?? shortId(a.entityId)}
+                    </TableCell>
+                    <TableCell title={a.userId ?? undefined}>{auditUserLabel(a.userName, a.userId)}</TableCell>
                     <TableCell className="text-muted-foreground">{a.details ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{dateTime(a.timestamp)}</TableCell>
                   </TableRow>
@@ -60,6 +68,12 @@ function AuditPage() {
           </div>
         )}
       </Card>
+
+      <AuditDetailDialog
+        entry={selected}
+        open={selected !== null}
+        onOpenChange={(open) => !open && setSelected(null)}
+      />
     </div>
   );
 }

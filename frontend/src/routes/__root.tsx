@@ -67,7 +67,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ProdWatch — Inventory & POS" },
+      { title: "ProdWatch" },
       { name: "description", content: "ProdWatch inventory and point-of-sale management dashboard." },
       { name: "theme-color", content: "#1a0a0d" },
     ],

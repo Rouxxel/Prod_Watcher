@@ -44,18 +44,21 @@ CREATE TABLE IF NOT EXISTS stock_movements (
     qty                 INT         NOT NULL,
     from_warehouse_id   UUID        REFERENCES warehouses (id),
     to_warehouse_id     UUID        REFERENCES warehouses (id),
-    user_id             UUID        NOT NULL REFERENCES profiles (id),
+    user_id             UUID        REFERENCES profiles (id),
+    provider            VARCHAR(255),
+    recipient           VARCHAR(255),
     note                VARCHAR(255),
     created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS audit_entries (
     id          UUID NOT NULL PRIMARY KEY,
-    user_id     UUID         NOT NULL REFERENCES profiles (id),
+    user_id     UUID         REFERENCES profiles (id),
     action      VARCHAR(255) NOT NULL,
     entity      VARCHAR(255) NOT NULL,
     entity_id   UUID         NOT NULL,
     details     VARCHAR(255),
+    entity_label VARCHAR(255),
     created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -68,11 +68,13 @@ Keep the dashboard option as a safety net in production.
 
 | Environment | URL(s) |
 | --- | --- |
-| Local dev | `http://localhost:8080/**`, `http://localhost:3000/**` |
-| Production (primary) | `https://prodwatch.vercel.app/**` (replace with your Vercel URL) |
-| Production (optional) | `https://prodwatch.your-subdomain.workers.dev/**` — only if Cloudflare Workers is deployed |
+| Local dev | `http://localhost:8000/confirm-email`, `http://localhost:8000/**` |
+| Production (primary) | `https://prodwatch.vercel.app/confirm-email`, `https://prodwatch.vercel.app/**` (replace with your Vercel URL) |
+| Production (optional) | `https://prodwatch.your-subdomain.workers.dev/confirm-email` — only if Cloudflare Workers is deployed |
 
-Local frontend dev server runs on **port 8080** (`frontend/vite.config.ts`). Include both 8080 and 3000 for flexibility.
+Local frontend dev server runs on **port 8000** (`frontend/vite.config.ts`).
+
+Set backend **`FRONTEND_URL`** (no trailing slash) to the same origin — e.g. `http://localhost:8000` or your Vercel URL. Owner sign-up emails use `{FRONTEND_URL}/confirm-email` as the confirmation redirect target.
 
 Both Vercel and Workers URLs can coexist in the allowlist.
 
@@ -93,7 +95,8 @@ Store `SUPABASE_JWT_SECRET` (or JWT signing secret from Project Settings → API
 Ensure `CORS_ALLOWED_ORIGINS` in `backend/.env` lists the same frontend origins:
 
 ```
-CORS_ALLOWED_ORIGINS=http://localhost:8080,http://localhost:3000,https://prodwatch.vercel.app
+CORS_ALLOWED_ORIGINS=http://localhost:8080,http://localhost:8000,http://localhost:3000,https://prodwatch.vercel.app
+FRONTEND_URL=http://localhost:8000
 ```
 
 Add the Workers URL when that deployment is active.
@@ -124,7 +127,9 @@ Use this checklist after migrations and `seed-auth-users` script (or real signup
 ### Bootstrap owner (`/signup`)
 
 - [ ] Unconfirmed user exists in `auth.users` but **cannot** access protected API routes
-- [ ] After email confirmation, backend calls `bootstrap_assign_admin` → `user_roles` contains `admin`
+- [ ] Confirmation email redirects to `{FRONTEND_URL}/confirm-email` with token query params
+- [ ] After `POST /auth/confirm-email`, backend assigns `admin` → `user_roles` contains `admin`
+- [ ] Owner signs in manually at `/login` (no auto-session after confirm)
 - [ ] Second public sign-up is rejected (backend or dashboard sign-ups disabled)
 
 ### Provisioned staff (Admin API)

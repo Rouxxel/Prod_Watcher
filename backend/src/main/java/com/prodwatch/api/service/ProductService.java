@@ -36,7 +36,7 @@ public class ProductService {
         this.auditService = auditService;
     }
 
-    public List<ProductResponse> list(String category, String search, Boolean lowStock) {
+    public List<ProductResponse> list(String category, String search, Boolean lowStock, UUID stockWarehouseId) {
         List<Product> products;
         if (category != null && !category.isBlank() && search != null && !search.isBlank()) {
             products = productRepository.findByCategoryIgnoreCaseAndNameContainingIgnoreCase(category, search);
@@ -49,11 +49,11 @@ public class ProductService {
         } else {
             products = productRepository.findAll();
         }
-        return products.stream().map(this::toResponse).toList();
+        return products.stream().map(product -> toResponse(product, stockWarehouseId)).toList();
     }
 
     public ProductResponse get(UUID id) {
-        return toResponse(load(id));
+        return toResponse(load(id), null);
     }
 
     @Transactional
@@ -75,7 +75,7 @@ public class ProductService {
                 dto.images().toArray(String[]::new)));
 
         auditService.log(user.getUserId(), "PRODUCT_CREATED", "product", product.getId(), product.getSku());
-        return toResponse(product);
+        return toResponse(product, null);
     }
 
     @Transactional
@@ -112,7 +112,7 @@ public class ProductService {
 
         product = productRepository.save(product);
         auditService.log(user.getUserId(), "PRODUCT_UPDATED", "product", id, product.getSku());
-        return toResponse(product);
+        return toResponse(product, null);
     }
 
     @Transactional
@@ -126,8 +126,10 @@ public class ProductService {
         return productRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Product not found"));
     }
 
-    private ProductResponse toResponse(Product product) {
-        int stock = inventoryBalanceService.getStockAtDefaultWarehouse(product.getId());
+    private ProductResponse toResponse(Product product, UUID stockWarehouseId) {
+        int stock = stockWarehouseId != null
+                ? inventoryBalanceService.getStock(product.getId(), stockWarehouseId)
+                : inventoryBalanceService.getStockAtDefaultWarehouse(product.getId());
         return new ProductResponse(
                 product.getId(),
                 product.getName(),

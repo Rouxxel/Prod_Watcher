@@ -13,4 +13,6 @@ public record StockMovementCreate(
         @Min(1) int qty,
         UUID fromWarehouseId,
         UUID toWarehouseId,
+        String provider,
+        String recipient,
         String note) {}

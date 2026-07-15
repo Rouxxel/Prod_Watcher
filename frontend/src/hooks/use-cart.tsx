@@ -1,14 +1,38 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import type { CartItem, Product } from "@/types";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toastApiError } from "@/lib/api-error";
+import { notify, validation } from "@/lib/notify";
+import { isApiError } from "@/services/api";
+import { transactionsService } from "@/services/transactions.service";
+import { cartLineKey, type CartItem, type Product, type Transaction } from "@/types";
 
 const TAX_RATE = 0.16;
 
+type CheckoutResult =
+  | { ok: true; transaction: Transaction }
+  | { ok: false };
+
+export interface CartAddContext {
+  warehouseId: string;
+  warehouseName: string;
+  maxStock: number;
+}
+
 interface CartCtx {
   items: CartItem[];
-  add: (p: Product) => void;
-  setQty: (productId: string, qty: number) => void;
-  remove: (productId: string) => void;
+  isCheckingOut: boolean;
+  add: (p: Product, context: CartAddContext) => boolean;
+  setQty: (productId: string, warehouseId: string, qty: number, maxStock?: number) => void;
+  remove: (productId: string, warehouseId: string) => void;
   clear: () => void;
+  checkout: () => Promise<CheckoutResult>;
   subtotal: number;
   tax: number;
   total: number;
@@ -19,40 +43,123 @@ const Ctx = createContext<CartCtx | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const qc = useQueryClient();
 
-  const value = useMemo<CartCtx>(() => {
-    const subtotal = items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
-    const tax = subtotal * TAX_RATE;
-    return {
+  const subtotal = items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
+  const tax = subtotal * TAX_RATE;
+  const total = subtotal + tax;
+
+  const add = useCallback((p: Product, context: CartAddContext): boolean => {
+    if (context.maxStock <= 0) return false;
+
+    let allowed = true;
+    setItems((prev) => {
+      const existing = prev.find(
+        (i) => i.productId === p.id && i.warehouseId === context.warehouseId,
+      );
+      const nextQty = (existing?.qty ?? 0) + 1;
+      if (nextQty > context.maxStock) {
+        allowed = false;
+        return prev;
+      }
+      if (existing) {
+        return prev.map((i) =>
+          i.productId === p.id && i.warehouseId === context.warehouseId
+            ? { ...i, qty: i.qty + 1, maxStock: context.maxStock }
+            : i,
+        );
+      }
+      return [
+        ...prev,
+        {
+          productId: p.id,
+          name: p.name,
+          sku: p.sku,
+          qty: 1,
+          unitPrice: p.price,
+          warehouseId: context.warehouseId,
+          warehouseName: context.warehouseName,
+          maxStock: context.maxStock,
+        },
+      ];
+    });
+    return allowed;
+  }, []);
+
+  const setQty = useCallback(
+    (productId: string, warehouseId: string, qty: number, maxStock?: number) => {
+      setItems((prev) => {
+        let nextQty = Math.max(0, qty);
+        if (maxStock !== undefined) {
+          nextQty = Math.min(nextQty, maxStock);
+        }
+        return prev
+          .map((i) =>
+            i.productId === productId && i.warehouseId === warehouseId
+              ? { ...i, qty: nextQty, maxStock: maxStock ?? i.maxStock }
+              : i,
+          )
+          .filter((i) => i.qty > 0);
+      });
+    },
+    [],
+  );
+
+  const remove = useCallback((productId: string, warehouseId: string) => {
+    setItems((prev) =>
+      prev.filter((i) => !(i.productId === productId && i.warehouseId === warehouseId)),
+    );
+  }, []);
+
+  const clear = useCallback(() => setItems([]), []);
+
+  const checkout = useCallback(async (): Promise<CheckoutResult> => {
+    if (items.length === 0) return { ok: false };
+
+    setIsCheckingOut(true);
+    try {
+      const transaction = await transactionsService.create({
+        items,
+        subtotal,
+        tax,
+        total,
+      });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["products"] }),
+        qc.invalidateQueries({ queryKey: ["transactions"] }),
+        qc.invalidateQueries({ queryKey: ["movements"] }),
+      ]);
+      setItems([]);
+      return { ok: true, transaction };
+    } catch (err) {
+      if (isApiError(err) && err.status === 409) {
+        notify.error("Not enough stock", err.message);
+      } else {
+        toastApiError(err, "Checkout failed");
+      }
+      return { ok: false };
+    } finally {
+      setIsCheckingOut(false);
+    }
+  }, [items, subtotal, tax, total, qc]);
+
+  const value = useMemo<CartCtx>(
+    () => ({
       items,
-      add: (p) =>
-        setItems((prev) => {
-          const existing = prev.find((i) => i.productId === p.id);
-          if (existing) {
-            return prev.map((i) =>
-              i.productId === p.id ? { ...i, qty: i.qty + 1 } : i,
-            );
-          }
-          return [
-            ...prev,
-            { productId: p.id, name: p.name, sku: p.sku, qty: 1, unitPrice: p.price },
-          ];
-        }),
-      setQty: (productId, qty) =>
-        setItems((prev) =>
-          prev
-            .map((i) => (i.productId === productId ? { ...i, qty: Math.max(0, qty) } : i))
-            .filter((i) => i.qty > 0),
-        ),
-      remove: (productId) =>
-        setItems((prev) => prev.filter((i) => i.productId !== productId)),
-      clear: () => setItems([]),
+      isCheckingOut,
+      add,
+      setQty,
+      remove,
+      clear,
+      checkout,
       subtotal,
       tax,
-      total: subtotal + tax,
+      total,
       taxRate: TAX_RATE,
-    };
-  }, [items]);
+    }),
+    [items, isCheckingOut, add, setQty, remove, clear, checkout, subtotal, tax, total],
+  );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -62,3 +169,5 @@ export function useCart() {
   if (!ctx) throw new Error("useCart must be used inside CartProvider");
   return ctx;
 }
+
+export { cartLineKey };

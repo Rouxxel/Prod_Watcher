@@ -1,4 +1,5 @@
 import { clearAccessToken, getAccessToken } from "@/lib/auth-token";
+import { captureApiError } from "@/lib/error-capture";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -48,7 +49,8 @@ async function parseErrorBody(res: Response): Promise<{ error: string; detail: s
 
 function redirectToLogin(): void {
   if (typeof window === "undefined") return;
-  if (window.location.pathname === "/login") return;
+  const path = window.location.pathname;
+  if (path === "/login" || path === "/signup" || path === "/confirm-email") return;
   window.location.assign("/login");
 }
 
@@ -75,6 +77,7 @@ async function request<T>(
   }
 
   let res: Response;
+  const errorContext = { method, path };
   try {
     res = await fetch(buildUrl(path), {
       method,
@@ -82,7 +85,9 @@ async function request<T>(
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError(0, "Network Error", "Could not reach the server");
+    const networkError = new ApiError(0, "Network Error", "Could not reach the server");
+    captureApiError(networkError, errorContext);
+    throw networkError;
   }
 
   if (res.status === 401 && withAuth) {
@@ -92,7 +97,9 @@ async function request<T>(
 
   if (!res.ok) {
     const { error, detail } = await parseErrorBody(res);
-    throw new ApiError(res.status, error, detail);
+    const apiError = new ApiError(res.status, error, detail);
+    captureApiError(apiError, errorContext);
+    throw apiError;
   }
 
   if (res.status === 204) {

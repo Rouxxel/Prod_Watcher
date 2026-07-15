@@ -3,6 +3,9 @@ package com.prodwatch.api.entity;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -25,6 +28,7 @@ public class StockMovement {
     private UUID id;
 
     @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "type", nullable = false)
     private StockMovementType type;
 
@@ -43,12 +47,18 @@ public class StockMovement {
     @JoinColumn(name = "to_warehouse_id")
     private Warehouse toWarehouse;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     private Profile user;
 
     @Column(name = "note")
     private String note;
+
+    @Column(name = "provider")
+    private String provider;
+
+    @Column(name = "recipient")
+    private String recipient;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -122,6 +132,22 @@ public class StockMovement {
         this.note = note;
     }
 
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
+    }
+
+    public String getRecipient() {
+        return recipient;
+    }
+
+    public void setRecipient(String recipient) {
+        this.recipient = recipient;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -133,6 +159,8 @@ public class StockMovement {
             Warehouse fromWarehouse,
             Warehouse toWarehouse,
             Profile user,
+            String provider,
+            String recipient,
             String note) {
         StockMovement movement = new StockMovement();
         movement.type = type;
@@ -141,6 +169,8 @@ public class StockMovement {
         movement.fromWarehouse = fromWarehouse;
         movement.toWarehouse = toWarehouse;
         movement.user = user;
+        movement.provider = provider;
+        movement.recipient = recipient;
         movement.note = note;
         return movement;
     }

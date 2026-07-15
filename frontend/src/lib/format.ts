@@ -14,3 +14,14 @@ export const roleLabel = (role: string) =>
     .split("_")
     .map((w) => w[0].toUpperCase() + w.slice(1))
     .join(" ");
+
+export function shortId(id: string | null | undefined) {
+  if (!id) return "—";
+  return id.length > 8 ? `${id.slice(0, 8)}…` : id;
+}
+
+export function auditUserLabel(userName?: string | null, userId?: string | null) {
+  if (userName?.trim()) return userName.trim();
+  if (userId) return shortId(userId);
+  return "Deleted user";
+}

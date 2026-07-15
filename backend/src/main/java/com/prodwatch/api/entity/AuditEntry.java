@@ -22,8 +22,8 @@ public class AuditEntry {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     private Profile user;
 
     @Column(name = "action", nullable = false)
@@ -38,6 +38,9 @@ public class AuditEntry {
     @Column(name = "details")
     private String details;
 
+    @Column(name = "entity_label")
+    private String entityLabel;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -45,12 +48,18 @@ public class AuditEntry {
 
     public static AuditEntry create(
             Profile user, String action, String entity, UUID entityId, String details) {
+        return create(user, action, entity, entityId, details, null);
+    }
+
+    public static AuditEntry create(
+            Profile user, String action, String entity, UUID entityId, String details, String entityLabel) {
         AuditEntry entry = new AuditEntry();
         entry.setUser(user);
         entry.setAction(action);
         entry.setEntity(entity);
         entry.setEntityId(entityId);
         entry.setDetails(details);
+        entry.setEntityLabel(entityLabel);
         return entry;
     }
 
@@ -103,6 +112,14 @@ public class AuditEntry {
 
     public void setDetails(String details) {
         this.details = details;
+    }
+
+    public String getEntityLabel() {
+        return entityLabel;
+    }
+
+    public void setEntityLabel(String entityLabel) {
+        this.entityLabel = entityLabel;
     }
 
     public Instant getCreatedAt() {

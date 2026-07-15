@@ -72,7 +72,7 @@ class TransactionServiceTest extends AbstractIntegrationTest {
                 new String[0]));
 
         stockMovementService.create(
-                new StockMovementCreate(StockMovementType.IN, product.getId(), 10, null, warehouse.getId(), "seed"),
+                new StockMovementCreate(StockMovementType.IN, product.getId(), 10, null, warehouse.getId(), "Test Supplier", null, "seed"),
                 TestFixtures.currentUser(TestFixtures.WORKER_ID, AppRole.warehouse_worker));
     }
 
@@ -98,7 +98,7 @@ class TransactionServiceTest extends AbstractIntegrationTest {
 
     private TransactionCreate checkoutRequest(int qty, BigDecimal subtotal, BigDecimal tax, BigDecimal total) {
         CartItemDto item = new CartItemDto(
-                product.getId(), product.getName(), product.getSku(), qty, product.getPrice());
+                product.getId(), product.getName(), product.getSku(), qty, product.getPrice(), warehouse.getId());
         return new TransactionCreate(List.of(item), subtotal, tax, total);
     }
 }

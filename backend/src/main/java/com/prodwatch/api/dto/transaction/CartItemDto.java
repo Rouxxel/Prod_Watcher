@@ -14,4 +14,5 @@ public record CartItemDto(
         @NotBlank @Size(max = 255) String name,
         @NotBlank @Size(max = 64) String sku,
         @Min(1) int qty,
-        @NotNull @DecimalMin("0.00") BigDecimal unitPrice) {}
+        @NotNull @DecimalMin("0.00") BigDecimal unitPrice,
+        UUID warehouseId) {}

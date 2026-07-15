@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, Pencil, Trash2, Package } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,8 @@ import {
   useUpdateProduct,
   useDeleteProduct,
 } from "@/hooks/queries";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { canMutateInventory } from "@/lib/role-access";
 import { currency } from "@/lib/format";
 import type { Product, ProductInput } from "@/types";
 import { toast } from "sonner";
@@ -52,14 +54,18 @@ export const Route = createFileRoute("/_app/products")({
 });
 
 function ProductsPage() {
-  const products = useProducts();
+  const { user } = useCurrentUser();
+  const readOnly = user ? !canMutateInventory(user.role) : false;
   const warehouses = useWarehouses();
+  const [warehouseFilter, setWarehouseFilter] = useState("all");
+  const stockWarehouseId = warehouseFilter === "all" ? undefined : warehouseFilter;
+  const products = useProducts(stockWarehouseId);
   const createMut = useCreateProduct();
   const updateMut = useUpdateProduct();
   const deleteMut = useDeleteProduct();
   const { isSingleLocation, setDetectedWarehouseCount } = useBusinessMode();
 
-  useMemo(() => {
+  useEffect(() => {
     if (warehouses.data) setDetectedWarehouseCount(warehouses.data.length);
   }, [warehouses.data, setDetectedWarehouseCount]);
 
@@ -80,12 +86,17 @@ function ProductsPage() {
       const q = query.toLowerCase();
       if (q && !p.name.toLowerCase().includes(q) && !p.sku.toLowerCase().includes(q)) return false;
       if (category !== "all" && p.category !== category) return false;
+      if (warehouseFilter !== "all") {
+        const stockedHere = p.stock > 0;
+        const defaultHere = p.warehouseId === warehouseFilter;
+        if (!stockedHere && !defaultHere) return false;
+      }
       if (stockLevel === "out" && p.stock !== 0) return false;
       if (stockLevel === "low" && (p.stock === 0 || p.stock > p.lowStockThreshold)) return false;
       if (stockLevel === "ok" && p.stock <= p.lowStockThreshold) return false;
       return true;
     });
-  }, [products.data, query, category, stockLevel]);
+  }, [products.data, query, category, stockLevel, warehouseFilter]);
 
   const handleSubmit = (input: ProductInput) => {
     if (editing) {
@@ -118,15 +129,24 @@ function ProductsPage() {
     return <Badge variant="outline" className="bg-success/15 text-success border-success/30">OK</Badge>;
   };
 
+  const stockColumnLabel =
+    warehouseFilter === "all" ? "Stock" : `Stock (${warehouseName(warehouseFilter)})`;
+
   return (
     <div>
       <PageHeader
         title="Products"
-        description="Manage your catalog, pricing, and stock levels."
+        description={
+          readOnly
+            ? "Read-only catalog view — pricing and stock levels across locations."
+            : "Manage your catalog, pricing, and stock levels."
+        }
         actions={
-          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" /> Add product
-          </Button>
+          !readOnly ? (
+            <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+              <Plus className="mr-2 h-4 w-4" /> Add product
+            </Button>
+          ) : undefined
         }
       />
 
@@ -150,6 +170,17 @@ function ProductsPage() {
               ))}
             </SelectContent>
           </Select>
+          {!isSingleLocation && (
+            <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Warehouse" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All warehouses</SelectItem>
+                {warehouses.data?.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Select value={stockLevel} onValueChange={setStockLevel}>
             <SelectTrigger className="w-[160px]"><SelectValue placeholder="Stock level" /></SelectTrigger>
             <SelectContent>
@@ -169,9 +200,11 @@ function ProductsPage() {
             title="No products found"
             description="Try adjusting filters or add your first product."
             action={
-              <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-                <Plus className="mr-2 h-4 w-4" /> Add product
-              </Button>
+              !readOnly ? (
+                <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+                  <Plus className="mr-2 h-4 w-4" /> Add product
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -184,10 +217,10 @@ function ProductsPage() {
                   <TableHead>SKU</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="text-right">Stock</TableHead>
+                  <TableHead className="text-right">{stockColumnLabel}</TableHead>
                   <TableHead>Status</TableHead>
                   {!isSingleLocation && <TableHead>Warehouse</TableHead>}
-                  <TableHead className="w-[100px]" />
+                  {!readOnly && <TableHead className="w-[100px]" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -211,16 +244,18 @@ function ProductsPage() {
                     {!isSingleLocation && (
                       <TableCell className="text-muted-foreground">{warehouseName(p.warehouseId)}</TableCell>
                     )}
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => { setEditing(p); setDialogOpen(true); }}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => setToDelete(p)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    {!readOnly && (
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          <Button size="icon" variant="ghost" onClick={() => { setEditing(p); setDialogOpen(true); }}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" onClick={() => setToDelete(p)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -229,41 +264,45 @@ function ProductsPage() {
         )}
       </Card>
 
-      <ProductFormDialog
-        open={dialogOpen}
-        onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditing(null); }}
-        initial={editing}
-        warehouses={warehouses.data ?? []}
-        onSubmit={handleSubmit}
-        pending={createMut.isPending || updateMut.isPending}
-      />
+      {!readOnly && (
+        <>
+          <ProductFormDialog
+            open={dialogOpen}
+            onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditing(null); }}
+            initial={editing}
+            warehouses={warehouses.data ?? []}
+            onSubmit={handleSubmit}
+            pending={createMut.isPending || updateMut.isPending}
+          />
 
-      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this product?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {toDelete?.name} ({toDelete?.sku}) will be permanently removed from the mock catalog.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (!toDelete) return;
-                deleteMut.mutate(toDelete.id, {
-                  onSuccess: () => {
-                    toast.success("Product deleted");
-                    setToDelete(null);
-                  },
-                });
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this product?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {toDelete?.name} ({toDelete?.sku}) will be permanently removed from the catalog.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    if (!toDelete) return;
+                    deleteMut.mutate(toDelete.id, {
+                      onSuccess: () => {
+                        toast.success("Product deleted");
+                        setToDelete(null);
+                      },
+                    });
+                  }}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </div>
   );
 }

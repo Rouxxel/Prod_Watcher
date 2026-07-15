@@ -1,43 +1,42 @@
-import { createFileRoute, useNavigate, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, Navigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import logoUrl from "@/assets/prodwatch-logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { MOCK_LOGIN_PASSWORD, useCurrentUser } from "@/hooks/use-current-user";
-import { roleLabel } from "@/lib/format";
-import { users } from "@/mock/seed";
-import type { Role } from "@/types";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-const ROLES: Role[] = ["admin", "warehouse_manager", "warehouse_worker", "inspector", "cashier"];
-
 function LoginPage() {
-  const { user, login } = useCurrentUser();
+  const { user, isLoading, login } = useCurrentUser();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Role>("admin");
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </div>
+    );
+  }
 
   if (user) return <Navigate to="/" />;
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    const result = login(email, password, role);
+    setSubmitting(true);
+    const result = await login(email, password);
+    setSubmitting(false);
     if (!result.ok) {
-      setError(result.error ?? "Unable to Log in.");
+      setError(result.error ?? "Unable to log in.");
       return;
     }
     navigate({ to: "/" });
@@ -76,21 +75,6 @@ function LoginPage() {
 
         <form className="space-y-4" onSubmit={onSubmit}>
           <div className="space-y-1.5">
-            <Label htmlFor="role">Role</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-              <SelectTrigger id="role" className="h-10">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ROLES.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {roleLabel(r)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
@@ -104,9 +88,8 @@ function LoginPage() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="password">Password</Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="current-password"
               placeholder="••••••••"
               value={password}
@@ -119,27 +102,17 @@ function LoginPage() {
               {error}
             </div>
           )}
-          <Button type="submit" className="w-full">
-            Log in
+          <Button type="submit" className="w-full" disabled={submitting}>
+            {submitting ? "Logging in…" : "Log in"}
+          </Button>
+          <Button type="button" variant="outline" className="w-full" asChild>
+            <Link to="/signup">Sign up</Link>
           </Button>
         </form>
 
-        <div className="mt-6 rounded-md border border-border bg-background/50 p-3 text-xs text-muted-foreground">
-          <div className="font-mono-retro mb-1 text-[10px] uppercase tracking-[0.25em] text-foreground/80">
-            Demo accounts · password{" "}
-            <span className="text-primary-foreground">{MOCK_LOGIN_PASSWORD}</span>
-          </div>
-          <ul className="space-y-0.5">
-            {users
-              .filter((u) => u.active)
-              .map((u) => (
-                <li key={u.id} className="flex justify-between gap-2">
-                  <span className="truncate">{u.email}</span>
-                  <span className="text-foreground/60">{roleLabel(u.role)}</span>
-                </li>
-              ))}
-          </ul>
-        </div>
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Sign up creates an administrator account only. Staff are added by an admin after login.
+        </p>
       </div>
     </div>
   );

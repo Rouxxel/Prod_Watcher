@@ -14,5 +14,6 @@ public record TransactionResponse(
         BigDecimal tax,
         BigDecimal total,
         UUID cashierId,
+        String cashierName,
         TransactionStatus status,
         Instant timestamp) {}

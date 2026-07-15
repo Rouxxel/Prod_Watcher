@@ -2,6 +2,8 @@ package com.prodwatch.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.UUID;
+
 import com.prodwatch.api.entity.AppRole;
 import com.prodwatch.api.entity.Profile;
 import com.prodwatch.api.entity.UserRole;
@@ -35,16 +37,46 @@ class AuthBootstrapServiceTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void signupAllowedWhenNoAdminExists() {
+    void signupIsAlwaysAllowed() {
+        Profile adminProfile = profileRepository.save(Profile.create(
+                UUID.randomUUID(), "admin@test.local", "Admin", true));
+        userRoleRepository.save(new UserRole(adminProfile, AppRole.admin));
+
         assertThat(authBootstrapService.isSignupAllowed()).isTrue();
     }
 
     @Test
-    void signupBlockedAfterAdminExists() {
-        Profile adminProfile = profileRepository.save(Profile.create(
-                java.util.UUID.randomUUID(), "admin@test.local", "Admin", true));
-        userRoleRepository.save(new UserRole(adminProfile, AppRole.admin));
+    void confirmedSignupBecomesAdmin() {
+        UUID userId = UUID.randomUUID();
+        profileRepository.save(Profile.create(userId, "owner@test.local", "Owner", true));
 
-        assertThat(authBootstrapService.isSignupAllowed()).isFalse();
+        authBootstrapService.assignAdminFromSignup(userId);
+
+        assertThat(userRoleRepository.findByUser_Id(userId)).get().extracting(UserRole::getRole).isEqualTo(AppRole.admin);
+    }
+
+    @Test
+    void confirmedSignupBecomesAdminEvenWhenOtherAdminsExist() {
+        Profile existingAdmin = profileRepository.save(Profile.create(
+                UUID.randomUUID(), "admin@test.local", "Admin", true));
+        userRoleRepository.save(new UserRole(existingAdmin, AppRole.admin));
+
+        UUID userId = UUID.randomUUID();
+        profileRepository.save(Profile.create(userId, "owner2@test.local", "Owner Two", true));
+
+        authBootstrapService.assignAdminFromSignup(userId);
+
+        assertThat(userRoleRepository.findByUser_Id(userId)).get().extracting(UserRole::getRole).isEqualTo(AppRole.admin);
+    }
+
+    @Test
+    void ensureAdminRoleFromSignupIsIdempotent() {
+        UUID userId = UUID.randomUUID();
+        profileRepository.save(Profile.create(userId, "owner@test.local", "Owner", true));
+
+        authBootstrapService.ensureAdminRoleFromSignup(userId);
+        authBootstrapService.ensureAdminRoleFromSignup(userId);
+
+        assertThat(userRoleRepository.findByUser_Id(userId)).get().extracting(UserRole::getRole).isEqualTo(AppRole.admin);
     }
 }
