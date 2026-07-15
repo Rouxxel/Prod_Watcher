@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { notify, validation } from "@/lib/notify";
@@ -58,9 +58,8 @@ export function ResetPasswordDialog({ user, open, onOpenChange, onSubmit, pendin
         >
           <div className="space-y-1.5">
             <Label htmlFor="reset-password">New password</Label>
-            <Input
+            <PasswordInput
               id="reset-password"
-              type="password"
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -69,9 +68,8 @@ export function ResetPasswordDialog({ user, open, onOpenChange, onSubmit, pendin
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="reset-confirm">Confirm password</Label>
-            <Input
+            <PasswordInput
               id="reset-confirm"
-              type="password"
               autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
