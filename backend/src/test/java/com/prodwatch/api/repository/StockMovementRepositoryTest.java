@@ -7,6 +7,7 @@ import com.prodwatch.api.entity.Profile;
 import com.prodwatch.api.entity.StockMovement;
 import com.prodwatch.api.entity.StockMovementType;
 import com.prodwatch.api.entity.Warehouse;
+import com.prodwatch.api.repository.EcosystemRepository;
 import com.prodwatch.api.support.TestFixtures;
 
 import jakarta.persistence.EntityManager;
@@ -42,6 +43,9 @@ class StockMovementRepositoryTest {
     private UserRoleRepository userRoleRepository;
 
     @Autowired
+    private EcosystemRepository ecosystemRepository;
+
+    @Autowired
     private EntityManager entityManager;
 
     private Product product;
@@ -51,9 +55,10 @@ class StockMovementRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        user = TestFixtures.seedUser(profileRepository, userRoleRepository, TestFixtures.WORKER_ID, com.prodwatch.api.entity.AppRole.warehouse_worker);
-        source = warehouseRepository.save(Warehouse.create("Source WH", "A1"));
-        destination = warehouseRepository.save(Warehouse.create("Dest WH", "B1"));
+        user = TestFixtures.seedUser(
+                profileRepository, userRoleRepository, ecosystemRepository, TestFixtures.WORKER_ID, com.prodwatch.api.entity.AppRole.warehouse_worker);
+        source = TestFixtures.saveWarehouse(warehouseRepository, ecosystemRepository, "Source WH", "A1");
+        destination = TestFixtures.saveWarehouse(warehouseRepository, ecosystemRepository, "Dest WH", "B1");
         product = productRepository.save(
                 Product.create("Balance test", "BAL-001", "general", java.math.BigDecimal.TEN, source, 2, new String[0]));
     }

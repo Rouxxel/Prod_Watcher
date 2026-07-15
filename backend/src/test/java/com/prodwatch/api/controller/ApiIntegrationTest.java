@@ -26,6 +26,7 @@ import com.prodwatch.api.entity.Product;
 import com.prodwatch.api.entity.StockMovementType;
 import com.prodwatch.api.entity.Warehouse;
 import com.prodwatch.api.repository.AuditEntryRepository;
+import com.prodwatch.api.repository.EcosystemRepository;
 import com.prodwatch.api.repository.ProductRepository;
 import com.prodwatch.api.repository.ProfileRepository;
 import com.prodwatch.api.repository.UserRoleRepository;
@@ -62,6 +63,9 @@ class ApiIntegrationTest extends AbstractIntegrationTest {
     private UserRoleRepository userRoleRepository;
 
     @Autowired
+    private EcosystemRepository ecosystemRepository;
+
+    @Autowired
     private WarehouseRepository warehouseRepository;
 
     @Autowired
@@ -74,10 +78,10 @@ class ApiIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        TestFixtures.seedUser(profileRepository, userRoleRepository, TestFixtures.ADMIN_ID, AppRole.admin);
-        TestFixtures.seedUser(profileRepository, userRoleRepository, TestFixtures.WORKER_ID, AppRole.warehouse_worker);
-        TestFixtures.seedUser(profileRepository, userRoleRepository, TestFixtures.CASHIER_ID, AppRole.cashier);
-        warehouseId = warehouseRepository.save(Warehouse.create("Main WH", "Floor 1")).getId();
+        TestFixtures.seedUser(profileRepository, userRoleRepository, ecosystemRepository, TestFixtures.ADMIN_ID, AppRole.admin);
+        TestFixtures.seedUser(profileRepository, userRoleRepository, ecosystemRepository, TestFixtures.WORKER_ID, AppRole.warehouse_worker);
+        TestFixtures.seedUser(profileRepository, userRoleRepository, ecosystemRepository, TestFixtures.CASHIER_ID, AppRole.cashier);
+        warehouseId = TestFixtures.saveWarehouse(warehouseRepository, ecosystemRepository, "Main WH", "Floor 1").getId();
     }
 
     @Test
@@ -89,8 +93,8 @@ class ApiIntegrationTest extends AbstractIntegrationTest {
     @Test
     void inactiveUserJwtIsRejected() throws Exception {
         UUID inactiveId = UUID.fromString("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
-        profileRepository.save(com.prodwatch.api.entity.Profile.create(
-                inactiveId, "inactive@test.local", "Inactive User", false));
+        TestFixtures.saveProfile(
+                profileRepository, ecosystemRepository, inactiveId, "inactive@test.local", "Inactive User", false);
         userRoleRepository.save(new com.prodwatch.api.entity.UserRole(
                 profileRepository.findById(inactiveId).orElseThrow(), AppRole.cashier));
 
@@ -196,7 +200,7 @@ class ApiIntegrationTest extends AbstractIntegrationTest {
                 warehouseRepository.findById(warehouseId).orElseThrow(),
                 1,
                 new String[0]));
-        UUID destId = warehouseRepository.save(Warehouse.create("Dest", "D1")).getId();
+        UUID destId = TestFixtures.saveWarehouse(warehouseRepository, ecosystemRepository, "Dest", "D1").getId();
 
         seedStock(product.getId(), 3);
 

@@ -16,6 +16,7 @@ import com.prodwatch.api.entity.AppRole;
 import com.prodwatch.api.entity.Profile;
 import com.prodwatch.api.entity.UserRole;
 import com.prodwatch.api.error.BusinessRuleException;
+import com.prodwatch.api.repository.EcosystemRepository;
 import com.prodwatch.api.repository.ProfileRepository;
 import com.prodwatch.api.repository.UserRoleRepository;
 import com.prodwatch.api.security.CurrentUser;
@@ -44,6 +45,9 @@ class UserServiceTest extends AbstractIntegrationTest {
     @Autowired
     private UserRoleRepository userRoleRepository;
 
+    @Autowired
+    private EcosystemRepository ecosystemRepository;
+
     @MockBean
     private SupabaseAuthService supabaseAuthService;
 
@@ -51,7 +55,7 @@ class UserServiceTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        TestFixtures.seedUser(profileRepository, userRoleRepository, TestFixtures.ADMIN_ID, AppRole.admin);
+        TestFixtures.seedUser(profileRepository, userRoleRepository, ecosystemRepository, TestFixtures.ADMIN_ID, AppRole.admin);
         admin = TestFixtures.currentUser(TestFixtures.ADMIN_ID, AppRole.admin);
         when(supabaseAuthService.createConfirmedUser(anyString(), anyString(), anyString()))
                 .thenReturn(UUID.fromString("cccccccc-cccc-4ccc-8ccc-ccccccccccc1"));
@@ -81,11 +85,13 @@ class UserServiceTest extends AbstractIntegrationTest {
 
     @Test
     void cannotAssignAdminViaPatch() {
-        Profile worker = profileRepository.save(Profile.create(
+        Profile worker = TestFixtures.saveProfile(
+                profileRepository,
+                ecosystemRepository,
                 UUID.fromString("dddddddd-dddd-4ddd-8ddd-dddddddddddd"),
                 "patch@test.local",
                 "Patch User",
-                true));
+                true);
         userRoleRepository.save(new UserRole(worker, AppRole.warehouse_worker));
 
         assertThatThrownBy(() -> userService.update(
@@ -96,11 +102,13 @@ class UserServiceTest extends AbstractIntegrationTest {
 
     @Test
     void promoteToAdminWorks() {
-        Profile worker = profileRepository.save(Profile.create(
+        Profile worker = TestFixtures.saveProfile(
+                profileRepository,
+                ecosystemRepository,
                 UUID.fromString("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"),
                 "promote@test.local",
                 "Promote User",
-                true));
+                true);
         userRoleRepository.save(new UserRole(worker, AppRole.warehouse_worker));
 
         var response = userService.promoteToAdmin(worker.getId(), admin);
@@ -124,7 +132,8 @@ class UserServiceTest extends AbstractIntegrationTest {
     @Test
     void adminCannotResetOtherAdminPassword() {
         UUID otherAdminId = UUID.fromString("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
-        profileRepository.save(Profile.create(otherAdminId, "other-admin@test.local", "Other Admin", true));
+        TestFixtures.saveProfile(
+                profileRepository, ecosystemRepository, otherAdminId, "other-admin@test.local", "Other Admin", true);
         userRoleRepository.save(new UserRole(profileRepository.getReferenceById(otherAdminId), AppRole.admin));
 
         assertThatThrownBy(() -> userService.resetPassword(
@@ -136,7 +145,8 @@ class UserServiceTest extends AbstractIntegrationTest {
     @Test
     void adminCanStepDownWhenAnotherActiveAdminExists() {
         UUID otherAdminId = UUID.fromString("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
-        profileRepository.save(Profile.create(otherAdminId, "other-admin@test.local", "Other Admin", true));
+        TestFixtures.saveProfile(
+                profileRepository, ecosystemRepository, otherAdminId, "other-admin@test.local", "Other Admin", true);
         userRoleRepository.save(new UserRole(profileRepository.getReferenceById(otherAdminId), AppRole.admin));
 
         var response = userService.stepDownFromAdmin(new AdminStepDownRequest(AppRole.inspector), admin);
@@ -153,11 +163,13 @@ class UserServiceTest extends AbstractIntegrationTest {
 
     @Test
     void nonAdminCannotStepDown() {
-        Profile worker = profileRepository.save(Profile.create(
+        Profile worker = TestFixtures.saveProfile(
+                profileRepository,
+                ecosystemRepository,
                 UUID.fromString("ffffffff-ffff-4fff-8fff-ffffffffffff"),
                 "worker-step@test.local",
                 "Worker Step",
-                true));
+                true);
         userRoleRepository.save(new UserRole(worker, AppRole.warehouse_worker));
         CurrentUser workerUser = TestFixtures.currentUser(worker.getId(), AppRole.warehouse_worker);
 
@@ -168,11 +180,13 @@ class UserServiceTest extends AbstractIntegrationTest {
 
     @Test
     void adminCanDeleteNonAdminUser() {
-        Profile worker = profileRepository.save(Profile.create(
+        Profile worker = TestFixtures.saveProfile(
+                profileRepository,
+                ecosystemRepository,
                 UUID.fromString("11111111-1111-4111-8111-111111111111"),
                 "delete@test.local",
                 "Delete Me",
-                true));
+                true);
         userRoleRepository.save(new UserRole(worker, AppRole.cashier));
 
         userService.delete(worker.getId(), admin);
@@ -184,8 +198,8 @@ class UserServiceTest extends AbstractIntegrationTest {
     @Test
     void adminCannotDeleteAnotherAdmin() {
         UUID otherAdminId = UUID.fromString("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
-        Profile otherAdmin = profileRepository.save(
-                Profile.create(otherAdminId, "other-admin@test.local", "Other Admin", true));
+        Profile otherAdmin = TestFixtures.saveProfile(
+                profileRepository, ecosystemRepository, otherAdminId, "other-admin@test.local", "Other Admin", true);
         userRoleRepository.save(new UserRole(otherAdmin, AppRole.admin));
 
         assertThatThrownBy(() -> userService.delete(otherAdminId, admin))

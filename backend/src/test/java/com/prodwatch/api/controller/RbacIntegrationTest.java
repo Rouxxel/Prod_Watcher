@@ -15,6 +15,7 @@ import com.prodwatch.api.entity.AppRole;
 import com.prodwatch.api.entity.Product;
 import com.prodwatch.api.entity.StockMovementType;
 import com.prodwatch.api.entity.Warehouse;
+import com.prodwatch.api.repository.EcosystemRepository;
 import com.prodwatch.api.repository.ProductRepository;
 import com.prodwatch.api.repository.ProfileRepository;
 import com.prodwatch.api.repository.UserRoleRepository;
@@ -55,16 +56,19 @@ class RbacIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private UserRoleRepository userRoleRepository;
 
+    @Autowired
+    private EcosystemRepository ecosystemRepository;
+
     private UUID productId;
     private UUID warehouseId;
 
     @BeforeEach
     void setUp() {
-        TestFixtures.seedUser(profileRepository, userRoleRepository, TestFixtures.ADMIN_ID, AppRole.admin);
-        TestFixtures.seedUser(profileRepository, userRoleRepository, TestFixtures.WORKER_ID, AppRole.warehouse_worker);
-        TestFixtures.seedUser(profileRepository, userRoleRepository, TestFixtures.CASHIER_ID, AppRole.cashier);
+        TestFixtures.seedUser(profileRepository, userRoleRepository, ecosystemRepository, TestFixtures.ADMIN_ID, AppRole.admin);
+        TestFixtures.seedUser(profileRepository, userRoleRepository, ecosystemRepository, TestFixtures.WORKER_ID, AppRole.warehouse_worker);
+        TestFixtures.seedUser(profileRepository, userRoleRepository, ecosystemRepository, TestFixtures.CASHIER_ID, AppRole.cashier);
 
-        Warehouse warehouse = warehouseRepository.save(Warehouse.create("RBAC WH", "Shelf 1"));
+        Warehouse warehouse = TestFixtures.saveWarehouse(warehouseRepository, ecosystemRepository, "RBAC WH", "Shelf 1");
         warehouseId = warehouse.getId();
         Product product = productRepository.save(Product.create(
                 "RBAC product",
