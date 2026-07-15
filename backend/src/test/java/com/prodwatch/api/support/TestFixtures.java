@@ -35,8 +35,12 @@ public final class TestFixtures {
     }
 
     public static Profile seedUser(ProfileRepository profiles, UserRoleRepository roles, UUID id, AppRole role) {
-        Profile profile = profiles.save(Profile.create(id, role.name() + "@test.local", "Test " + role, true));
-        roles.save(new UserRole(profile, role));
+        Profile profile = profiles.findById(id).orElseGet(() ->
+                profiles.save(Profile.create(id, role.name() + "@test.local", "Test " + role, true)));
+        roles.findByUser_Id(id).orElseGet(() -> {
+            roles.save(new UserRole(profile, role));
+            return null;
+        });
         return profile;
     }
 

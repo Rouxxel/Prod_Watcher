@@ -299,6 +299,11 @@ class ApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void settingsGetWithoutAuthReturns401() throws Exception {
+        mockMvc.perform(get("/api/v1/settings")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void settingsGetAllowedForCashier() throws Exception {
         mockMvc.perform(get("/api/v1/settings")
                         .header("Authorization", TestFixtures.bearerHeader(TestFixtures.CASHIER_ID)))
@@ -311,6 +316,15 @@ class ApiIntegrationTest extends AbstractIntegrationTest {
     void settingsPatchForbiddenForCashier() throws Exception {
         mockMvc.perform(patch("/api/v1/settings")
                         .header("Authorization", TestFixtures.bearerHeader(TestFixtures.CASHIER_ID))
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"taxRate\":0.10}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void settingsPatchForbiddenForWorker() throws Exception {
+        mockMvc.perform(patch("/api/v1/settings")
+                        .header("Authorization", TestFixtures.bearerHeader(TestFixtures.WORKER_ID))
                         .contentType(APPLICATION_JSON)
                         .content("{\"taxRate\":0.10}"))
                 .andExpect(status().isForbidden());
@@ -333,6 +347,15 @@ class ApiIntegrationTest extends AbstractIntegrationTest {
                         .header("Authorization", TestFixtures.bearerHeader(TestFixtures.ADMIN_ID))
                         .contentType(APPLICATION_JSON)
                         .content("{\"taxRate\":1.5}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void settingsPatchRejectsInvalidEmail() throws Exception {
+        mockMvc.perform(patch("/api/v1/settings")
+                        .header("Authorization", TestFixtures.bearerHeader(TestFixtures.ADMIN_ID))
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"contactEmail\":\"not-an-email\"}"))
                 .andExpect(status().isBadRequest());
     }
 

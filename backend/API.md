@@ -78,9 +78,12 @@ Errors use a uniform shape:
 | Stock movements | CRU | CRU | CRU | R | R |
 | Audit | R | R | R | R | R |
 | Users | full | — | — | — | — |
+| Settings | RU | R | R | R | R |
 | Transactions | CRUD + refund/void | R | — | R | checkout + R |
 
 Legend: **C** create, **R** read, **U** update, **D** delete.
+
+Settings **U** (PATCH) is admin-only; all roles may **R** (GET) when authenticated. Unauthenticated clients receive **401** and never see `contactEmail` or other fields.
 
 ---
 
@@ -608,7 +611,7 @@ Workspace configuration singleton (tax, receipts, business mode). Persisted in `
 
 ### GET `/api/v1/settings`
 
-**Roles:** any authenticated user (cashiers need tax rate for cart/receipts).
+**Roles:** any authenticated user (cashiers need tax rate for cart/receipts). Unauthenticated requests → **401** (no settings payload, including `contactEmail`).
 
 **Response 200**
 
