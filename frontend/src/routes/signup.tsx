@@ -42,7 +42,6 @@ function SignupPage() {
   }
 
   if (user) return <Navigate to="/" />;
-  if (!allowed) return <Navigate to="/login" />;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -87,14 +86,25 @@ function SignupPage() {
             <img src={logoUrl} alt="ProdWatch logo" className="h-14 w-14 object-contain" />
           </div>
           <h1 className="font-display vw-text-glow mt-4 text-2xl font-semibold uppercase tracking-wide">
-            Owner sign-up
+            {allowed ? "Owner sign-up" : "Sign up"}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Create the first admin account for this workspace.
+            {allowed
+              ? "Create the first admin account for this workspace."
+              : "Owner registration is already complete for this workspace."}
           </p>
         </div>
 
-        {successMessage ? (
+        {!allowed ? (
+          <div className="space-y-4 text-center">
+            <div className="rounded-md border border-border bg-background/50 px-4 py-3 text-sm text-muted-foreground">
+              If you need access, ask your administrator or log in with your existing account.
+            </div>
+            <Button asChild className="w-full">
+              <Link to="/login">Back to login</Link>
+            </Button>
+          </div>
+        ) : successMessage ? (
           <div className="space-y-4 text-center">
             <div className="rounded-md border border-border bg-background/50 px-4 py-3 text-sm text-foreground">
               {successMessage}
@@ -104,72 +114,72 @@ function SignupPage() {
             </Button>
           </div>
         ) : (
-          <form className="space-y-4" onSubmit={onSubmit}>
-            <div className="space-y-1.5">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                autoComplete="name"
-                placeholder="Alex Owner"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="alex@acme.co"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="confirm-password">Confirm password</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                autoComplete="new-password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
-            {error && (
-              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
+          <>
+            <form className="space-y-4" onSubmit={onSubmit}>
+              <div className="space-y-1.5">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  autoComplete="name"
+                  placeholder="Alex Owner"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
               </div>
-            )}
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Creating account…" : "Create account"}
-            </Button>
-          </form>
-        )}
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="alex@acme.co"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="confirm-password">Confirm password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+              {error && (
+                <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? "Creating account…" : "Create account"}
+              </Button>
+            </form>
 
-        {!successMessage && (
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link to="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
-              Log in
-            </Link>
-          </p>
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <Link to="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
+                Log in
+              </Link>
+            </p>
+          </>
         )}
       </div>
     </div>
