@@ -49,6 +49,10 @@ public class Transaction {
     @JoinColumn(name = "cashier_id", nullable = false)
     private Profile cashier;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "ecosystem_id", nullable = false)
+    private Ecosystem ecosystem;
+
     // Native transaction_status enum binding (see V13 migration: the 'void' label is renamed to
     // 'void_' so it matches the Java constant name). The REST contract still uses "void" via the
     // @JsonValue/@JsonCreator mapping on TransactionStatus.
@@ -116,6 +120,10 @@ public class Transaction {
         this.cashier = cashier;
     }
 
+    public Ecosystem getEcosystem() {
+        return ecosystem;
+    }
+
     public TransactionStatus getStatus() {
         return status;
     }
@@ -140,6 +148,7 @@ public class Transaction {
         transaction.tax = tax;
         transaction.total = total;
         transaction.cashier = cashier;
+        transaction.ecosystem = cashier.getEcosystem();
         transaction.status = TransactionStatus.completed;
         return transaction;
     }

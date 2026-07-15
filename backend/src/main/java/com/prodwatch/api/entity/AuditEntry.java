@@ -41,6 +41,10 @@ public class AuditEntry {
     @Column(name = "entity_label")
     private String entityLabel;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "ecosystem_id", nullable = false)
+    private Ecosystem ecosystem;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -60,6 +64,9 @@ public class AuditEntry {
         entry.setEntityId(entityId);
         entry.setDetails(details);
         entry.setEntityLabel(entityLabel);
+        if (user != null) {
+            entry.setEcosystem(user.getEcosystem());
+        }
         return entry;
     }
 
@@ -120,6 +127,14 @@ public class AuditEntry {
 
     public void setEntityLabel(String entityLabel) {
         this.entityLabel = entityLabel;
+    }
+
+    public Ecosystem getEcosystem() {
+        return ecosystem;
+    }
+
+    public void setEcosystem(Ecosystem ecosystem) {
+        this.ecosystem = ecosystem;
     }
 
     public Instant getCreatedAt() {

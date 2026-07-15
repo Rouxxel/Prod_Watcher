@@ -51,6 +51,10 @@ public class StockMovement {
     @JoinColumn(name = "user_id")
     private Profile user;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "ecosystem_id", nullable = false)
+    private Ecosystem ecosystem;
+
     @Column(name = "note")
     private String note;
 
@@ -124,6 +128,10 @@ public class StockMovement {
         this.user = user;
     }
 
+    public Ecosystem getEcosystem() {
+        return ecosystem;
+    }
+
     public String getNote() {
         return note;
     }
@@ -169,6 +177,7 @@ public class StockMovement {
         movement.fromWarehouse = fromWarehouse;
         movement.toWarehouse = toWarehouse;
         movement.user = user;
+        movement.ecosystem = product.getEcosystem();
         movement.provider = provider;
         movement.recipient = recipient;
         movement.note = note;
