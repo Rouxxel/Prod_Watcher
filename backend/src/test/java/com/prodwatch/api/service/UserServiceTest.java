@@ -165,4 +165,37 @@ class UserServiceTest extends AbstractIntegrationTest {
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("Only admins can step down");
     }
+
+    @Test
+    void adminCanDeleteNonAdminUser() {
+        Profile worker = profileRepository.save(Profile.create(
+                UUID.fromString("11111111-1111-4111-8111-111111111111"),
+                "delete@test.local",
+                "Delete Me",
+                true));
+        userRoleRepository.save(new UserRole(worker, AppRole.cashier));
+
+        userService.delete(worker.getId(), admin);
+
+        assertThat(profileRepository.findById(worker.getId())).isEmpty();
+        assertThat(userRoleRepository.findByUser_Id(worker.getId())).isEmpty();
+    }
+
+    @Test
+    void adminCannotDeleteAnotherAdmin() {
+        UUID otherAdminId = UUID.fromString("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+        profileRepository.save(Profile.create(otherAdminId, "other-admin@test.local", "Other Admin", true));
+        userRoleRepository.save(new UserRole(profileRepository.getReferenceById(otherAdminId), AppRole.admin));
+
+        assertThatThrownBy(() -> userService.delete(otherAdminId, admin))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Cannot delete an admin");
+    }
+
+    @Test
+    void adminCannotDeleteSelf() {
+        assertThatThrownBy(() -> userService.delete(TestFixtures.ADMIN_ID, admin))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("your own account");
+    }
 }
