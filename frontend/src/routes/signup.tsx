@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import logoUrl from "@/assets/prodwatch-logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,8 +16,6 @@ export const Route = createFileRoute("/signup")({
 
 function SignupPage() {
   const { user, isLoading } = useCurrentUser();
-  const [checking, setChecking] = useState(true);
-  const [allowed, setAllowed] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,15 +24,7 @@ function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    authService
-      .bootstrapStatus()
-      .then((status) => setAllowed(status.signupAllowed))
-      .catch(() => setAllowed(false))
-      .finally(() => setChecking(false));
-  }, []);
-
-  if (isLoading || checking) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">Loading…</p>
@@ -59,6 +49,12 @@ function SignupPage() {
 
     setSubmitting(true);
     try {
+      const availability = await authService.signupEmailAvailable(email);
+      if (!availability.available) {
+        setError("An account with this email already exists.");
+        return;
+      }
+
       const response = await authService.signup({
         name: name.trim(),
         email: email.trim(),
@@ -87,25 +83,15 @@ function SignupPage() {
             <img src={logoUrl} alt="ProdWatch logo" className="h-14 w-14 object-contain" />
           </div>
           <h1 className="font-display vw-text-glow mt-4 text-2xl font-semibold uppercase tracking-wide">
-            {allowed ? "Owner sign-up" : "Owner sign-up closed"}
+            Sign up
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {allowed
-              ? "Create the first admin account for this workspace. After you confirm your email, you can log in and provision staff."
-              : "An admin already exists for this workspace. Staff accounts are created by an admin — not via public sign-up."}
+            Create an administrator account. Sign-up grants the admin role only — add staff from Users after you log
+            in.
           </p>
         </div>
 
-        {!allowed ? (
-          <div className="space-y-4 text-center">
-            <div className="rounded-md border border-border bg-background/50 px-4 py-3 text-sm text-muted-foreground">
-              Log in with the email and password your administrator gave you.
-            </div>
-            <Button asChild className="w-full">
-              <Link to="/login">Go to login</Link>
-            </Button>
-          </div>
-        ) : successMessage ? (
+        {successMessage ? (
           <div className="space-y-4 text-center">
             <div className="rounded-md border border-border bg-background/50 px-4 py-3 text-sm text-foreground">
               {successMessage}
@@ -168,7 +154,7 @@ function SignupPage() {
                 </div>
               )}
               <Button type="submit" className="w-full" disabled={submitting}>
-                {submitting ? "Creating account…" : "Create owner account"}
+                {submitting ? "Creating account…" : "Create admin account"}
               </Button>
             </form>
 

@@ -1,12 +1,11 @@
 import { createFileRoute, Link, useNavigate, Navigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import logoUrl from "@/assets/prodwatch-logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { authService } from "@/services/auth.service";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -15,22 +14,12 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const { user, isLoading, login } = useCurrentUser();
   const navigate = useNavigate();
-  const [checkingBootstrap, setCheckingBootstrap] = useState(true);
-  const [ownerSignupOpen, setOwnerSignupOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    authService
-      .bootstrapStatus()
-      .then((status) => setOwnerSignupOpen(status.signupAllowed))
-      .catch(() => setOwnerSignupOpen(false))
-      .finally(() => setCheckingBootstrap(false));
-  }, []);
-
-  if (isLoading || checkingBootstrap) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">Loading…</p>
@@ -116,17 +105,13 @@ function LoginPage() {
           <Button type="submit" className="w-full" disabled={submitting}>
             {submitting ? "Logging in…" : "Log in"}
           </Button>
-          {ownerSignupOpen && (
-            <Button type="button" variant="outline" className="w-full" asChild>
-              <Link to="/signup">Create owner account</Link>
-            </Button>
-          )}
+          <Button type="button" variant="outline" className="w-full" asChild>
+            <Link to="/signup">Sign up</Link>
+          </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          {ownerSignupOpen
-            ? "Setting up a new workspace? Create the owner account above. Staff are added by the owner after login."
-            : "Staff accounts are created by your administrator. Ask your admin if you need access."}
+          Sign up creates an administrator account only. Staff are added by an admin after login.
         </p>
       </div>
     </div>
