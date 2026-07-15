@@ -50,7 +50,7 @@ export function Topbar() {
               {modes.includes("inventory") && (
                 <SelectItem value="inventory">
                   <span className="flex items-center gap-2">
-                    <Boxes className="h-3.5 w-3.5" />
+                    {/* <Boxes className="h-3.5 w-3.5" /> */}
                     Inventory mode
                   </span>
                 </SelectItem>
@@ -58,7 +58,7 @@ export function Topbar() {
               {modes.includes("selling") && (
                 <SelectItem value="selling">
                   <span className="flex items-center gap-2">
-                    <ScanBarcode className="h-3.5 w-3.5" />
+                    {/* <ScanBarcode className="h-3.5 w-3.5" /> */}
                     Selling mode
                   </span>
                 </SelectItem>
