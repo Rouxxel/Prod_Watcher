@@ -80,14 +80,14 @@ export interface UserUpdateInput {
 
 export interface AuditEntry {
   id: string;
-  userId: string;
-  userName?: string;
+  userId?: string | null;
+  userName?: string | null;
   action: string;
   entity: string;
   entityId: string;
-  entityLabel?: string;
+  entityLabel?: string | null;
   timestamp: string;
-  details?: string;
+  details?: string | null;
 }
 
 export interface CartItem {

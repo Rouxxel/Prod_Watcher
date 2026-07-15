@@ -16,12 +16,8 @@ import { TableSkeleton } from "@/components/common/TableSkeleton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { AuditDetailDialog } from "@/components/audit/AuditDetailDialog";
 import { useAudit } from "@/hooks/queries";
-import { dateTime } from "@/lib/format";
+import { auditUserLabel, dateTime, shortId } from "@/lib/format";
 import type { AuditEntry } from "@/types";
-
-function shortId(id: string) {
-  return id.length > 8 ? `${id.slice(0, 8)}…` : id;
-}
 
 export const Route = createFileRoute("/_app/audit")({
   component: AuditPage,
@@ -46,7 +42,7 @@ function AuditPage() {
                 <TableRow>
                   <TableHead>Action</TableHead>
                   <TableHead>Entity</TableHead>
-                  <TableHead>User</TableHead>
+                  <TableHead>By User</TableHead>
                   <TableHead>Details</TableHead>
                   <TableHead>When</TableHead>
                 </TableRow>
@@ -62,7 +58,7 @@ function AuditPage() {
                     <TableCell className="text-muted-foreground" title={a.entityId}>
                       {a.entity} · {a.entityLabel ?? shortId(a.entityId)}
                     </TableCell>
-                    <TableCell title={a.userId}>{a.userName ?? shortId(a.userId)}</TableCell>
+                    <TableCell title={a.userId ?? undefined}>{auditUserLabel(a.userName, a.userId)}</TableCell>
                     <TableCell className="text-muted-foreground">{a.details ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{dateTime(a.timestamp)}</TableCell>
                   </TableRow>

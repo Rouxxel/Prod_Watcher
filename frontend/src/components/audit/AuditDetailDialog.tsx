@@ -7,17 +7,13 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { dateTime } from "@/lib/format";
+import { auditUserLabel, dateTime, shortId } from "@/lib/format";
 import type { AuditEntry } from "@/types";
 
 interface Props {
   entry: AuditEntry | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-function shortId(id: string) {
-  return id.length > 8 ? `${id.slice(0, 8)}…` : id;
 }
 
 function DetailField({
@@ -41,7 +37,7 @@ export function AuditDetailDialog({ entry, open, onOpenChange }: Props) {
   if (!entry) return null;
 
   const entityDisplay = `${entry.entity} · ${entry.entityLabel ?? shortId(entry.entityId)}`;
-  const userName = entry.userName ?? shortId(entry.userId);
+  const userName = auditUserLabel(entry.userName, entry.userId);
   const details = entry.details?.trim();
 
   return (

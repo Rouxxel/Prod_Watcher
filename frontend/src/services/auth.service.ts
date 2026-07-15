@@ -36,6 +36,10 @@ export interface SignupResponse {
   message: string;
 }
 
+export interface SignupEmailAvailability {
+  available: boolean;
+}
+
 export function mapUser(response: ApiUserResponse): User {
   return {
     id: response.id,
@@ -49,6 +53,11 @@ export function mapUser(response: ApiUserResponse): User {
 export const authService = {
   bootstrapStatus(): Promise<BootstrapStatus> {
     return apiGet<BootstrapStatus>("/auth/bootstrap-status", { auth: false });
+  },
+
+  signupEmailAvailable(email: string): Promise<SignupEmailAvailability> {
+    const params = new URLSearchParams({ email: email.trim().toLowerCase() });
+    return apiGet<SignupEmailAvailability>(`/auth/signup-email-available?${params}`, { auth: false });
   },
 
   signup(input: SignupInput): Promise<SignupResponse> {
