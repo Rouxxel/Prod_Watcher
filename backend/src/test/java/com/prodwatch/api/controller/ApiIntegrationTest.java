@@ -298,6 +298,78 @@ class ApiIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void settingsGetAllowedForCashier() throws Exception {
+        mockMvc.perform(get("/api/v1/settings")
+                        .header("Authorization", TestFixtures.bearerHeader(TestFixtures.CASHIER_ID)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.taxRate").value(0.16))
+                .andExpect(jsonPath("$.taxLabel").value("VAT"));
+    }
+
+    @Test
+    void settingsPatchForbiddenForCashier() throws Exception {
+        mockMvc.perform(patch("/api/v1/settings")
+                        .header("Authorization", TestFixtures.bearerHeader(TestFixtures.CASHIER_ID))
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"taxRate\":0.10}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void settingsPatchAllowedForAdmin() throws Exception {
+        mockMvc.perform(patch("/api/v1/settings")
+                        .header("Authorization", TestFixtures.bearerHeader(TestFixtures.ADMIN_ID))
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"taxRate\":0.10,\"taxLabel\":\"GST\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.taxRate").value(0.10))
+                .andExpect(jsonPath("$.taxLabel").value("GST"));
+    }
+
+    @Test
+    void settingsPatchRejectsInvalidTaxRate() throws Exception {
+        mockMvc.perform(patch("/api/v1/settings")
+                        .header("Authorization", TestFixtures.bearerHeader(TestFixtures.ADMIN_ID))
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"taxRate\":1.5}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void checkoutUsesUpdatedTaxRate() throws Exception {
+        mockMvc.perform(patch("/api/v1/settings")
+                        .header("Authorization", TestFixtures.bearerHeader(TestFixtures.ADMIN_ID))
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"taxRate\":0.10}"))
+                .andExpect(status().isOk());
+
+        Product product = productRepository.save(Product.create(
+                "Tax test",
+                "TAX-001",
+                "general",
+                new BigDecimal("10.00"),
+                warehouseRepository.findById(warehouseId).orElseThrow(),
+                1,
+                new String[0]));
+        seedStock(product.getId(), 10);
+
+        TransactionCreate checkout = new TransactionCreate(
+                List.of(new CartItemDto(
+                        product.getId(), product.getName(), product.getSku(), 2, product.getPrice(), warehouseId)),
+                new BigDecimal("20.00"),
+                new BigDecimal("2.00"),
+                new BigDecimal("22.00"));
+
+        mockMvc.perform(post("/api/v1/transactions")
+                        .header("Authorization", TestFixtures.bearerHeader(TestFixtures.CASHIER_ID))
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(checkout)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.tax").value(2.00))
+                .andExpect(jsonPath("$.total").value(22.00));
+    }
+
     private void seedStock(UUID productId, int qty) throws Exception {
         StockMovementCreate in =
                 new StockMovementCreate(StockMovementType.IN, productId, qty, null, warehouseId, "Test Supplier", null, "seed");
