@@ -597,9 +597,63 @@ Admin-only except `GET /users/me`.
 
 ---
 
+## Settings
+
+Workspace configuration singleton (tax, receipts, business mode). Persisted in `workspace_settings`.
+
+| Method | Path | Roles | Description |
+| --- | --- | --- | --- |
+| GET | `/api/v1/settings` | authenticated | Workspace settings |
+| PATCH | `/api/v1/settings` | admin | Partial update |
+
+### GET `/api/v1/settings`
+
+**Roles:** any authenticated user (cashiers need tax rate for cart/receipts).
+
+**Response 200**
+
+```json
+{
+  "businessName": "ProdWatch Demo Co.",
+  "contactEmail": "ops@prodwatch.app",
+  "taxRate": 0.16,
+  "taxLabel": "VAT",
+  "receiptFooter": "Thank you for your purchase!",
+  "receiptLogoUrl": null,
+  "businessMode": "auto",
+  "updatedAt": "2026-07-15T12:00:00Z"
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `taxRate` | Decimal fraction `0`–`1` (e.g. `0.16` = 16%) |
+| `businessMode` | `auto` \| `single` \| `multi` — inventory/POS location UX preference |
+
+### PATCH `/api/v1/settings`
+
+**Roles:** admin.
+
+**Body:** partial update — omitted/`null` fields are unchanged.
+
+```json
+{
+  "taxRate": 0.10,
+  "taxLabel": "GST"
+}
+```
+
+**Validation:** `taxRate` 0–1; `contactEmail` valid email when set; `receiptLogoUrl` http/https URL when set; `businessMode` one of `auto`, `single`, `multi`.
+
+**Response 200** — full `SettingsResponse` after save. Writes `SETTINGS_UPDATED` audit entry.
+
+On first access, if no row exists the server bootstraps defaults using `POS_TAX_RATE` (env fallback, default `0.16`).
+
+---
+
 ## Transactions (POS)
 
-Tax rate defaults to **16%** (`POS_TAX_RATE=0.16`). Server validates line prices against the product catalog and recalculates tax/total.
+Tax rate comes from **workspace settings** (`GET /api/v1/settings`). `POS_TAX_RATE` seeds the row on first bootstrap only. Server validates line prices against the product catalog and recalculates tax/total.
 
 Checkout creates one **`OUT`** stock movement per line. Stock is deducted from **`warehouseId` on each cart item** when present; otherwise from `POS_WAREHOUSE_ID` (if configured) or the product's default warehouse. Each persisted line item stores `warehouseId` in transaction JSON so refunds/voids restore stock to the correct warehouse.
 
