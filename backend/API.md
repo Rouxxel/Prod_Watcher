@@ -96,11 +96,13 @@ Public. Returns whether owner sign-up is allowed (no admin exists yet).
 { "signupAllowed": true }
 ```
 
+When `false`, an admin already exists — staff must be provisioned by an admin on `/users`.
+
 ---
 
 ### POST `/api/v1/auth/signup`
 
-Public. Owner bootstrap only (when `signupAllowed` is true).
+Public. **Owner bootstrap only** (when `signupAllowed` is true). Creates the first admin after email confirmation.
 
 **Body**
 
@@ -541,6 +543,20 @@ Admin-only except `GET /users/me`.
 
 ---
 
+### POST `/api/v1/users/me/step-down-admin`
+
+**Roles:** admin (self only). Demote your own account to a non-admin role when at least two admins are active.
+
+**Body**
+
+```json
+{ "role": "warehouse_manager" }
+```
+
+**Response 200** — `UserResponse` with the new role.
+
+---
+
 ### POST `/api/v1/users/{id}/promote-admin`
 
 **Roles:** admin.
@@ -563,7 +579,7 @@ Admin-only except `GET /users/me`.
 
 ### POST `/api/v1/users/{id}/deactivate`
 
-**Roles:** admin. Cannot deactivate the last admin.
+**Roles:** admin. Cannot deactivate the last active admin.
 
 ---
 

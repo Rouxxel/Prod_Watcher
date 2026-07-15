@@ -3,6 +3,7 @@ package com.prodwatch.api.service;
 import java.util.List;
 import java.util.UUID;
 
+import com.prodwatch.api.dto.user.AdminStepDownRequest;
 import com.prodwatch.api.dto.user.UserProvisionRequest;
 import com.prodwatch.api.dto.user.UserResetPasswordRequest;
 import com.prodwatch.api.dto.user.UserResponse;
@@ -121,6 +122,36 @@ public class UserService {
     }
 
     @Transactional
+    public UserResponse stepDownFromAdmin(AdminStepDownRequest dto, CurrentUser actor) {
+        if (dto.role() == AppRole.admin) {
+            throw new BusinessRuleException("Cannot step down to admin role");
+        }
+
+        Profile profile = loadProfile(actor.getUserId());
+        if (!profile.isActive()) {
+            throw new BusinessRuleException("Inactive users cannot step down from admin");
+        }
+
+        UserRole userRole = userRoleRepository
+                .findByUser_Id(actor.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
+
+        if (userRole.getRole() != AppRole.admin) {
+            throw new BusinessRuleException("Only admins can step down from admin");
+        }
+
+        if (userRoleRepository.countActiveByRole(AppRole.admin) <= 1) {
+            throw new BusinessRuleException("Cannot step down while you are the only active admin");
+        }
+
+        userRole.setRole(dto.role());
+        userRoleRepository.save(userRole);
+        auditService.log(
+                actor.getUserId(), "ROLE_STEPPED_DOWN_FROM_ADMIN", "user", actor.getUserId(), dto.role().name());
+        return toResponse(profile);
+    }
+
+    @Transactional
     public void resetPassword(UUID id, UserResetPasswordRequest dto, CurrentUser admin) {
         RoleChecker.requireAdmin(admin);
         UserRole userRole = userRoleRepository
@@ -175,8 +206,8 @@ public class UserService {
     }
 
     private void assertNotLastAdmin(UUID userId, AppRole role) {
-        if (role == AppRole.admin && userRoleRepository.countByRole(AppRole.admin) <= 1) {
-            throw new BusinessRuleException("Cannot deactivate the last admin");
+        if (role == AppRole.admin && userRoleRepository.countActiveByRole(AppRole.admin) <= 1) {
+            throw new BusinessRuleException("Cannot deactivate the last active admin");
         }
     }
 

@@ -23,6 +23,7 @@ public class AuthBootstrapService {
         this.profileRepository = profileRepository;
     }
 
+    /** Owner sign-up is allowed only while no admin exists in the workspace. */
     public boolean isSignupAllowed() {
         return !userRoleRepository.existsByRole(AppRole.admin);
     }

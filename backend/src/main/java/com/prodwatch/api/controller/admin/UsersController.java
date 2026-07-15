@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.prodwatch.api.config.RateLimit;
+import com.prodwatch.api.dto.user.AdminStepDownRequest;
 import com.prodwatch.api.dto.user.UserProvisionRequest;
 import com.prodwatch.api.dto.user.UserResetPasswordRequest;
 import com.prodwatch.api.dto.user.UserResponse;
@@ -50,6 +51,13 @@ public class UsersController {
     @GetMapping("/me")
     public UserResponse me(@AuthenticationPrincipal CurrentUser user) {
         return userService.getMe(user);
+    }
+
+    @RateLimit("users_endpoint")
+    @PostMapping("/me/step-down-admin")
+    public UserResponse stepDownAdmin(
+            @Valid @RequestBody AdminStepDownRequest body, @AuthenticationPrincipal CurrentUser user) {
+        return userService.stepDownFromAdmin(body, user);
     }
 
     @RateLimit("users_endpoint")
