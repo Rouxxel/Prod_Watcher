@@ -1,14 +1,12 @@
 package com.prodwatch.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.UUID;
 
 import com.prodwatch.api.entity.AppRole;
 import com.prodwatch.api.entity.Profile;
 import com.prodwatch.api.entity.UserRole;
-import com.prodwatch.api.error.BusinessRuleException;
 import com.prodwatch.api.repository.ProfileRepository;
 import com.prodwatch.api.repository.UserRoleRepository;
 import com.prodwatch.api.support.AbstractIntegrationTest;
@@ -39,40 +37,46 @@ class AuthBootstrapServiceTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void signupAllowedWhenNoAdminExists() {
-        assertThat(authBootstrapService.isSignupAllowed()).isTrue();
-    }
-
-    @Test
-    void signupBlockedAfterAdminExists() {
+    void signupIsAlwaysAllowed() {
         Profile adminProfile = profileRepository.save(Profile.create(
                 UUID.randomUUID(), "admin@test.local", "Admin", true));
         userRoleRepository.save(new UserRole(adminProfile, AppRole.admin));
 
-        assertThat(authBootstrapService.isSignupAllowed()).isFalse();
+        assertThat(authBootstrapService.isSignupAllowed()).isTrue();
     }
 
     @Test
-    void firstConfirmedSignupBecomesAdmin() {
+    void confirmedSignupBecomesAdmin() {
         UUID userId = UUID.randomUUID();
         profileRepository.save(Profile.create(userId, "owner@test.local", "Owner", true));
 
-        authBootstrapService.assignAdminIfFirstUser(userId);
+        authBootstrapService.assignAdminFromSignup(userId);
 
         assertThat(userRoleRepository.findByUser_Id(userId)).get().extracting(UserRole::getRole).isEqualTo(AppRole.admin);
     }
 
     @Test
-    void cannotAssignAdminWhenAdminAlreadyExists() {
-        Profile adminProfile = profileRepository.save(Profile.create(
+    void confirmedSignupBecomesAdminEvenWhenOtherAdminsExist() {
+        Profile existingAdmin = profileRepository.save(Profile.create(
                 UUID.randomUUID(), "admin@test.local", "Admin", true));
-        userRoleRepository.save(new UserRole(adminProfile, AppRole.admin));
+        userRoleRepository.save(new UserRole(existingAdmin, AppRole.admin));
 
         UUID userId = UUID.randomUUID();
-        profileRepository.save(Profile.create(userId, "late@test.local", "Late", true));
+        profileRepository.save(Profile.create(userId, "owner2@test.local", "Owner Two", true));
 
-        assertThatThrownBy(() -> authBootstrapService.assignAdminIfFirstUser(userId))
-                .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("admin already exists");
+        authBootstrapService.assignAdminFromSignup(userId);
+
+        assertThat(userRoleRepository.findByUser_Id(userId)).get().extracting(UserRole::getRole).isEqualTo(AppRole.admin);
+    }
+
+    @Test
+    void ensureAdminRoleFromSignupIsIdempotent() {
+        UUID userId = UUID.randomUUID();
+        profileRepository.save(Profile.create(userId, "owner@test.local", "Owner", true));
+
+        authBootstrapService.ensureAdminRoleFromSignup(userId);
+        authBootstrapService.ensureAdminRoleFromSignup(userId);
+
+        assertThat(userRoleRepository.findByUser_Id(userId)).get().extracting(UserRole::getRole).isEqualTo(AppRole.admin);
     }
 }
