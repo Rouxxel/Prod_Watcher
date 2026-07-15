@@ -10,15 +10,20 @@ import com.prodwatch.api.entity.Product;
 
 public interface ProductRepository extends JpaRepository<Product, UUID> {
 
-    Optional<Product> findBySku(String sku);
+    List<Product> findAllByEcosystem_Id(UUID ecosystemId);
 
-    boolean existsBySku(String sku);
+    Optional<Product> findByIdAndEcosystem_Id(UUID id, UUID ecosystemId);
 
-    boolean existsByDefaultWarehouse_Id(UUID warehouseId);
+    Optional<Product> findByEcosystem_IdAndSku(UUID ecosystemId, String sku);
 
-    List<Product> findByCategoryIgnoreCase(String category);
+    boolean existsByEcosystem_IdAndSku(UUID ecosystemId, String sku);
 
-    List<Product> findByNameContainingIgnoreCase(String name);
+    boolean existsByEcosystem_IdAndDefaultWarehouse_Id(UUID ecosystemId, UUID warehouseId);
 
-    List<Product> findByCategoryIgnoreCaseAndNameContainingIgnoreCase(String category, String name);
+    List<Product> findByEcosystem_IdAndCategoryIgnoreCase(UUID ecosystemId, String category);
+
+    List<Product> findByEcosystem_IdAndNameContainingIgnoreCase(UUID ecosystemId, String name);
+
+    List<Product> findByEcosystem_IdAndCategoryIgnoreCaseAndNameContainingIgnoreCase(
+            UUID ecosystemId, String category, String name);
 }

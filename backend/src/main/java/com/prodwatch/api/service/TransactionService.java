@@ -25,6 +25,7 @@ import com.prodwatch.api.repository.StockMovementRepository;
 import com.prodwatch.api.repository.TransactionRepository;
 import com.prodwatch.api.repository.WarehouseRepository;
 import com.prodwatch.api.security.CurrentUser;
+import com.prodwatch.api.security.TenantContext;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -68,32 +69,36 @@ public class TransactionService {
 
     @Transactional(readOnly = true)
     public List<TransactionResponse> list(
-            UUID cashierId, TransactionStatus status, Instant from, Instant to) {
+            UUID cashierId, TransactionStatus status, Instant from, Instant to, CurrentUser user) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
         return transactionRepository
-                .findWithFilters(cashierId, status == null ? null : status.name(), from, to)
+                .findWithFilters(ecosystemId, cashierId, status == null ? null : status.name(), from, to)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public TransactionResponse get(UUID id) {
-        return toResponse(load(id));
+    public TransactionResponse get(UUID id, CurrentUser user) {
+        return toResponse(load(id, user));
     }
 
     @Transactional
     public TransactionResponse checkout(TransactionCreate dto, CurrentUser cashier) {
-        Profile cashierProfile = profileRepository.getReferenceById(cashier.getUserId());
-        Warehouse posWarehouse = resolvePosWarehouse();
+        UUID ecosystemId = TenantContext.requireEcosystemId(cashier);
+        Profile cashierProfile = profileRepository
+                .findByIdAndEcosystem_Id(cashier.getUserId(), ecosystemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
+        Warehouse posWarehouse = resolvePosWarehouse(ecosystemId);
 
-        List<ValidatedLine> lines = validateAndResolveLines(dto.items(), posWarehouse);
+        List<ValidatedLine> lines = validateAndResolveLines(dto.items(), posWarehouse, ecosystemId);
 
         BigDecimal subtotal = lines.stream()
                 .map(ValidatedLine::lineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(MONEY_SCALE, RoundingMode.HALF_UP);
         BigDecimal tax = subtotal
-                .multiply(settingsService.getTaxRate())
+                .multiply(settingsService.getTaxRate(ecosystemId))
                 .setScale(MONEY_SCALE, RoundingMode.HALF_UP);
         BigDecimal total = subtotal.add(tax).setScale(MONEY_SCALE, RoundingMode.HALF_UP);
 
@@ -142,21 +147,24 @@ public class TransactionService {
 
     private TransactionResponse reverse(
             UUID id, CurrentUser user, TransactionStatus newStatus, String auditAction) {
-        Transaction transaction = load(id);
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
+        Transaction transaction = load(id, user);
         if (transaction.getStatus() != TransactionStatus.completed) {
             throw new BusinessRuleException("Only completed transactions can be reversed");
         }
 
-        Profile actor = profileRepository.getReferenceById(user.getUserId());
-        Warehouse posWarehouse = resolvePosWarehouse();
+        Profile actor = profileRepository
+                .findByIdAndEcosystem_Id(user.getUserId(), ecosystemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
+        Warehouse posWarehouse = resolvePosWarehouse(ecosystemId);
 
         for (TransactionLineItem item : transaction.getItems()) {
             Product product = productRepository
-                    .findById(item.productId())
+                    .findByIdAndEcosystem_Id(item.productId(), ecosystemId)
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
             Warehouse warehouse = item.warehouseId() != null
                     ? warehouseRepository
-                            .findById(item.warehouseId())
+                            .findByIdAndEcosystem_Id(item.warehouseId(), ecosystemId)
                             .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"))
                     : warehouseForProduct(product, posWarehouse);
 
@@ -177,11 +185,12 @@ public class TransactionService {
         return toResponse(transaction);
     }
 
-    private List<ValidatedLine> validateAndResolveLines(List<CartItemDto> items, Warehouse posWarehouse) {
+    private List<ValidatedLine> validateAndResolveLines(
+            List<CartItemDto> items, Warehouse posWarehouse, UUID ecosystemId) {
         List<ValidatedLine> lines = new ArrayList<>();
         for (CartItemDto item : items) {
             Product product = productRepository
-                    .findById(item.productId())
+                    .findByIdAndEcosystem_Id(item.productId(), ecosystemId)
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + item.productId()));
             if (!product.getSku().equals(item.sku())) {
                 throw new BusinessRuleException("SKU mismatch for product " + item.productId());
@@ -190,7 +199,7 @@ public class TransactionService {
                 throw new BusinessRuleException("Price mismatch for product " + product.getSku());
             }
 
-            Warehouse warehouse = resolveWarehouse(item, product, posWarehouse);
+            Warehouse warehouse = resolveWarehouse(item, product, posWarehouse, ecosystemId);
             inventoryBalanceService.assertSufficientStock(product.getId(), warehouse.getId(), item.qty());
 
             BigDecimal lineTotal = item.unitPrice()
@@ -201,10 +210,11 @@ public class TransactionService {
         return lines;
     }
 
-    private Warehouse resolveWarehouse(CartItemDto item, Product product, Warehouse posWarehouse) {
+    private Warehouse resolveWarehouse(
+            CartItemDto item, Product product, Warehouse posWarehouse, UUID ecosystemId) {
         if (item.warehouseId() != null) {
             return warehouseRepository
-                    .findById(item.warehouseId())
+                    .findByIdAndEcosystem_Id(item.warehouseId(), ecosystemId)
                     .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"));
         }
         return warehouseForProduct(product, posWarehouse);
@@ -217,12 +227,12 @@ public class TransactionService {
         return product.getDefaultWarehouse();
     }
 
-    private Warehouse resolvePosWarehouse() {
+    private Warehouse resolvePosWarehouse(UUID ecosystemId) {
         if (posWarehouseId == null) {
             return null;
         }
         return warehouseRepository
-                .findById(posWarehouseId)
+                .findByIdAndEcosystem_Id(posWarehouseId, ecosystemId)
                 .orElseThrow(() -> new ResourceNotFoundException("POS warehouse not found"));
     }
 
@@ -233,9 +243,10 @@ public class TransactionService {
         }
     }
 
-    private Transaction load(UUID id) {
+    private Transaction load(UUID id, CurrentUser user) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
         return transactionRepository
-                .findById(id)
+                .findByIdAndEcosystem_Id(id, ecosystemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
     }
 

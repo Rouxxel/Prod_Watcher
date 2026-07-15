@@ -51,11 +51,16 @@ public class WorkspaceSettings {
     @JoinColumn(name = "updated_by")
     private Profile updatedBy;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "ecosystem_id", nullable = false)
+    private Ecosystem ecosystem;
+
     protected WorkspaceSettings() {}
 
-    public static WorkspaceSettings createDefault(BigDecimal taxRate) {
+    public static WorkspaceSettings createDefault(Ecosystem ecosystem, BigDecimal taxRate) {
         WorkspaceSettings settings = new WorkspaceSettings();
-        settings.id = SINGLETON_ID;
+        settings.id = UUID.randomUUID();
+        settings.ecosystem = ecosystem;
         settings.businessName = "";
         settings.contactEmail = "";
         settings.taxRate = taxRate;
@@ -68,7 +73,7 @@ public class WorkspaceSettings {
     @PrePersist
     void onCreate() {
         if (id == null) {
-            id = SINGLETON_ID;
+            id = UUID.randomUUID();
         }
         if (updatedAt == null) {
             updatedAt = Instant.now();
@@ -150,5 +155,13 @@ public class WorkspaceSettings {
 
     public void setUpdatedBy(Profile updatedBy) {
         this.updatedBy = updatedBy;
+    }
+
+    public Ecosystem getEcosystem() {
+        return ecosystem;
+    }
+
+    public UUID getEcosystemId() {
+        return ecosystem != null ? ecosystem.getId() : null;
     }
 }

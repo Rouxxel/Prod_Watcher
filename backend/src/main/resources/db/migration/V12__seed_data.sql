@@ -2,6 +2,10 @@
 -- Warehouses and products apply on Flyway migrate. Activity data (movements, audit,
 -- transactions) is loaded by seed_demo_activity() after auth users exist.
 -- Step 2: run backend/scripts/seed-auth-users.ps1 — see docs/DATABASE_VERIFICATION.md
+--
+-- Ecosystem: V12 predates the ecosystems table (V19). Demo rows are tagged with
+-- ecosystem_id in V21__ecosystem_backfill.sql. seed_demo_activity() is updated
+-- in V25 to insert activity rows with the demo ecosystem id.
 
 -- ---------------------------------------------------------------------------
 -- Warehouses (fixed IDs for idempotent seed)

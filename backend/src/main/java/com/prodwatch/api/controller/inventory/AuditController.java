@@ -6,11 +6,13 @@ import java.util.UUID;
 
 import com.prodwatch.api.config.RateLimit;
 import com.prodwatch.api.dto.audit.AuditEntryResponse;
+import com.prodwatch.api.security.CurrentUser;
 import com.prodwatch.api.service.AuditQueryService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,13 +37,14 @@ public class AuditController {
             @RequestParam(required = false) String entity,
             @RequestParam(required = false) UUID userId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
-        return auditQueryService.list(entity, userId, from, to);
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @AuthenticationPrincipal CurrentUser user) {
+        return auditQueryService.list(entity, userId, from, to, user);
     }
 
     @RateLimit("audit_endpoint")
     @GetMapping("/{id}")
-    public AuditEntryResponse get(@PathVariable UUID id) {
-        return auditQueryService.get(id);
+    public AuditEntryResponse get(@PathVariable UUID id, @AuthenticationPrincipal CurrentUser user) {
+        return auditQueryService.get(id, user);
     }
 }

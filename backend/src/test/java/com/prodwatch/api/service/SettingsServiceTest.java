@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import com.prodwatch.api.dto.settings.SettingsUpdateRequest;
 import com.prodwatch.api.entity.AppRole;
 import com.prodwatch.api.repository.AuditEntryRepository;
+import com.prodwatch.api.repository.EcosystemRepository;
 import com.prodwatch.api.repository.ProfileRepository;
 import com.prodwatch.api.repository.UserRoleRepository;
 import com.prodwatch.api.repository.WorkspaceSettingsRepository;
@@ -41,6 +42,9 @@ class SettingsServiceTest extends AbstractIntegrationTest {
     private UserRoleRepository userRoleRepository;
 
     @Autowired
+    private EcosystemRepository ecosystemRepository;
+
+    @Autowired
     private AuditEntryRepository auditEntryRepository;
 
     @Autowired
@@ -50,13 +54,13 @@ class SettingsServiceTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        TestFixtures.seedUser(profileRepository, userRoleRepository, TestFixtures.ADMIN_ID, AppRole.admin);
+        TestFixtures.seedUser(profileRepository, userRoleRepository, ecosystemRepository, TestFixtures.ADMIN_ID, AppRole.admin);
         admin = TestFixtures.currentUser(TestFixtures.ADMIN_ID, AppRole.admin);
     }
 
     @Test
     void getReturnsSeededSettings() {
-        var response = settingsService.get();
+        var response = settingsService.get(admin);
 
         assertThat(response.businessName()).isEqualTo("ProdWatch Demo Co.");
         assertThat(response.taxRate()).isEqualByComparingTo("0.16");
@@ -82,15 +86,17 @@ class SettingsServiceTest extends AbstractIntegrationTest {
         workspaceSettingsRepository.deleteById(TestFixtures.WORKSPACE_SETTINGS_ID);
         entityManager.flush();
         entityManager.clear();
-        assertThat(workspaceSettingsRepository.findSingleton()).isEmpty();
+        assertThat(workspaceSettingsRepository.findByEcosystem_Id(TestFixtures.DEMO_ECOSYSTEM_ID))
+                .isEmpty();
 
-        var response = settingsService.get();
+        var response = settingsService.get(admin);
 
         assertThat(response.taxRate()).isEqualByComparingTo("0.16");
         assertThat(response.businessName()).isEmpty();
         assertThat(response.contactEmail()).isEmpty();
         assertThat(response.businessMode()).isEqualTo("auto");
         assertThat(response.taxLabel()).isEqualTo("Tax");
-        assertThat(workspaceSettingsRepository.findSingleton()).isPresent();
+        assertThat(workspaceSettingsRepository.findByEcosystem_Id(TestFixtures.DEMO_ECOSYSTEM_ID))
+                .isPresent();
     }
 }

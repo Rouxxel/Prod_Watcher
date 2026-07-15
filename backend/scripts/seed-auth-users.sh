@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Provision ProdWatch dev auth users via Supabase Admin API + REST (no psql required).
-# Prerequisites: Flyway migrations applied (V1-V12), backend/.env configured.
+# Prerequisites: Flyway migrations applied (V1-V25), backend/.env configured.
 #
 # Usage (from repo root):
 #   bash backend/scripts/seed-auth-users.sh
@@ -25,6 +25,28 @@ set +a
 : "${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY is required in backend/.env}"
 
 DEV_SEED_PASSWORD="${DEV_SEED_PASSWORD:-ProdWatchDev2024!}"
+
+# Demo ecosystem id — must match V21__ecosystem_backfill.sql
+DEMO_ECOSYSTEM_ID="33333333-3333-4333-8333-333333333301"
+
+ensure_demo_ecosystem() {
+  curl -sS -X POST "$SUPABASE_URL/rest/v1/ecosystems" \
+    -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+    -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+    -H "Content-Type: application/json" \
+    -H "Prefer: resolution=ignore-duplicates" \
+    -d "{\"id\":\"$DEMO_ECOSYSTEM_ID\",\"name\":\"Acme Demo\"}" >/dev/null
+  echo "  demo ecosystem ready ($DEMO_ECOSYSTEM_ID)"
+}
+
+assign_seed_ecosystem() {
+  curl -sS -X PATCH "$SUPABASE_URL/rest/v1/profiles?email=in.(alex@acme.co,maya@acme.co,jordan@acme.co,sam@acme.co,riley@acme.co,devon@acme.co)" \
+    -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+    -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+    -H "Content-Type: application/json" \
+    -d "{\"ecosystem_id\":\"$DEMO_ECOSYSTEM_ID\"}" >/dev/null
+  echo "  assigned demo ecosystem to seed profiles"
+}
 
 create_user() {
   local email="$1"
@@ -124,6 +146,9 @@ seed_activity() {
     -d '{}' >/dev/null
 }
 
+echo "Ensuring demo ecosystem..."
+ensure_demo_ecosystem
+
 echo "Creating dev auth users (password: see DEV_SEED_PASSWORD in backend/.env.example)..."
 
 create_user "alex@acme.co"   "Alex Reyes"
@@ -135,6 +160,9 @@ create_user "devon@acme.co"  "Devon Cruz"
 
 echo "Assigning roles..."
 assign_roles
+
+echo "Assigning demo ecosystem to seed profiles..."
+assign_seed_ecosystem
 
 echo "Deactivating inactive user..."
 ban_user "devon@acme.co"

@@ -2,9 +2,9 @@
 
 SQL schema history for the Supabase PostgreSQL database. Applied automatically on backend startup (`spring.flyway.enabled=true`) unless disabled.
 
-**Full multi-tenancy plan:** [`docs/TASK_05_ecosystems.md`](../../../../docs/TASK_05_ecosystems.md)  
 **Schema reference:** [`docs/DATABASE_SCHEMA.md`](../../../../docs/DATABASE_SCHEMA.md)  
-**Backend setup:** [`backend/README.md`](../../../../README.md)
+**Backend setup:** [`backend/README.md`](../../../../README.md)  
+**Seed scripts:** [`backend/scripts/README.md`](../../../../scripts/README.md)
 
 ---
 
@@ -35,7 +35,7 @@ V{version}__{snake_case_description}.sql
 
 ---
 
-## Migration catalog (V1–V18)
+## Migration catalog (V1–V26)
 
 | Version | File | Purpose |
 | --- | --- | --- |
@@ -43,36 +43,32 @@ V{version}__{snake_case_description}.sql
 | **V2** | `V2__auth_helpers.sql` | Auth helper functions |
 | **V3** | `V3__profiles_and_roles.sql` | `profiles`, `user_roles`, `handle_new_user` trigger, `bootstrap_assign_admin` |
 | **V4** | `V4__warehouses.sql` | `warehouses` |
-| **V5** | `V5__products.sql` | `products` (global SKU unique — **pre-ecosystem**) |
+| **V5** | `V5__products.sql` | `products` (global SKU unique — superseded by V22) |
 | **V6** | `V6__stock_movements.sql` | Immutable stock ledger |
-| **V7** | `V7__inventory_balances_view.sql` | `inventory_balances`, `product_stock_summary` views |
+| **V7** | `V7__inventory_balances_view.sql` | `inventory_balances`, `product_stock_summary` views (superseded by V23) |
 | **V8** | `V8__audit_entries.sql` | Append-only audit log |
 | **V9** | `V9__transactions.sql` | POS `transactions` |
-| **V10** | `V10__rls_policies.sql` | RLS policies (role-based, **not tenant-scoped**) |
+| **V10** | `V10__rls_policies.sql` | RLS policies (role-based — superseded by V23) |
 | **V11** | `V11__storage_product_images.sql` | Supabase Storage bucket policies |
-| **V12** | `V12__seed_data.sql` | **Demo** warehouses/products + `seed_demo_activity()` — **global, single-tenant** |
+| **V12** | `V12__seed_data.sql` | **Demo** warehouses/products + `seed_demo_activity()` — backfilled to demo ecosystem in V21 |
 | **V13** | `V13__rename_transaction_void_status.sql` | Enum label `void` → `void_` |
 | **V14** | `V14__stock_movement_provider.sql` | `provider` on IN movements |
 | **V15** | `V15__stock_movement_recipient.sql` | `recipient` on OUT movements |
 | **V16** | `V16__user_delete_references.sql` | Nullable `user_id` on audit/movements; ON DELETE SET NULL |
 | **V17** | `V17__audit_entity_label.sql` | `entity_label` on audit; backfill user names |
-| **V18** | `V18__workspace_settings.sql` | Singleton workspace settings (tax, receipts, business mode) + RLS |
+| **V18** | `V18__workspace_settings.sql` | Workspace settings (tax, receipts, business mode) + RLS |
+| **V19** | `V19__ecosystems.sql` | `ecosystems` table |
+| **V20** | `V20__ecosystem_id_columns.sql` | Nullable `ecosystem_id` on tenant tables |
+| **V21** | `V21__ecosystem_backfill.sql` | Demo ecosystem `Acme Demo` (`33333333-…3301`) for all existing rows |
+| **V22** | `V22__ecosystem_constraints.sql` | NOT NULL + per-ecosystem unique (SKU, settings) |
+| **V23** | `V23__ecosystem_rls_and_views.sql` | `current_user_ecosystem_id()`, ecosystem RLS, view rebuild (drops views before recreate) |
+| **V24** | `V24__profiles_ecosystem_nullable.sql` | Allow orphan profiles until bootstrap assigns ecosystem |
+| **V25** | `V25__seed_demo_activity_ecosystem.sql` | Ecosystem-aware `seed_demo_activity()` + legacy activity backfill |
+| **V26** | `V26__storage_ecosystem_paths.sql` | `product-images` writes scoped to `{ecosystem_id}/…` path prefix |
 
----
+**Demo ecosystem id:** `33333333-3333-4333-8333-333333333301` (`Acme Demo`).
 
-## Planned migrations (ecosystem isolation)
-
-See [`docs/TASK_05_ecosystems.md`](../../../../docs/TASK_05_ecosystems.md).
-
-| Version | Purpose |
-| --- | --- |
-| **V19** | `ecosystems` table |
-| **V20** | Add nullable `ecosystem_id` to tenant tables (incl. `workspace_settings`) |
-| **V21** | Backfill demo ecosystem for existing Alex/seed data |
-| **V22** | NOT NULL + FKs + per-ecosystem unique indexes (e.g. SKU) |
-| **V23** | RLS + view updates for ecosystem scope |
-
-Until V19–V23 ship, **public sign-up on a shared database exposes all tenants' data** to every admin.
+Java services enforce `ecosystem_id` in queries. Run `backend/scripts/seed-auth-users.ps1` after migrate to attach demo users to the demo ecosystem.
 
 ---
 
@@ -108,18 +104,14 @@ WHERE ae.entity = 'user'
 
 ## Demo seed vs production
 
-| Source | What it inserts | Tenant scope today |
+| Source | What it inserts | Tenant scope |
 | --- | --- | --- |
-| **V12** (Flyway) | Warehouses, products, `seed_demo_activity()` | **Global** — visible to all admins |
-| **`scripts/seed-auth-users.ps1`** | Auth users, roles, demo activity | **Global** |
-| **Owner sign-up** | Auth user + admin role | No inventory rows — but **can read** V12 global data |
+| **V12** (Flyway) | Warehouses, products | Backfilled to **Acme Demo** in V21 |
+| **V25** (Flyway) | `seed_demo_activity()` with `ecosystem_id` | **Acme Demo** only |
+| **`scripts/seed-auth-users.ps1`** | Auth users, roles, ecosystem assignment, demo activity | **Acme Demo** only |
+| **Owner sign-up** | Auth user + new ecosystem + admin role | Empty inventory in **new** ecosystem |
 
-After ecosystem migrations:
-
-- Demo data → fixed **demo ecosystem id**
-- New sign-ups → new ecosystem, empty inventory
-
-Consider moving V12 business seed out of Flyway into scripts only for production deployments.
+For production deployments, consider skipping `seed-auth-users` and relying on owner sign-up only. V12 demo catalog remains on the demo ecosystem and is invisible to new sign-ups.
 
 ---
 
@@ -136,7 +128,7 @@ Flyway stores a checksum per applied migration in `flyway_schema_history`. Editi
 
 | Script | Purpose |
 | --- | --- |
-| [`backend/scripts/seed-auth-users.ps1`](../../../../scripts/seed-auth-users.ps1) | Dev users + roles (update for `ecosystem_id` when V18+ lands) |
+| [`backend/scripts/seed-auth-users.ps1`](../../../../scripts/seed-auth-users.ps1) | Dev users + roles + demo ecosystem assignment |
 | [`backend/scripts/seed-activity-only.sql`](../../../../scripts/seed-activity-only.sql) | Demo movements/audit/transactions |
 | [`backend/scripts/verify-database.sql`](../../../../scripts/verify-database.sql) | Post-seed validation |
 
@@ -148,4 +140,4 @@ Flyway stores a checksum per applied migration in `flyway_schema_history`. Editi
 2. Mirror structural changes in `backend/src/test/resources/schema-h2.sql`.
 3. Run `./gradlew test` and local `bootRun` against Supabase.
 4. Document the version in this README and [`docs/DATABASE_SCHEMA.md`](../../../../docs/DATABASE_SCHEMA.md).
-5. If behavior affects API or sign-up, update [`backend/API.md`](../../../../API.md) and the relevant TASK doc.
+5. If behavior affects API or sign-up, update [`backend/API.md`](../../../../API.md) and the README trio.

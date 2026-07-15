@@ -18,9 +18,12 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "products")
+@Table(
+        name = "products",
+        uniqueConstraints = @UniqueConstraint(name = "idx_products_ecosystem_sku", columnNames = {"ecosystem_id", "sku"}))
 public class Product {
 
     @Id
@@ -30,7 +33,7 @@ public class Product {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "sku", nullable = false, unique = true)
+    @Column(name = "sku", nullable = false)
     private String sku;
 
     @Column(name = "category", nullable = false)
@@ -42,6 +45,10 @@ public class Product {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "default_warehouse_id", nullable = false)
     private Warehouse defaultWarehouse;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "ecosystem_id", nullable = false)
+    private Ecosystem ecosystem;
 
     @Column(name = "low_stock_threshold", nullable = false)
     private int lowStockThreshold;
@@ -72,6 +79,7 @@ public class Product {
         product.category = category;
         product.price = price;
         product.defaultWarehouse = defaultWarehouse;
+        product.ecosystem = defaultWarehouse.getEcosystem();
         product.lowStockThreshold = lowStockThreshold;
         product.images = images != null ? images : new String[0];
         return product;
@@ -136,6 +144,17 @@ public class Product {
 
     public void setDefaultWarehouse(Warehouse defaultWarehouse) {
         this.defaultWarehouse = defaultWarehouse;
+        if (defaultWarehouse != null) {
+            this.ecosystem = defaultWarehouse.getEcosystem();
+        }
+    }
+
+    public Ecosystem getEcosystem() {
+        return ecosystem;
+    }
+
+    public UUID getEcosystemId() {
+        return ecosystem != null ? ecosystem.getId() : null;
     }
 
     public int getLowStockThreshold() {

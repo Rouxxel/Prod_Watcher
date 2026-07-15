@@ -20,6 +20,7 @@ import {
 import type { Product, ProductInput, Warehouse } from "@/types";
 import { ProductImageCarousel } from "./ProductImageCarousel";
 import { useBusinessMode } from "@/hooks/use-business-mode";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   buildProductImagePath,
   isProductImageUploadEnabled,
@@ -54,6 +55,7 @@ export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onS
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadEnabled = isProductImageUploadEnabled();
   const { isSingleLocation } = useBusinessMode();
+  const { user } = useCurrentUser();
 
   useEffect(() => {
     if (open) {
@@ -92,9 +94,18 @@ export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onS
     );
 
   const handleFileUpload = async (file: File) => {
+    if (!user?.ecosystemId) {
+      notify.error("Upload failed", "Your account is not assigned to a workspace yet.");
+      return;
+    }
+
     setUploadingImage(true);
     try {
-      const path = buildProductImagePath(file, form.sku || undefined);
+      const path = buildProductImagePath(file, {
+        ecosystemId: user.ecosystemId,
+        productId: initial?.id,
+        sku: form.sku || undefined,
+      });
       const url = await uploadProductImage(file, path);
       set("images", [...form.images, url]);
       notify.success("Image uploaded");

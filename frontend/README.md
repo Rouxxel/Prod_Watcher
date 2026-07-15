@@ -6,13 +6,27 @@ Product image uploads use **Supabase Storage** directly from the browser (option
 
 ---
 
+## Multi-tenant model (ecosystems)
+
+Each owner sign-up creates a **new isolated business** (ecosystem) on the shared backend. The API scopes all data by `ecosystem_id` — you only see warehouses, products, users, and transactions in **your** workspace.
+
+| Scenario | What you see |
+| --- | --- |
+| **New owner sign-up** | Empty inventory (no demo seed data) |
+| **Demo seed** (`seed-auth-users.ps1`) | Acme Demo ecosystem only — `alex@acme.co` and staff |
+| **Staff provisioned by admin** | Same ecosystem as the admin who created them |
+
+There is **no tenant switcher** in the UI (MVP). The sidebar shows your workspace name from `GET /users/me` (`ecosystemName`) when available.
+
+---
+
 ## Features
 
 ### Auth & shell
 
 - **Login-first** — unauthenticated visitors are sent to `/login`; the app dashboard requires a session
 - **Log in** — email + password via `POST /api/v1/auth/login`
-- **Sign up** — always linked from login; creates the **first admin only** (owner bootstrap). After an admin exists, the sign-up page shows a closed-registration message; staff are provisioned by an admin on `/users`
+- **Sign up** — `/signup` creates a **new business workspace** (ecosystem) and admin account; inventory starts empty
 - **Email confirm** — `/confirm-email` completes owner bootstrap after the Supabase confirmation link (then log in manually)
 - **Two operating modes** — `inventory` and `selling`, switchable from the topbar
 - **Role-based sidebar** — menu items filter by the logged-in user's role
@@ -41,11 +55,11 @@ Product image uploads use **Supabase Storage** directly from the browser (option
 ### Admin
 
 - User provisioning, password reset, role management (`/users`)
-- **Workspace settings** (`/settings`, admin-only) — company, tax, receipts, business mode via `GET/PATCH /api/v1/settings` (see [`docs/TASK_04_settings.md`](../docs/TASK_04_settings.md))
+- **Workspace settings** (`/settings`, admin-only) — company, tax, receipts, business mode via `GET/PATCH /api/v1/settings` (see [`backend/API.md`](../backend/API.md))
 
 ### Other
 
-- **Product images** — URL list and optional file upload to Supabase `product-images` bucket
+- **Product images** — URL list and optional file upload to Supabase `product-images` bucket (paths scoped as `{ecosystemId}/{productId}/…`)
 - **Dark-only theme** with burgundy/vinotinto tokens in `src/styles.css`
 
 ---
@@ -94,10 +108,12 @@ so owner sign-up emails redirect to `/confirm-email`.
 
 | User | How to get an account |
 | --- | --- |
-| **First owner (admin)** | `/signup` on a fresh database → confirm email → `/login` |
-| **Staff** | Admin creates account on **Users** → staff logs in at `/login` |
+| **Owner (admin)** | `/signup` → confirm email → `/login` → empty workspace; add warehouses/products |
+| **Staff** | Admin provisions on **Users** → staff logs in at `/login` (inherits admin's ecosystem) |
 
-Demo databases seeded with `seed-auth-users.ps1` already have an admin — sign-up shows closed registration; use seeded credentials or provision staff as admin.
+Demo databases seeded with `seed-auth-users.ps1` use the **Acme Demo** ecosystem (`alex@acme.co` = admin). New sign-ups on the same Supabase project get a **separate** ecosystem and do not see Alex's catalog.
+
+`User` type includes optional `ecosystemId` / `ecosystemName` from the API for display (sidebar footer).
 
 ### Scripts
 
@@ -125,7 +141,7 @@ src/
     auth-token.ts      # sessionStorage JWT
     api-error.ts       # Toast mapping for API errors
     error-capture.ts   # Dev console logging
-    storage.ts         # Supabase Storage uploads (optional)
+    storage.ts         # Supabase Storage uploads (ecosystem-prefixed paths, optional)
   types/index.ts       # Shared domain types
 ```
 
@@ -164,6 +180,8 @@ Endpoint reference: [`backend/API.md`](../backend/API.md)
 ---
 
 ## Deployment
+
+> **Shared Supabase:** safe for multi-tenant SaaS when Flyway **V19–V26** and the current backend are deployed. Each sign-up is isolated. Skip `seed-auth-users` in production if you do not want demo data.
 
 ### Vercel (primary)
 

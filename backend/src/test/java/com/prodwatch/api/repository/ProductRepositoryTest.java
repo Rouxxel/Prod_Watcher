@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 
 import com.prodwatch.api.entity.Product;
 import com.prodwatch.api.entity.Warehouse;
+import com.prodwatch.api.support.TestFixtures;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,23 +27,29 @@ class ProductRepositoryTest {
     @Autowired
     private WarehouseRepository warehouseRepository;
 
+    @Autowired
+    private com.prodwatch.api.repository.EcosystemRepository ecosystemRepository;
+
     @Test
-    void skuMustBeUnique() {
-        Warehouse warehouse = warehouseRepository.save(Warehouse.create("Main", "Floor 1"));
+    void skuMustBeUniquePerEcosystem() {
+        Warehouse warehouse =
+                TestFixtures.saveWarehouse(warehouseRepository, ecosystemRepository, "Main", "Floor 1");
 
         productRepository.save(product(warehouse, "SKU-UNIQUE-1"));
-        assertThat(productRepository.existsBySku("SKU-UNIQUE-1")).isTrue();
+        assertThat(productRepository.existsByEcosystem_IdAndSku(TestFixtures.DEMO_ECOSYSTEM_ID, "SKU-UNIQUE-1"))
+                .isTrue();
 
         assertThatThrownBy(() -> productRepository.saveAndFlush(product(warehouse, "SKU-UNIQUE-1")))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
-    void findBySkuReturnsProduct() {
-        Warehouse warehouse = warehouseRepository.save(Warehouse.create("Secondary", "Floor 2"));
+    void findByEcosystemAndSkuReturnsProduct() {
+        Warehouse warehouse =
+                TestFixtures.saveWarehouse(warehouseRepository, ecosystemRepository, "Secondary", "Floor 2");
         Product saved = productRepository.save(product(warehouse, "SKU-FIND-ME"));
 
-        assertThat(productRepository.findBySku("SKU-FIND-ME"))
+        assertThat(productRepository.findByEcosystem_IdAndSku(TestFixtures.DEMO_ECOSYSTEM_ID, "SKU-FIND-ME"))
                 .isPresent()
                 .get()
                 .extracting(Product::getId)

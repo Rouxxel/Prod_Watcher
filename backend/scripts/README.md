@@ -2,9 +2,11 @@
 
 Dev utilities for seeding Supabase auth users and demo activity data.
 
+> **Dev-only.** Seed data is scoped to the **Acme Demo** ecosystem (`33333333-3333-4333-8333-333333333301`). New sign-ups get their own empty ecosystem via the API. Do not run against production unless you intend to load demo tenants. See [`docs/DATABASE_SCHEMA.md`](../../docs/DATABASE_SCHEMA.md) and [`backend/src/main/resources/db/migration/README.md`](../src/main/resources/db/migration/README.md).
+
 **Prerequisites**
 
-- Flyway migrations **V1–V15** applied (see [`backend/README.md`](../README.md))
+- Flyway migrations **V1–V26** applied (see [`backend/README.md`](../README.md))
 - `backend/.env` copied from [`backend/.env.example`](../.env.example) with real Supabase values
 
 **Required env vars** (in `backend/.env`):
@@ -22,7 +24,7 @@ Optional: `DEV_SEED_PASSWORD` — defaults to `ProdWatchDev2024!` if unset.
 
 ## `seed-auth-users.ps1` (Windows)
 
-Creates dev auth users, assigns roles, deactivates/bans the inactive seed user, and loads demo movements, audit entries, and transactions.
+Creates dev auth users, ensures the **Acme Demo** ecosystem, assigns roles and `profiles.ecosystem_id`, deactivates/bans the inactive seed user, and loads demo movements, audit entries, and transactions.
 
 ### Run from repo root
 
@@ -41,6 +43,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ### Expected output
 
 - `created` or `exists` for each of the 6 seed emails
+- `demo ecosystem ready` and `assigned demo ecosystem to seed profiles`
 - Role lines for `alex@acme.co` (admin) through `devon@acme.co` (cashier)
 - `banned devon@acme.co`
 - Activity data loaded (or a note to run `seed-activity-only.sql` if the RPC step fails)

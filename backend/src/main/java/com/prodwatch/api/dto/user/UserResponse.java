@@ -10,4 +10,6 @@ public record UserResponse(
         String email,
         AppRole role,
         boolean active,
-        Boolean emailConfirmed) {}
+        Boolean emailConfirmed,
+        UUID ecosystemId,
+        String ecosystemName) {}

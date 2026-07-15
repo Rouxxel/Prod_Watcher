@@ -1,5 +1,5 @@
 # Provision ProdWatch dev auth users via Supabase Admin API + REST (no psql required).
-# Prerequisites: Flyway migrations applied (V1-V12), backend/.env configured.
+# Prerequisites: Flyway migrations applied (V1-V25), backend/.env configured.
 #
 # Usage (from repo root):
 #   .\backend\scripts\seed-auth-users.ps1
@@ -30,6 +30,18 @@ foreach ($var in @("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")) {
 
 $DevSeedPassword = if ($env:DEV_SEED_PASSWORD) { $env:DEV_SEED_PASSWORD } else { "ProdWatchDev2024!" }
 
+# Demo ecosystem id — must match V21__ecosystem_backfill.sql
+$DemoEcosystemId = "33333333-3333-4333-8333-333333333301"
+
+$SeedEmails = @(
+    "alex@acme.co",
+    "maya@acme.co",
+    "jordan@acme.co",
+    "sam@acme.co",
+    "riley@acme.co",
+    "devon@acme.co"
+)
+
 $AuthHeaders = @{
     apikey        = $env:SUPABASE_SERVICE_ROLE_KEY
     Authorization = "Bearer $($env:SUPABASE_SERVICE_ROLE_KEY)"
@@ -39,6 +51,35 @@ $RestHeaders = @{
     apikey        = $env:SUPABASE_SERVICE_ROLE_KEY
     Authorization = "Bearer $($env:SUPABASE_SERVICE_ROLE_KEY)"
     'Content-Type' = 'application/json'
+}
+
+function Ensure-DemoEcosystem {
+    $body = @{ id = $DemoEcosystemId; name = "Acme Demo" } | ConvertTo-Json -Compress
+    $headers = $RestHeaders.Clone()
+    $headers["Prefer"] = "resolution=ignore-duplicates"
+
+    try {
+        Invoke-RestMethod -Method Post -Uri "$($env:SUPABASE_URL)/rest/v1/ecosystems" `
+            -Headers $headers -Body $body | Out-Null
+        Write-Host "  demo ecosystem ready ($DemoEcosystemId)"
+    }
+    catch {
+        Write-Warning "  demo ecosystem: $($_.Exception.Message)"
+    }
+}
+
+function Set-SeedEcosystem {
+    $encoded = ($SeedEmails | ForEach-Object { [uri]::EscapeDataString($_) }) -join ","
+    $uri = "$($env:SUPABASE_URL)/rest/v1/profiles?email=in.($encoded)"
+    $body = @{ ecosystem_id = $DemoEcosystemId } | ConvertTo-Json -Compress
+
+    try {
+        Invoke-RestMethod -Method Patch -Uri $uri -Headers $RestHeaders -Body $body | Out-Null
+        Write-Host "  assigned demo ecosystem to seed profiles"
+    }
+    catch {
+        Write-Warning "  assign ecosystem: $($_.Exception.Message)"
+    }
 }
 
 function New-SeedUser {
@@ -166,6 +207,9 @@ function Invoke-SeedDemoActivity {
     }
 }
 
+Write-Host "Ensuring demo ecosystem..."
+Ensure-DemoEcosystem
+
 Write-Host "Creating dev auth users (password: see DEV_SEED_PASSWORD in backend/.env.example)..."
 
 New-SeedUser "alex@acme.co"   "Alex Reyes"
@@ -177,6 +221,9 @@ New-SeedUser "devon@acme.co"  "Devon Cruz"
 
 Write-Host "Assigning roles..."
 Set-SeedRoles
+
+Write-Host "Assigning demo ecosystem to seed profiles..."
+Set-SeedEcosystem
 
 Write-Host "Deactivating inactive user..."
 Set-UserBanned "devon@acme.co"

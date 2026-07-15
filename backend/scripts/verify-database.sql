@@ -1,8 +1,9 @@
 -- Run in Supabase SQL Editor after migrations + auth seed.
 -- Expected counts documented in docs/DATABASE_VERIFICATION.md
+-- Demo ecosystem id: 33333333-3333-4333-8333-333333333301 (Acme Demo)
 
 -- ---------------------------------------------------------------------------
--- 1. Row counts
+-- 1. Row counts (global)
 -- ---------------------------------------------------------------------------
 SELECT 'warehouses' AS entity, count(*) AS actual, 3 AS expected FROM warehouses
 UNION ALL SELECT 'products', count(*), 12 FROM products
@@ -12,6 +13,33 @@ UNION ALL SELECT 'stock_movements', count(*), 19 FROM stock_movements
 UNION ALL SELECT 'audit_entries', count(*), 6 FROM audit_entries
 UNION ALL SELECT 'transactions', count(*), 2 FROM transactions
 ORDER BY entity;
+
+-- ---------------------------------------------------------------------------
+-- 1b. Per-ecosystem counts (demo seed should be isolated to Acme Demo)
+-- ---------------------------------------------------------------------------
+SELECT e.name AS ecosystem, e.id AS ecosystem_id,
+       (SELECT count(*) FROM warehouses w WHERE w.ecosystem_id = e.id) AS warehouses,
+       (SELECT count(*) FROM products p WHERE p.ecosystem_id = e.id) AS products,
+       (SELECT count(*) FROM profiles pr WHERE pr.ecosystem_id = e.id) AS profiles,
+       (SELECT count(*) FROM stock_movements sm WHERE sm.ecosystem_id = e.id) AS stock_movements,
+       (SELECT count(*) FROM audit_entries ae WHERE ae.ecosystem_id = e.id) AS audit_entries,
+       (SELECT count(*) FROM transactions t WHERE t.ecosystem_id = e.id) AS transactions
+FROM ecosystems e
+ORDER BY e.name;
+
+-- Demo ecosystem expected (after full seed): 3 WH, 12 products, 6 profiles, 19 movements, 6 audit, 2 transactions
+SELECT
+    (SELECT count(*) FROM warehouses WHERE ecosystem_id = '33333333-3333-4333-8333-333333333301') = 3 AS demo_warehouses_ok,
+    (SELECT count(*) FROM products WHERE ecosystem_id = '33333333-3333-4333-8333-333333333301') = 12 AS demo_products_ok,
+    (SELECT count(*) FROM profiles WHERE ecosystem_id = '33333333-3333-4333-8333-333333333301') = 6 AS demo_profiles_ok,
+    (SELECT count(*) FROM stock_movements WHERE ecosystem_id = '33333333-3333-4333-8333-333333333301') = 19 AS demo_movements_ok;
+
+-- Seed profiles must belong to demo ecosystem
+SELECT p.email, p.ecosystem_id,
+       p.ecosystem_id = '33333333-3333-4333-8333-333333333301'::uuid AS in_demo_ecosystem
+FROM profiles p
+WHERE p.email LIKE '%@acme.co'
+ORDER BY p.email;
 
 -- ---------------------------------------------------------------------------
 -- 2. Schema — no stock column on products

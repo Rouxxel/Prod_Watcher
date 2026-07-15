@@ -10,6 +10,8 @@ import com.prodwatch.api.entity.AuditEntry;
 import com.prodwatch.api.entity.Profile;
 import com.prodwatch.api.error.ResourceNotFoundException;
 import com.prodwatch.api.repository.AuditEntryRepository;
+import com.prodwatch.api.security.CurrentUser;
+import com.prodwatch.api.security.TenantContext;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,21 +29,26 @@ public class AuditQueryService {
     }
 
     @Transactional(readOnly = true)
-    public List<AuditEntryResponse> list(String entity, UUID userId, Instant from, Instant to) {
-        List<AuditEntry> entries = auditEntryRepository.findWithFilters(entity, userId, from, to);
+    public List<AuditEntryResponse> list(
+            String entity, UUID userId, Instant from, Instant to, CurrentUser user) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
+        List<AuditEntry> entries = auditEntryRepository.findWithFilters(ecosystemId, entity, userId, from, to);
         Map<String, String> labels = entityLabelResolver.resolveLabels(entries);
         return entries.stream().map(entry -> toResponse(entry, labels)).toList();
     }
 
     @Transactional(readOnly = true)
-    public AuditEntryResponse get(UUID id) {
-        AuditEntry entry = load(id);
+    public AuditEntryResponse get(UUID id, CurrentUser user) {
+        AuditEntry entry = load(id, user);
         Map<String, String> labels = entityLabelResolver.resolveLabels(List.of(entry));
         return toResponse(entry, labels);
     }
 
-    private AuditEntry load(UUID id) {
-        return auditEntryRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Audit entry not found"));
+    private AuditEntry load(UUID id, CurrentUser user) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
+        return auditEntryRepository
+                .findByIdAndEcosystem_Id(id, ecosystemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Audit entry not found"));
     }
 
     private AuditEntryResponse toResponse(AuditEntry entry, Map<String, String> labels) {

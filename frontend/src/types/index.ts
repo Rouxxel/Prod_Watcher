@@ -11,6 +11,9 @@ export interface User {
   email: string;
   role: Role;
   active: boolean;
+  /** Tenant scope — from GET /users/me and auth login responses */
+  ecosystemId?: string;
+  ecosystemName?: string;
 }
 
 export interface Warehouse {

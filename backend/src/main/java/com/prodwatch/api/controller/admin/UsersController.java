@@ -45,7 +45,7 @@ public class UsersController {
     @GetMapping
     public List<UserResponse> list(@AuthenticationPrincipal CurrentUser user) {
         RoleChecker.requireAdmin(user);
-        return userService.list();
+        return userService.list(user);
     }
 
     @RateLimit("users_endpoint")
@@ -65,7 +65,7 @@ public class UsersController {
     @GetMapping("/{id}")
     public UserResponse get(@PathVariable UUID id, @AuthenticationPrincipal CurrentUser user) {
         RoleChecker.requireAdmin(user);
-        return userService.get(id);
+        return userService.get(id, user);
     }
 
     @RateLimit("users_endpoint")

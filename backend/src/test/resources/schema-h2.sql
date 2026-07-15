@@ -1,12 +1,27 @@
--- H2-compatible schema for integration tests (subset of Flyway V1–V9; idempotent for shared in-memory DB).
+-- H2-compatible schema for integration tests (mirrors Flyway V1–V23; idempotent for shared in-memory DB).
+-- Demo ecosystem id matches V21 backfill (tests use DB defaults when entities omit ecosystem_id).
 
-CREATE TABLE IF NOT EXISTS profiles (
+CREATE TABLE IF NOT EXISTS ecosystems (
     id          UUID NOT NULL PRIMARY KEY,
-    name        VARCHAR(255) NOT NULL,
-    email       VARCHAR(255) NOT NULL UNIQUE,
-    active      BOOLEAN      NOT NULL DEFAULT TRUE,
+    name        VARCHAR(255) NOT NULL DEFAULT '',
     created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO ecosystems (id, name)
+SELECT '33333333-3333-4333-8333-333333333301', 'Acme Demo Test'
+WHERE NOT EXISTS (
+    SELECT 1 FROM ecosystems WHERE id = '33333333-3333-4333-8333-333333333301'
+);
+
+CREATE TABLE IF NOT EXISTS profiles (
+    id            UUID NOT NULL PRIMARY KEY,
+    name          VARCHAR(255) NOT NULL,
+    email         VARCHAR(255) NOT NULL UNIQUE,
+    active        BOOLEAN      NOT NULL DEFAULT TRUE,
+    ecosystem_id  UUID         REFERENCES ecosystems (id),
+    created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS user_roles (
@@ -17,24 +32,27 @@ CREATE TABLE IF NOT EXISTS user_roles (
 );
 
 CREATE TABLE IF NOT EXISTS warehouses (
-    id          UUID NOT NULL PRIMARY KEY,
-    name        VARCHAR(255) NOT NULL,
-    location    VARCHAR(255) NOT NULL,
-    created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id            UUID NOT NULL PRIMARY KEY,
+    name          VARCHAR(255) NOT NULL,
+    location      VARCHAR(255) NOT NULL,
+    ecosystem_id  UUID         NOT NULL DEFAULT '33333333-3333-4333-8333-333333333301' REFERENCES ecosystems (id),
+    created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS products (
     id                    UUID NOT NULL PRIMARY KEY,
     name                  VARCHAR(255)   NOT NULL,
-    sku                   VARCHAR(255)   NOT NULL UNIQUE,
+    sku                   VARCHAR(255)   NOT NULL,
     category              VARCHAR(255)   NOT NULL,
     price                 DECIMAL(12, 2) NOT NULL,
     default_warehouse_id  UUID           NOT NULL REFERENCES warehouses (id),
     low_stock_threshold   INT            NOT NULL DEFAULT 0,
     images                VARCHAR(255) ARRAY NOT NULL,
+    ecosystem_id          UUID           NOT NULL DEFAULT '33333333-3333-4333-8333-333333333301' REFERENCES ecosystems (id),
     created_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT products_ecosystem_sku_unique UNIQUE (ecosystem_id, sku)
 );
 
 CREATE TABLE IF NOT EXISTS stock_movements (
@@ -48,29 +66,32 @@ CREATE TABLE IF NOT EXISTS stock_movements (
     provider            VARCHAR(255),
     recipient           VARCHAR(255),
     note                VARCHAR(255),
+    ecosystem_id        UUID        NOT NULL DEFAULT '33333333-3333-4333-8333-333333333301' REFERENCES ecosystems (id),
     created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS audit_entries (
-    id          UUID NOT NULL PRIMARY KEY,
-    user_id     UUID         REFERENCES profiles (id),
-    action      VARCHAR(255) NOT NULL,
-    entity      VARCHAR(255) NOT NULL,
-    entity_id   UUID         NOT NULL,
-    details     VARCHAR(255),
-    entity_label VARCHAR(255),
-    created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id            UUID NOT NULL PRIMARY KEY,
+    user_id       UUID         REFERENCES profiles (id),
+    action        VARCHAR(255) NOT NULL,
+    entity        VARCHAR(255) NOT NULL,
+    entity_id     UUID         NOT NULL,
+    details       VARCHAR(255),
+    entity_label  VARCHAR(255),
+    ecosystem_id  UUID         NOT NULL DEFAULT '33333333-3333-4333-8333-333333333301' REFERENCES ecosystems (id),
+    created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS transactions (
-    id          UUID NOT NULL PRIMARY KEY,
-    items       JSON         NOT NULL,
-    subtotal    DECIMAL(12, 2) NOT NULL,
-    tax         DECIMAL(12, 2) NOT NULL,
-    total       DECIMAL(12, 2) NOT NULL,
-    cashier_id  UUID         NOT NULL REFERENCES profiles (id),
-    status      VARCHAR(32)  NOT NULL DEFAULT 'completed',
-    created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id            UUID NOT NULL PRIMARY KEY,
+    items         JSON         NOT NULL,
+    subtotal      DECIMAL(12, 2) NOT NULL,
+    tax           DECIMAL(12, 2) NOT NULL,
+    total         DECIMAL(12, 2) NOT NULL,
+    cashier_id    UUID         NOT NULL REFERENCES profiles (id),
+    status        VARCHAR(32)  NOT NULL DEFAULT 'completed',
+    ecosystem_id  UUID         NOT NULL DEFAULT '33333333-3333-4333-8333-333333333301' REFERENCES ecosystems (id),
+    created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS workspace_settings (
@@ -82,8 +103,10 @@ CREATE TABLE IF NOT EXISTS workspace_settings (
     receipt_footer      VARCHAR(255),
     receipt_logo_url    VARCHAR(255),
     business_mode       VARCHAR(32) NOT NULL DEFAULT 'auto',
+    ecosystem_id        UUID NOT NULL DEFAULT '33333333-3333-4333-8333-333333333301' REFERENCES ecosystems (id),
     updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_by          UUID REFERENCES profiles (id) ON DELETE SET NULL
+    updated_by          UUID REFERENCES profiles (id) ON DELETE SET NULL,
+    CONSTRAINT workspace_settings_ecosystem_unique UNIQUE (ecosystem_id)
 );
 
 DROP VIEW IF EXISTS product_stock_summary;
@@ -91,26 +114,27 @@ DROP VIEW IF EXISTS inventory_balances;
 
 CREATE VIEW inventory_balances AS
 SELECT
-    product_id,
-    warehouse_id,
-    CAST(SUM(delta) AS INT) AS quantity
+    sm.ecosystem_id,
+    sm.product_id,
+    sm.warehouse_id,
+    CAST(SUM(sm.delta) AS INT) AS quantity
 FROM (
-    SELECT product_id, to_warehouse_id AS warehouse_id, qty AS delta
+    SELECT ecosystem_id, product_id, to_warehouse_id AS warehouse_id, qty AS delta
     FROM stock_movements WHERE type = 'IN'
     UNION ALL
-    SELECT product_id, from_warehouse_id, -qty FROM stock_movements WHERE type = 'OUT'
+    SELECT ecosystem_id, product_id, from_warehouse_id, -qty FROM stock_movements WHERE type = 'OUT'
     UNION ALL
-    SELECT product_id, from_warehouse_id, -qty FROM stock_movements WHERE type = 'TRANSFER'
+    SELECT ecosystem_id, product_id, from_warehouse_id, -qty FROM stock_movements WHERE type = 'TRANSFER'
     UNION ALL
-    SELECT product_id, to_warehouse_id, qty FROM stock_movements WHERE type = 'TRANSFER'
+    SELECT ecosystem_id, product_id, to_warehouse_id, qty FROM stock_movements WHERE type = 'TRANSFER'
     UNION ALL
-    SELECT product_id, from_warehouse_id, -qty
+    SELECT ecosystem_id, product_id, from_warehouse_id, -qty
     FROM stock_movements WHERE type = 'ADJUSTMENT' AND from_warehouse_id IS NOT NULL
     UNION ALL
-    SELECT product_id, to_warehouse_id, qty
+    SELECT ecosystem_id, product_id, to_warehouse_id, qty
     FROM stock_movements WHERE type = 'ADJUSTMENT' AND to_warehouse_id IS NOT NULL
-) AS deltas
-GROUP BY product_id, warehouse_id;
+) AS sm
+GROUP BY sm.ecosystem_id, sm.product_id, sm.warehouse_id;
 
 CREATE VIEW product_stock_summary AS
 SELECT
@@ -119,10 +143,14 @@ SELECT
     CAST(COALESCE(ib.quantity, 0) AS INT) AS quantity
 FROM products p
 LEFT JOIN inventory_balances ib
-    ON ib.product_id = p.id AND ib.warehouse_id = p.default_warehouse_id;
+    ON ib.product_id = p.id
+   AND ib.warehouse_id = p.default_warehouse_id
+   AND ib.ecosystem_id = p.ecosystem_id;
 
--- Singleton workspace settings (mirrors Flyway V18 seed).
-INSERT INTO workspace_settings (id, business_name, contact_email, tax_rate, tax_label, receipt_footer, business_mode)
+-- Demo workspace settings (mirrors Flyway V18 seed + V21 ecosystem backfill).
+INSERT INTO workspace_settings (
+    id, business_name, contact_email, tax_rate, tax_label, receipt_footer, business_mode, ecosystem_id
+)
 SELECT
     '00000000-0000-4000-8000-000000000001',
     'ProdWatch Demo Co.',
@@ -130,7 +158,8 @@ SELECT
     0.16,
     'VAT',
     'Thank you for your purchase!',
-    'auto'
+    'auto',
+    '33333333-3333-4333-8333-333333333301'
 WHERE NOT EXISTS (
     SELECT 1 FROM workspace_settings WHERE id = '00000000-0000-4000-8000-000000000001'
 );

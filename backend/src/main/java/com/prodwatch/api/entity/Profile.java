@@ -5,7 +5,10 @@ import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -27,6 +30,10 @@ public class Profile {
     @Column(name = "active", nullable = false)
     private boolean active = true;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ecosystem_id")
+    private Ecosystem ecosystem;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -36,11 +43,16 @@ public class Profile {
     protected Profile() {}
 
     public static Profile create(UUID id, String email, String name, boolean active) {
+        return create(id, email, name, active, null);
+    }
+
+    public static Profile create(UUID id, String email, String name, boolean active, Ecosystem ecosystem) {
         Profile profile = new Profile();
         profile.id = id;
         profile.email = email;
         profile.name = name;
         profile.active = active;
+        profile.ecosystem = ecosystem;
         return profile;
     }
 
@@ -88,6 +100,18 @@ public class Profile {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public Ecosystem getEcosystem() {
+        return ecosystem;
+    }
+
+    public void setEcosystem(Ecosystem ecosystem) {
+        this.ecosystem = ecosystem;
+    }
+
+    public UUID getEcosystemId() {
+        return ecosystem != null ? ecosystem.getId() : null;
     }
 
     public Instant getCreatedAt() {

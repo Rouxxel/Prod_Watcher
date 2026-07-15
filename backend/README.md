@@ -13,6 +13,25 @@ Base package: **`com.prodwatch.api`**. Gradle project: **`prodwatch-api`**.
 
 ---
 
+## Ecosystem isolation (multi-tenant)
+
+Each business is an **ecosystem**. The API enforces `ecosystem_id` on every tenant query (warehouses, products, movements, transactions, audit, users, settings). JWT auth requires a non-null `profiles.ecosystem_id` (assigned on sign-up or login bootstrap).
+
+| Flow | Behavior |
+| --- | --- |
+| `POST /auth/signup` | Supabase user + profile → **new ecosystem** + `admin` role |
+| `POST /auth/login` / `confirm-email` | Ensures ecosystem + role if missing (orphan profiles) |
+| `POST /users` (provision) | Staff in **admin's** ecosystem |
+| List / get by UUID | Scoped to caller's ecosystem; other tenant's id → **404** |
+
+**Demo data:** `scripts/seed-auth-users.*` attaches seed users to the fixed Acme Demo ecosystem (`33333333-3333-4333-8333-333333333301`). New sign-ups do not see it.
+
+**Defense in depth:** Postgres RLS (V23, V26) scopes direct Supabase access; Java API uses service role and enforces tenancy in services.
+
+See [`src/main/resources/db/migration/README.md`](src/main/resources/db/migration/README.md), [`docs/DATABASE_SCHEMA.md`](../docs/DATABASE_SCHEMA.md), and [`API.md`](API.md) (`UserResponse.ecosystemId`).
+
+---
+
 ## Quick start (local + Supabase)
 
 ### 1. Prerequisites
@@ -57,7 +76,7 @@ Optional:
 
 `bootRun` and the start scripts load `backend/.env` automatically.
 
-On first run, Flyway applies migrations `V1`–`V15` against Supabase Postgres.
+On first run, Flyway applies migrations `V1`–`V26` against Supabase Postgres.
 Startup runs `flyway.repair()` then `migrate()` to heal checksum drift from line-ending edits on already-applied migrations.
 
 ### 4. Seed dev users (optional)
@@ -77,7 +96,7 @@ bash scripts/seed-auth-users.sh
 Password is controlled by `DEV_SEED_PASSWORD` in `.env` (see `.env.example`).
 Existing Supabase users are **not** updated automatically — reset via Admin API if needed.
 
-Alternatively, use **owner bootstrap**: `GET /api/v1/auth/bootstrap-status` → `POST /api/v1/auth/signup` when no admin exists.
+Alternatively, use **owner sign-up**: `POST /api/v1/auth/signup` → confirm email → login (creates a **new** ecosystem with empty inventory).
 
 ### 5. Verify
 
@@ -102,7 +121,7 @@ Log in via `POST /api/v1/auth/login`, then call protected routes with `Authoriza
 
 - `Product.stock` in API responses is computed from the `inventory_balances` view.
 - **`GET /products?warehouseId=`** — when `warehouseId` is set, `stock` is the quantity at that warehouse; otherwise stock at the product's **default warehouse**.
-- `product_stock_summary` view unchanged — still keyed to `default_warehouse_id`.
+- `product_stock_summary` and `inventory_balances` are ecosystem-scoped (V23); stock is per default warehouse within the tenant.
 
 ### Stock movements
 
@@ -119,9 +138,9 @@ POS checkout creates `OUT` movements with `recipient = "POS customer"`. Refunds/
 
 ### Workspace settings
 
-- Singleton row in `workspace_settings` (Flyway `V18`; demo seed in migration or bootstrap on first `GET /api/v1/settings`).
-- **Tax at checkout** comes from the settings row (`SettingsService.getTaxRate()`), not from `POS_TAX_RATE` at runtime.
-- **`POS_TAX_RATE`** (env → `prodwatch.pos.tax-rate`) seeds `tax_rate` only when bootstrap creates the row (empty company fields, `business_mode = auto`).
+- **One row per ecosystem** in `workspace_settings` (Flyway `V18` + `V21` backfill; unique on `ecosystem_id` since `V22`).
+- **Tax at checkout** comes from the settings row for the caller's ecosystem (`SettingsService.getTaxRate(ecosystemId)`).
+- **`POS_TAX_RATE`** (env → `prodwatch.pos.tax-rate`) seeds `tax_rate` when bootstrap creates the row for an ecosystem.
 - Admins change tax, receipts, and business mode via **`PATCH /api/v1/settings`** or the frontend Settings page.
 
 ### POS / transactions
@@ -211,7 +230,7 @@ backend/
 ├── API.md                 # REST contract
 ├── src/main/java/...      # com.prodwatch.api.*
 ├── src/main/resources/
-│   ├── db/migration/      # Flyway V1–V15
+│   ├── db/migration/      # Flyway V1–V26
 │   └── core_specs/        # config_file.json, general_data.json
 ├── scripts/               # seed-auth-users.*
 └── .env.example
@@ -224,3 +243,9 @@ backend/
 | V13 | Rename `transaction_status` enum label `void` → `void_` (Java keyword) |
 | V14 | Add `provider` on `stock_movements` (required for IN) |
 | V15 | Add `recipient` on `stock_movements` (required for OUT) |
+| V18 | `workspace_settings` (per-ecosystem after V22) |
+| V19–V24 | Ecosystems table, `ecosystem_id` columns, backfill, constraints, RLS |
+| V25 | Ecosystem-aware `seed_demo_activity()` |
+| V26 | Storage paths scoped by `ecosystem_id` prefix |
+
+Full catalog: [`src/main/resources/db/migration/README.md`](src/main/resources/db/migration/README.md).

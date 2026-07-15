@@ -13,12 +13,14 @@ import com.prodwatch.api.entity.AppRole;
 public class CurrentUser implements UserDetails {
 
     private final UUID userId;
+    private final UUID ecosystemId;
     private final String email;
     private final AppRole role;
     private final boolean active;
 
-    public CurrentUser(UUID userId, String email, AppRole role, boolean active) {
+    public CurrentUser(UUID userId, UUID ecosystemId, String email, AppRole role, boolean active) {
         this.userId = userId;
+        this.ecosystemId = ecosystemId;
         this.email = email;
         this.role = role;
         this.active = active;
@@ -26,6 +28,10 @@ public class CurrentUser implements UserDetails {
 
     public UUID getUserId() {
         return userId;
+    }
+
+    public UUID getEcosystemId() {
+        return ecosystemId;
     }
 
     public AppRole getRole() {

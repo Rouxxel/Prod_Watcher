@@ -14,7 +14,9 @@ import com.prodwatch.api.entity.Product;
 import com.prodwatch.api.entity.StockMovementType;
 import com.prodwatch.api.entity.Warehouse;
 import com.prodwatch.api.error.InsufficientStockException;
+import com.prodwatch.api.repository.EcosystemRepository;
 import com.prodwatch.api.repository.ProductRepository;
+import com.prodwatch.api.repository.EcosystemRepository;
 import com.prodwatch.api.repository.ProfileRepository;
 import com.prodwatch.api.repository.UserRoleRepository;
 import com.prodwatch.api.repository.WarehouseRepository;
@@ -54,14 +56,17 @@ class TransactionServiceTest extends AbstractIntegrationTest {
     @Autowired
     private UserRoleRepository userRoleRepository;
 
+    @Autowired
+    private EcosystemRepository ecosystemRepository;
+
     private Product product;
     private Warehouse warehouse;
 
     @BeforeEach
     void setUp() {
-        TestFixtures.seedUser(profileRepository, userRoleRepository, TestFixtures.CASHIER_ID, AppRole.cashier);
-        TestFixtures.seedUser(profileRepository, userRoleRepository, TestFixtures.WORKER_ID, AppRole.warehouse_worker);
-        warehouse = warehouseRepository.save(Warehouse.create("POS WH", "Front"));
+        TestFixtures.seedUser(profileRepository, userRoleRepository, ecosystemRepository, TestFixtures.CASHIER_ID, AppRole.cashier);
+        TestFixtures.seedUser(profileRepository, userRoleRepository, ecosystemRepository, TestFixtures.WORKER_ID, AppRole.warehouse_worker);
+        warehouse = TestFixtures.saveWarehouse(warehouseRepository, ecosystemRepository, "POS WH", "Front");
         product = productRepository.save(Product.create(
                 "POS item",
                 "POS-001",

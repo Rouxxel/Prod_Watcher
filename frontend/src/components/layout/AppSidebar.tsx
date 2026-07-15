@@ -134,6 +134,11 @@ export function AppSidebar() {
                 <div className="min-w-0 flex-1 leading-tight">
                   <div className="truncate text-sm font-medium">{user.name}</div>
                   <div className="truncate text-xs text-muted-foreground">{user.email}</div>
+                  {user.ecosystemName && (
+                    <div className="truncate text-[10px] text-muted-foreground/80" title={user.ecosystemId}>
+                      {user.ecosystemName}
+                    </div>
+                  )}
                 </div>
                 <RoleBadge role={user.role} />
               </>

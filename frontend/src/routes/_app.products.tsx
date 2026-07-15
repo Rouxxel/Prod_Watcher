@@ -129,9 +129,6 @@ function ProductsPage() {
     return <Badge variant="outline" className="bg-success/15 text-success border-success/30">OK</Badge>;
   };
 
-  const stockColumnLabel =
-    warehouseFilter === "all" ? "Stock" : `Stock (${warehouseName(warehouseFilter)})`;
-
   return (
     <div>
       <PageHeader
@@ -197,8 +194,12 @@ function ProductsPage() {
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={Package}
-            title="No products found"
-            description="Try adjusting filters or add your first product."
+            title={products.data?.length === 0 ? "No products yet" : "No products found"}
+            description={
+              products.data?.length === 0
+                ? "Add your first product to start tracking inventory."
+                : "Try adjusting filters or add a new product."
+            }
             action={
               !readOnly ? (
                 <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
@@ -216,8 +217,8 @@ function ProductsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>SKU</TableHead>
                   <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="text-right">{stockColumnLabel}</TableHead>
+                  <TableHead className="text-right">Price/Unit</TableHead>
+                  <TableHead className="text-right">Stock</TableHead>
                   <TableHead>Status</TableHead>
                   {!isSingleLocation && <TableHead>Warehouse</TableHead>}
                   {!readOnly && <TableHead className="w-[100px]" />}

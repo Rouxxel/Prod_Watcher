@@ -11,6 +11,7 @@ import com.prodwatch.api.entity.Product;
 import com.prodwatch.api.entity.StockMovementType;
 import com.prodwatch.api.entity.Warehouse;
 import com.prodwatch.api.error.InsufficientStockException;
+import com.prodwatch.api.repository.EcosystemRepository;
 import com.prodwatch.api.repository.ProductRepository;
 import com.prodwatch.api.repository.ProfileRepository;
 import com.prodwatch.api.repository.UserRoleRepository;
@@ -48,15 +49,18 @@ class StockMovementServiceTest extends AbstractIntegrationTest {
     @Autowired
     private UserRoleRepository userRoleRepository;
 
+    @Autowired
+    private EcosystemRepository ecosystemRepository;
+
     private Product product;
     private Warehouse warehouseA;
     private Warehouse warehouseB;
 
     @BeforeEach
     void setUp() {
-        TestFixtures.seedUser(profileRepository, userRoleRepository, TestFixtures.WORKER_ID, AppRole.warehouse_worker);
-        warehouseA = warehouseRepository.save(Warehouse.create("WH-A", "Zone A"));
-        warehouseB = warehouseRepository.save(Warehouse.create("WH-B", "Zone B"));
+        TestFixtures.seedUser(profileRepository, userRoleRepository, ecosystemRepository, TestFixtures.WORKER_ID, AppRole.warehouse_worker);
+        warehouseA = TestFixtures.saveWarehouse(warehouseRepository, ecosystemRepository, "WH-A", "Zone A");
+        warehouseB = TestFixtures.saveWarehouse(warehouseRepository, ecosystemRepository, "WH-B", "Zone B");
         product = productRepository.save(Product.create(
                 "Movement test",
                 "MOV-001",

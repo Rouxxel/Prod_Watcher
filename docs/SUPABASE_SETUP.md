@@ -1,36 +1,51 @@
 # Supabase Setup — Storage & Auth
 
-SQL migrations automate the storage bucket (`V12__storage_product_images.sql`) and auth triggers (`V3__profiles_and_roles.sql`). Dashboard steps below must be applied once per Supabase project.
+One Supabase Postgres project hosts **many businesses** (ecosystems). Flyway migrations through **V26** add tenant columns, RLS, and storage path scoping. The Java API enforces `ecosystem_id` on all queries; new owner sign-ups get an **empty** workspace.
+
+SQL migrations automate the storage bucket (`V11__storage_product_images.sql`, path RLS in `V26`) and auth triggers (`V3__profiles_and_roles.sql`). Dashboard steps below must be applied once per Supabase project.
+
+**Not a single-shop model:** demo seed data (`seed-auth-users.ps1`) lives on the fixed **Acme Demo** ecosystem only. Production sign-ups create separate ecosystems automatically.
+
+See [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md).
 
 ---
 
-## Storage — `product-images` bucket (Phase 5.3)
+## Storage — `product-images` bucket
 
-### Applied by Flyway (`V12`)
+### Applied by Flyway (`V11` + `V26`)
 
 | Setting | Value |
 | --- | --- |
 | Bucket ID | `product-images` |
-| Public read | Yes |
+| Public read | Yes (catalog URLs) |
 | Max file size | 5 MB |
 | Allowed MIME types | `image/jpeg`, `image/png`, `image/webp`, `image/gif` |
 | Write access | `admin`, `warehouse_manager`, `warehouse_worker` (active users only) |
+| Path scope (V26) | First path segment must equal caller's `profiles.ecosystem_id` |
+
+### Path layout (multi-tenant)
+
+```
+{ecosystem_id}/{product_id}/{timestamp}.{ext}
+{ecosystem_id}/draft-{sku}/{timestamp}.{ext}   # new product before save
+```
+
+The frontend upload helper (`frontend/src/lib/storage.ts`) builds these paths automatically using `ecosystemId` from `GET /users/me`. Storage RLS rejects writes outside the user's ecosystem prefix.
 
 ### Public URL pattern
 
 ```
-{SUPABASE_URL}/storage/v1/object/public/product-images/{path}
+{SUPABASE_URL}/storage/v1/object/public/product-images/{ecosystem_id}/{product_id}/{file}
 ```
 
-Example: `https://your-project.supabase.co/storage/v1/object/public/product-images/kettle-1.jpg`
+Example: `https://your-project.supabase.co/storage/v1/object/public/product-images/33333333-3333-4333-8333-333333333301/22222222-2222-4222-8222-222222222201/1730000000000.jpg`
 
 ### Seed product images
 
-`V11__seed_data.sql` still uses external [picsum.photos](https://picsum.photos) URLs so demo data works without uploaded files. When ready:
+`V12__seed_data.sql` still uses external [picsum.photos](https://picsum.photos) URLs so demo data works without uploaded files. When ready:
 
-1. Upload images to the `product-images` bucket.
+1. Upload images under the demo ecosystem prefix.
 2. Update `products.images` to Storage URLs (migration or admin script).
-3. Optional path convention: `{sku}/{index}.jpg` (e.g. `KTL-001/1.jpg`).
 
 ---
 
@@ -47,14 +62,14 @@ Open **Supabase Dashboard → Authentication → Providers → Email**.
 
 **Provisioned staff** (Admin API `createUser` with `email_confirm: true`) skip the confirmation email regardless of the above — handled by the backend seed script and production admin API.
 
-### Disable public sign-up (after bootstrap)
+### Disable public sign-up (optional)
 
-Choose **one**:
+Public sign-up is **enabled** by default — each registration creates a new ecosystem. To restrict to admin-provisioned staff only:
 
-1. **Dashboard:** Authentication → Providers → Email → disable **Enable sign ups** after the first admin exists, **or**
-2. **Backend:** Reject `POST /auth/signup` when `user_roles` already has an `admin` row.
+1. **Dashboard:** Authentication → Providers → Email → disable **Enable sign ups**, **or**
+2. Change `AuthBootstrapService.isSignupAllowed()` / reject `POST /auth/signup` in the backend.
 
-Keep the dashboard option as a safety net in production.
+Keep dashboard + backend aligned in production if you disable self-service owner registration.
 
 ### Site URL & redirect URLs
 
@@ -124,19 +139,20 @@ If you want Supabase to embed `app_role` in the JWT, add a **Custom Access Token
 
 Use this checklist after migrations and `seed-auth-users` script (or real signup flow).
 
-### Bootstrap owner (`/signup`)
+### Owner sign-up (`/signup`)
 
-- [ ] Unconfirmed user exists in `auth.users` but **cannot** access protected API routes
+- [ ] Unconfirmed user exists in `auth.users`; profile may have `ecosystem_id` null until bootstrap
 - [ ] Confirmation email redirects to `{FRONTEND_URL}/confirm-email` with token query params
-- [ ] After `POST /auth/confirm-email`, backend assigns `admin` → `user_roles` contains `admin`
+- [ ] After `POST /auth/confirm-email`, backend creates **new ecosystem** + `admin` role
+- [ ] `GET /users/me` returns `ecosystemId` and `ecosystemName`
+- [ ] Owner sees **zero** warehouses/products from other ecosystems (empty catalog)
 - [ ] Owner signs in manually at `/login` (no auto-session after confirm)
-- [ ] Second public sign-up is rejected (backend or dashboard sign-ups disabled)
 
 ### Provisioned staff (Admin API)
 
 - [ ] `email_confirmed_at` is set immediately (`email_confirm: true`)
 - [ ] User can log in at `/login` with admin-set password (no confirmation email)
-- [ ] Role row exists in `user_roles` (not on `profiles`)
+- [ ] Role row exists in `user_roles`; `profiles.ecosystem_id` matches admin's ecosystem
 
 ### Promote to admin
 
@@ -147,9 +163,10 @@ Use this checklist after migrations and `seed-auth-users` script (or real signup
 
 ```sql
 -- Roles live in user_roles, not profiles
-SELECT p.email, ur.role
+SELECT p.email, ur.role, p.ecosystem_id, e.name AS ecosystem_name
 FROM profiles p
 LEFT JOIN user_roles ur ON ur.user_id = p.id
+LEFT JOIN ecosystems e ON e.id = p.ecosystem_id
 ORDER BY p.email;
 
 -- Inactive user
@@ -183,9 +200,8 @@ Apply once per environment (project):
 - [ ] Site URL = Vercel production URL
 - [ ] Redirect URLs: localhost:8080, localhost:3000, Vercel URL, Workers URL (if used)
 - [ ] JWT expiry + refresh rotation configured
-- [ ] Sign-ups disabled after bootstrap **or** backend guard in place
-- [ ] Flyway V12 applied (`product-images` bucket visible under Storage)
-- [ ] `seed-auth-users` script run for local dev (optional)
+- [ ] Flyway **V26** applied (`ecosystems` table, `ecosystem_id` columns, storage policies)
+- [ ] `seed-auth-users` script run for local dev demos only (optional)
 
 ---
 
@@ -194,6 +210,8 @@ Apply once per environment (project):
 | File | Purpose |
 | --- | --- |
 | `backend/src/main/resources/db/migration/V3__profiles_and_roles.sql` | Auth user → profile trigger, bootstrap admin function |
-| `backend/src/main/resources/db/migration/V12__storage_product_images.sql` | Storage bucket + RLS |
-| `backend/scripts/seed-auth-users.ps1` / `.sh` | Dev auth users + roles |
+| `backend/src/main/resources/db/migration/V11__storage_product_images.sql` | Storage bucket + base RLS |
+| `backend/src/main/resources/db/migration/V26__storage_ecosystem_paths.sql` | Ecosystem-prefixed storage writes |
+| `backend/src/main/resources/db/migration/V19__ecosystems.sql` | Ecosystems table |
+| `backend/scripts/seed-auth-users.ps1` / `.sh` | Dev auth users + Acme Demo ecosystem |
 | `backend/.env.example` | Env vars + dev seed password comments |
