@@ -16,7 +16,24 @@ Protected routes require a Supabase access token:
 Authorization: Bearer <accessToken>
 ```
 
-Obtain a token via `POST /api/v1/auth/login` or `POST /api/v1/auth/confirm-email`. The backend validates the JWT using Supabase **ES256/RS256** keys from `{SUPABASE_URL}/auth/v1/.well-known/jwks.json`, with optional **HS256** fallback via `SUPABASE_JWT_SECRET`. It loads the user from `profiles` + `user_roles` and rejects inactive accounts.
+Obtain a token via `POST /api/v1/auth/login` or `POST /api/v1/auth/confirm-email`. The backend validates the JWT using Supabase **ES256/RS256** keys from `{SUPABASE_URL}/auth/v1/.well-known/jwks.json`, with optional **HS256** fallback via `SUPABASE_JWT_SECRET`. It loads the user from `profiles` + `user_roles`, requires a non-null `ecosystem_id`, and rejects inactive accounts.
+
+### Multi-tenancy (ecosystems)
+
+Each business owner gets an isolated **ecosystem** (tenant). All inventory, POS, audit, user-admin, and settings data is scoped by `ecosystem_id` on the server.
+
+| Concept | Notes |
+| --- | --- |
+| **Ecosystem** | One row in `ecosystems` per business / workspace |
+| **Membership** | `profiles.ecosystem_id` — one ecosystem per user (MVP) |
+| **Sign-up** | Creates a **new** ecosystem (empty inventory) + `admin` role |
+| **Staff provision** | Admin creates users in **their** ecosystem only |
+| **List endpoints** | Return only the caller's ecosystem |
+| **GET by UUID** | Cross-ecosystem id → **404** (not 403) |
+
+Demo seed data (`seed-auth-users.ps1`) lives on the fixed **Acme Demo** ecosystem (`33333333-3333-4333-8333-333333333301`). New sign-ups never see it.
+
+`UserResponse` includes `ecosystemId` and `ecosystemName` for display/debug. There is no tenant-switching API in MVP.
 
 ### Public routes (no JWT)
 
@@ -49,9 +66,9 @@ Errors use a uniform shape:
 | HTTP | When |
 | --- | --- |
 | 400 | Bean validation failed (`field: message` in `detail`) |
-| 401 | Missing/invalid JWT (Spring Security) |
-| 403 | Wrong role or inactive user |
-| 404 | Entity not found |
+| 401 | Missing/invalid JWT, or profile has no `ecosystem_id` yet |
+| 403 | Wrong role |
+| 404 | Entity not found, or resource exists in another ecosystem |
 | 409 | Insufficient stock (`InsufficientStockException`) |
 | 422 | Business rule violation (e.g. duplicate SKU, invalid movement) |
 | 429 | Rate limit exceeded |
@@ -91,7 +108,7 @@ Settings **U** (PATCH) is admin-only; all roles may **R** (GET) when authenticat
 
 ### GET `/api/v1/auth/bootstrap-status`
 
-Public. Returns whether owner sign-up is allowed (no admin exists yet).
+Public. Legacy compatibility — always returns `signupAllowed: true` (public owner sign-up is enabled; each sign-up creates a new ecosystem).
 
 **Response 200**
 
@@ -99,13 +116,27 @@ Public. Returns whether owner sign-up is allowed (no admin exists yet).
 { "signupAllowed": true }
 ```
 
-When `false`, an admin already exists — staff must be provisioned by an admin on `/users`.
+Staff accounts are provisioned by an admin on `/users` (cannot self-sign-up as cashier/worker).
+
+---
+
+### GET `/api/v1/auth/signup-email-available`
+
+Public. Checks whether an email is globally available (auth identity is unique across the platform).
+
+**Query:** `email` (required)
+
+**Response 200**
+
+```json
+{ "available": true }
+```
 
 ---
 
 ### POST `/api/v1/auth/signup`
 
-Public. **Owner bootstrap only** (when `signupAllowed` is true). Creates the first admin after email confirmation.
+Public. Creates a Supabase auth user and profile, then assigns a **new ecosystem** (empty workspace) and **admin** role. Does not copy demo seed data.
 
 **Body**
 
@@ -151,10 +182,14 @@ Public.
     "email": "jordan@acme.co",
     "role": "warehouse_worker",
     "active": true,
-    "emailConfirmed": true
+    "emailConfirmed": true,
+    "ecosystemId": "33333333-3333-4333-8333-333333333301",
+    "ecosystemName": "Acme Demo"
   }
 }
 ```
+
+`ecosystemId` / `ecosystemName` identify the user's tenant. Omitted or null only before bootstrap completes (login/confirm-email runs bootstrap first).
 
 ---
 
@@ -500,6 +535,29 @@ Read-only append-only log.
 
 Admin-only except `GET /users/me`.
 
+### `UserResponse`
+
+```json
+{
+  "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
+  "name": "Alex Reyes",
+  "email": "alex@acme.co",
+  "role": "admin",
+  "active": true,
+  "emailConfirmed": null,
+  "ecosystemId": "33333333-3333-4333-8333-333333333301",
+  "ecosystemName": "Acme Demo"
+}
+```
+
+| Field | Notes |
+| --- | --- |
+| `emailConfirmed` | Set on login/confirm-email responses; usually `null` on `/users` routes |
+| `ecosystemId` | Tenant UUID — all list/detail queries are scoped to this id |
+| `ecosystemName` | Display label from `ecosystems.name` (e.g. `"{ownerName}'s workspace"`) |
+
+Provisioning staff sets `ecosystemId` to the admin's ecosystem automatically.
+
 ### GET `/api/v1/users`
 
 **Roles:** admin.
@@ -602,7 +660,7 @@ Admin-only except `GET /users/me`.
 
 ## Settings
 
-Workspace configuration singleton (tax, receipts, business mode). Persisted in `workspace_settings`.
+Workspace configuration **per ecosystem** (tax, receipts, business mode). Persisted in `workspace_settings` (one row per `ecosystem_id`).
 
 | Method | Path | Roles | Description |
 | --- | --- | --- | --- |
@@ -650,7 +708,9 @@ Workspace configuration singleton (tax, receipts, business mode). Persisted in `
 
 **Response 200** — full `SettingsResponse` after save. Writes `SETTINGS_UPDATED` audit entry.
 
-On first access, if no row exists the server bootstraps defaults using `POS_TAX_RATE` (env fallback, default `0.16`).
+On first access per ecosystem, if no row exists the server bootstraps defaults using `POS_TAX_RATE` (env fallback, default `0.16`).
+
+New sign-ups get a fresh settings row when they first open Settings or when POS reads tax rate.
 
 ---
 
@@ -765,4 +825,5 @@ Per-endpoint limits are defined in `src/main/resources/core_specs/configuration/
 - [`README.md`](README.md) — setup, env vars, Docker, Render
 - [`docs/DATABASE_SCHEMA.md`](../docs/DATABASE_SCHEMA.md) — Postgres schema reference
 - [`docs/SUPABASE_SETUP.md`](../docs/SUPABASE_SETUP.md) — Supabase project configuration
+- [`docs/TASK_05_ecosystems.md`](../docs/TASK_05_ecosystems.md) — multi-tenancy plan and migrations
 - [`frontend/README.md`](../frontend/README.md) — frontend deploy and CORS

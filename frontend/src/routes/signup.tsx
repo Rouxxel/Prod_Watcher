@@ -86,8 +86,8 @@ function SignupPage() {
             Sign up
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Create an administrator account. Sign-up grants the admin role only — add staff from Users after you log
-            in.
+            Create your business workspace. You become admin with an empty inventory — add warehouses and products after
+            you log in. Staff are added from Users.
           </p>
         </div>
 

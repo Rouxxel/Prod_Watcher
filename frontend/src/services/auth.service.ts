@@ -23,7 +23,11 @@ interface ApiUserResponse {
   role: Role;
   active: boolean;
   emailConfirmed?: boolean | null;
+  ecosystemId?: string | null;
+  ecosystemName?: string | null;
 }
+
+export type { ApiUserResponse };
 
 export interface LoginResponse {
   accessToken: string;
@@ -47,6 +51,8 @@ export function mapUser(response: ApiUserResponse): User {
     email: response.email,
     role: response.role,
     active: response.active,
+    ecosystemId: response.ecosystemId ?? undefined,
+    ecosystemName: response.ecosystemName ?? undefined,
   };
 }
 

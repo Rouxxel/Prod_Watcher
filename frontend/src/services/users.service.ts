@@ -1,15 +1,6 @@
 import type { Role, User, UserProvisionInput, UserUpdateInput } from "@/types";
 import { apiGet, apiPatch, apiPost, apiDelete } from "./api";
-import { mapUser } from "./auth.service";
-
-interface ApiUserResponse {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-  active: boolean;
-  emailConfirmed?: boolean | null;
-}
+import { mapUser, type ApiUserResponse } from "./auth.service";
 
 function mapUsers(rows: ApiUserResponse[]): User[] {
   return rows.map(mapUser);
