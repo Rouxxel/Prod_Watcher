@@ -100,12 +100,19 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 return;
             }
 
+            UUID ecosystemId = profile.getEcosystemId();
+            if (ecosystemId == null) {
+                CustomLogger.debug("Rejected user without ecosystem: " + userId);
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             AppRole role = userRoleRepository
                     .findByUser_Id(userId)
                     .map(UserRole::getRole)
                     .orElseThrow(() -> new JWTVerificationException("User has no role"));
 
-            CurrentUser principal = new CurrentUser(userId, profile.getEmail(), role, profile.isActive());
+            CurrentUser principal = new CurrentUser(userId, ecosystemId, profile.getEmail(), role, profile.isActive());
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

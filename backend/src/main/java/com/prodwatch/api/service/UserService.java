@@ -69,6 +69,17 @@ public class UserService {
         return get(currentUser.getUserId(), currentUser);
     }
 
+    /** Auth login/confirm — load own profile after ecosystem is ensured. */
+    public UserResponse getForAuthSession(UUID userId) {
+        Profile profile = profileRepository
+                .findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (profile.getEcosystemId() == null) {
+            throw new ResourceNotFoundException("User not found");
+        }
+        return toResponse(profile);
+    }
+
     @Transactional
     public UserResponse provision(UserProvisionRequest dto, CurrentUser admin) {
         RoleChecker.requireAdmin(admin);
