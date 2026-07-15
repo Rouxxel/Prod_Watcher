@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowDown, KeyRound, Shield, UserPlus, Users as UsersIcon } from "lucide-react";
+import { ArrowDown, KeyRound, Shield, Trash2, UserPlus, Users as UsersIcon } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,7 @@ import { ResetPasswordDialog } from "@/components/users/ResetPasswordDialog";
 import { StepDownAdminDialog } from "@/components/users/StepDownAdminDialog";
 import {
   useDeactivateUser,
+  useDeleteUser,
   usePromoteAdmin,
   useProvisionUser,
   useReactivateUser,
@@ -48,7 +49,7 @@ import {
   useUsers,
 } from "@/hooks/queries";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { canAdminResetPassword, canAdminStepDown } from "@/lib/role-access";
+import { canAdminDeleteUser, canAdminResetPassword, canAdminStepDown } from "@/lib/role-access";
 import { defaultPathForRole } from "@/lib/role-modes";
 import { roleLabel } from "@/lib/format";
 import { toast } from "sonner";
@@ -75,11 +76,13 @@ function UsersPage() {
   const stepDownMut = useStepDownAdmin();
   const resetMut = useResetPassword();
   const deactivateMut = useDeactivateUser();
+  const deleteMut = useDeleteUser();
   const reactivateMut = useReactivateUser();
 
   const [provisionOpen, setProvisionOpen] = useState(false);
   const [resetUser, setResetUser] = useState<User | null>(null);
   const [promoteUser, setPromoteUser] = useState<User | null>(null);
+  const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [stepDownOpen, setStepDownOpen] = useState(false);
 
   const userList = users.data ?? [];
@@ -124,7 +127,7 @@ function UsersPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead className="w-[100px]">Active</TableHead>
-                  <TableHead className="w-[280px]">Actions</TableHead>
+                  <TableHead className="w-[360px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -138,6 +141,7 @@ function UsersPage() {
                     updateMut.isPending ||
                     promoteMut.isPending ||
                     stepDownMut.isPending ||
+                    deleteMut.isPending ||
                     deactivateMut.isPending ||
                     reactivateMut.isPending;
                   const isSelf = currentUser?.id === u.id;
@@ -221,6 +225,18 @@ function UsersPage() {
                               Reset password
                             </Button>
                           )}
+                          {currentUser && canAdminDeleteUser(currentUser.id, u) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={busy}
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeleteUser(u)}
+                            >
+                              <Trash2 className="mr-1 h-3.5 w-3.5" />
+                              Delete
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -283,6 +299,35 @@ function UsersPage() {
           })
         }
       />
+
+      <AlertDialog open={!!deleteUser} onOpenChange={(open) => !open && setDeleteUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteUser?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes their account and login access. Audit and stock movement history
+              is kept, but users with POS sales cannot be deleted — deactivate them instead.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!deleteUser) return;
+                deleteMut.mutate(deleteUser.id, {
+                  onSuccess: () => {
+                    toast.success(`${deleteUser.name} deleted`);
+                    setDeleteUser(null);
+                  },
+                });
+              }}
+            >
+              Delete user
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!promoteUser} onOpenChange={(open) => !open && setPromoteUser(null)}>
         <AlertDialogContent>

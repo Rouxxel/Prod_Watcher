@@ -1,5 +1,5 @@
 import type { Role, User, UserProvisionInput, UserUpdateInput } from "@/types";
-import { apiGet, apiPatch, apiPost } from "./api";
+import { apiGet, apiPatch, apiPost, apiDelete } from "./api";
 import { mapUser } from "./auth.service";
 
 interface ApiUserResponse {
@@ -53,5 +53,9 @@ export const usersService = {
   async reactivate(id: string): Promise<User> {
     const row = await apiPost<ApiUserResponse>(`/users/${id}/reactivate`);
     return mapUser(row);
+  },
+
+  async delete(id: string): Promise<void> {
+    await apiDelete(`/users/${id}`);
   },
 };

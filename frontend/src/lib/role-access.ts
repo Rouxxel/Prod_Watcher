@@ -37,6 +37,14 @@ export function canAdminResetPassword(
   return !isAdminRole(target.role) || target.id === actorId;
 }
 
+/** Admins may permanently delete non-admin users (not themselves or other admins). */
+export function canAdminDeleteUser(
+  actorId: string,
+  target: { id: string; role: Role },
+): boolean {
+  return target.id !== actorId && !isAdminRole(target.role);
+}
+
 export function countActiveAdmins(users: { role: Role; active: boolean }[]): number {
   return users.filter((u) => isAdminRole(u.role) && u.active).length;
 }

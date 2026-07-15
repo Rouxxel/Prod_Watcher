@@ -155,3 +155,11 @@ export const useReactivateUser = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });
 };
+
+export const useDeleteUser = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => usersService.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+};
