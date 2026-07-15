@@ -1,10 +1,12 @@
 # Supabase Setup — Storage & Auth
 
-SQL migrations automate the storage bucket (`V12__storage_product_images.sql`) and auth triggers (`V3__profiles_and_roles.sql`). Dashboard steps below must be applied once per Supabase project.
+One Supabase Postgres project hosts **many businesses** (ecosystems). Flyway migrations through **V26** add tenant columns, RLS, and storage path scoping. The Java API enforces `ecosystem_id` on all queries; new owner sign-ups get an **empty** workspace.
 
----
+SQL migrations automate the storage bucket (`V11__storage_product_images.sql`, path RLS in `V26`) and auth triggers (`V3__profiles_and_roles.sql`). Dashboard steps below must be applied once per Supabase project.
 
-SQL migrations automate the storage bucket (`V11__storage_product_images.sql`, ecosystem path RLS in `V26`) and auth triggers (`V3__profiles_and_roles.sql`). Dashboard steps below must be applied once per Supabase project.
+**Not a single-shop model:** demo seed data (`seed-auth-users.ps1`) lives on the fixed **Acme Demo** ecosystem only. Production sign-ups create separate ecosystems automatically.
+
+See [`TASK_05_ecosystems.md`](TASK_05_ecosystems.md) and [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md).
 
 ---
 
@@ -60,14 +62,14 @@ Open **Supabase Dashboard → Authentication → Providers → Email**.
 
 **Provisioned staff** (Admin API `createUser` with `email_confirm: true`) skip the confirmation email regardless of the above — handled by the backend seed script and production admin API.
 
-### Disable public sign-up (after bootstrap)
+### Disable public sign-up (optional)
 
-Choose **one**:
+Public sign-up is **enabled** by default — each registration creates a new ecosystem. To restrict to admin-provisioned staff only:
 
-1. **Dashboard:** Authentication → Providers → Email → disable **Enable sign ups** after the first admin exists, **or**
-2. **Backend:** Reject `POST /auth/signup` when `user_roles` already has an `admin` row.
+1. **Dashboard:** Authentication → Providers → Email → disable **Enable sign ups**, **or**
+2. Change `AuthBootstrapService.isSignupAllowed()` / reject `POST /auth/signup` in the backend.
 
-Keep the dashboard option as a safety net in production.
+Keep dashboard + backend aligned in production if you disable self-service owner registration.
 
 ### Site URL & redirect URLs
 
@@ -137,19 +139,20 @@ If you want Supabase to embed `app_role` in the JWT, add a **Custom Access Token
 
 Use this checklist after migrations and `seed-auth-users` script (or real signup flow).
 
-### Bootstrap owner (`/signup`)
+### Owner sign-up (`/signup`)
 
-- [ ] Unconfirmed user exists in `auth.users` but **cannot** access protected API routes
+- [ ] Unconfirmed user exists in `auth.users`; profile may have `ecosystem_id` null until bootstrap
 - [ ] Confirmation email redirects to `{FRONTEND_URL}/confirm-email` with token query params
-- [ ] After `POST /auth/confirm-email`, backend assigns `admin` → `user_roles` contains `admin`
+- [ ] After `POST /auth/confirm-email`, backend creates **new ecosystem** + `admin` role
+- [ ] `GET /users/me` returns `ecosystemId` and `ecosystemName`
+- [ ] Owner sees **zero** warehouses/products from other ecosystems (empty catalog)
 - [ ] Owner signs in manually at `/login` (no auto-session after confirm)
-- [ ] Second public sign-up is rejected (backend or dashboard sign-ups disabled)
 
 ### Provisioned staff (Admin API)
 
 - [ ] `email_confirmed_at` is set immediately (`email_confirm: true`)
 - [ ] User can log in at `/login` with admin-set password (no confirmation email)
-- [ ] Role row exists in `user_roles` (not on `profiles`)
+- [ ] Role row exists in `user_roles`; `profiles.ecosystem_id` matches admin's ecosystem
 
 ### Promote to admin
 
@@ -160,9 +163,10 @@ Use this checklist after migrations and `seed-auth-users` script (or real signup
 
 ```sql
 -- Roles live in user_roles, not profiles
-SELECT p.email, ur.role
+SELECT p.email, ur.role, p.ecosystem_id, e.name AS ecosystem_name
 FROM profiles p
 LEFT JOIN user_roles ur ON ur.user_id = p.id
+LEFT JOIN ecosystems e ON e.id = p.ecosystem_id
 ORDER BY p.email;
 
 -- Inactive user
@@ -196,9 +200,8 @@ Apply once per environment (project):
 - [ ] Site URL = Vercel production URL
 - [ ] Redirect URLs: localhost:8080, localhost:3000, Vercel URL, Workers URL (if used)
 - [ ] JWT expiry + refresh rotation configured
-- [ ] Sign-ups disabled after bootstrap **or** backend guard in place
-- [ ] Flyway V12 applied (`product-images` bucket visible under Storage)
-- [ ] `seed-auth-users` script run for local dev (optional)
+- [ ] Flyway **V26** applied (`ecosystems` table, `ecosystem_id` columns, storage policies)
+- [ ] `seed-auth-users` script run for local dev demos only (optional)
 
 ---
 
@@ -207,6 +210,8 @@ Apply once per environment (project):
 | File | Purpose |
 | --- | --- |
 | `backend/src/main/resources/db/migration/V3__profiles_and_roles.sql` | Auth user → profile trigger, bootstrap admin function |
-| `backend/src/main/resources/db/migration/V12__storage_product_images.sql` | Storage bucket + RLS |
-| `backend/scripts/seed-auth-users.ps1` / `.sh` | Dev auth users + roles |
+| `backend/src/main/resources/db/migration/V11__storage_product_images.sql` | Storage bucket + base RLS |
+| `backend/src/main/resources/db/migration/V26__storage_ecosystem_paths.sql` | Ecosystem-prefixed storage writes |
+| `backend/src/main/resources/db/migration/V19__ecosystems.sql` | Ecosystems table |
+| `backend/scripts/seed-auth-users.ps1` / `.sh` | Dev auth users + Acme Demo ecosystem |
 | `backend/.env.example` | Env vars + dev seed password comments |
