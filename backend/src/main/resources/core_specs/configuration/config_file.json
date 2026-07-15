@@ -91,6 +91,14 @@
             "endpoint_prefix": "/api/v1",
             "endpoint_tag": "transactions",
             "endpoint_route": "/transactions"
+        },
+
+        "settings_endpoint": {
+            "request_limit": 30,
+            "unit_of_time_for_limit": "m",
+            "endpoint_prefix": "/api/v1",
+            "endpoint_tag": "settings",
+            "endpoint_route": "/settings"
         }
     }
 }
