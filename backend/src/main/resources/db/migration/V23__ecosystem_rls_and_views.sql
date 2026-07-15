@@ -390,9 +390,13 @@ CREATE POLICY workspace_settings_update_admin
 
 -- ---------------------------------------------------------------------------
 -- Views — aggregate within ecosystem (matching product/warehouse tenant)
+-- PostgreSQL cannot add/reorder view columns via CREATE OR REPLACE; drop first.
 -- ---------------------------------------------------------------------------
 
-CREATE OR REPLACE VIEW public.inventory_balances AS
+DROP VIEW IF EXISTS public.product_stock_summary;
+DROP VIEW IF EXISTS public.inventory_balances;
+
+CREATE VIEW public.inventory_balances AS
 SELECT
     sm.ecosystem_id,
     sm.product_id,
@@ -437,7 +441,7 @@ FROM (
 ) AS sm
 GROUP BY sm.ecosystem_id, sm.product_id, sm.warehouse_id;
 
-CREATE OR REPLACE VIEW public.product_stock_summary AS
+CREATE VIEW public.product_stock_summary AS
 SELECT
     p.id AS product_id,
     p.default_warehouse_id AS warehouse_id,

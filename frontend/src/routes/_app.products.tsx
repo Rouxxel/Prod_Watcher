@@ -129,9 +129,6 @@ function ProductsPage() {
     return <Badge variant="outline" className="bg-success/15 text-success border-success/30">OK</Badge>;
   };
 
-  const stockColumnLabel =
-    warehouseFilter === "all" ? "Stock" : `Stock (${warehouseName(warehouseFilter)})`;
-
   return (
     <div>
       <PageHeader
@@ -220,8 +217,8 @@ function ProductsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>SKU</TableHead>
                   <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="text-right">{stockColumnLabel}</TableHead>
+                  <TableHead className="text-right">Price/Unit</TableHead>
+                  <TableHead className="text-right">Stock</TableHead>
                   <TableHead>Status</TableHead>
                   {!isSingleLocation && <TableHead>Warehouse</TableHead>}
                   {!readOnly && <TableHead className="w-[100px]" />}

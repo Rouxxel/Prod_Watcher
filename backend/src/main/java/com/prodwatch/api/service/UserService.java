@@ -56,7 +56,7 @@ public class UserService {
 
     public List<UserResponse> list(CurrentUser admin) {
         UUID ecosystemId = TenantContext.requireEcosystemId(admin);
-        return profileRepository.findAllByEcosystem_Id(ecosystemId).stream()
+        return profileRepository.findAllByEcosystem_IdWithEcosystem(ecosystemId).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -72,7 +72,7 @@ public class UserService {
     /** Auth login/confirm — load own profile after ecosystem is ensured. */
     public UserResponse getForAuthSession(UUID userId) {
         Profile profile = profileRepository
-                .findById(userId)
+                .findByIdWithEcosystem(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         if (profile.getEcosystemId() == null) {
             throw new ResourceNotFoundException("User not found");
@@ -263,7 +263,7 @@ public class UserService {
     private Profile loadProfile(UUID id, CurrentUser user) {
         UUID ecosystemId = TenantContext.requireEcosystemId(user);
         return profileRepository
-                .findByIdAndEcosystem_Id(id, ecosystemId)
+                .findByIdAndEcosystem_IdWithEcosystem(id, ecosystemId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
