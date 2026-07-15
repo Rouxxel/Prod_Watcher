@@ -4,15 +4,18 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 import com.prodwatch.api.dto.settings.SettingsResponse;
 import com.prodwatch.api.dto.settings.SettingsUpdateRequest;
+import com.prodwatch.api.entity.Ecosystem;
 import com.prodwatch.api.entity.Profile;
 import com.prodwatch.api.entity.WorkspaceSettings;
 import com.prodwatch.api.error.ResourceNotFoundException;
 import com.prodwatch.api.repository.ProfileRepository;
 import com.prodwatch.api.repository.WorkspaceSettingsRepository;
 import com.prodwatch.api.security.CurrentUser;
+import com.prodwatch.api.security.TenantContext;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -24,32 +27,36 @@ public class SettingsService {
     private final WorkspaceSettingsRepository workspaceSettingsRepository;
     private final ProfileRepository profileRepository;
     private final AuditService auditService;
+    private final EcosystemService ecosystemService;
     private final BigDecimal defaultTaxRate;
 
     public SettingsService(
             WorkspaceSettingsRepository workspaceSettingsRepository,
             ProfileRepository profileRepository,
             AuditService auditService,
+            EcosystemService ecosystemService,
             @Value("${prodwatch.pos.tax-rate:0.16}") BigDecimal defaultTaxRate) {
         this.workspaceSettingsRepository = workspaceSettingsRepository;
         this.profileRepository = profileRepository;
         this.auditService = auditService;
+        this.ecosystemService = ecosystemService;
         this.defaultTaxRate = defaultTaxRate;
     }
 
     @Transactional
-    public SettingsResponse get() {
-        return toResponse(getOrBootstrap());
+    public SettingsResponse get(CurrentUser user) {
+        return toResponse(getOrBootstrap(TenantContext.requireEcosystemId(user)));
     }
 
     @Transactional
-    public BigDecimal getTaxRate() {
-        return getOrBootstrap().getTaxRate();
+    public BigDecimal getTaxRate(UUID ecosystemId) {
+        return getOrBootstrap(ecosystemId).getTaxRate();
     }
 
     @Transactional
     public SettingsResponse update(SettingsUpdateRequest dto, CurrentUser admin) {
-        WorkspaceSettings settings = getOrBootstrap();
+        UUID ecosystemId = TenantContext.requireEcosystemId(admin);
+        WorkspaceSettings settings = getOrBootstrap(ecosystemId);
         List<String> changes = new ArrayList<>();
 
         if (dto.businessName() != null && !dto.businessName().equals(settings.getBusinessName())) {
@@ -98,17 +105,21 @@ public class SettingsService {
                     admin.getUserId(),
                     "SETTINGS_UPDATED",
                     "settings",
-                    WorkspaceSettings.SINGLETON_ID,
+                    settings.getId(),
                     String.join(", ", changes));
         }
 
         return toResponse(settings);
     }
 
-    private WorkspaceSettings getOrBootstrap() {
+    private WorkspaceSettings getOrBootstrap(UUID ecosystemId) {
         return workspaceSettingsRepository
-                .findSingleton()
-                .orElseGet(() -> workspaceSettingsRepository.save(WorkspaceSettings.createDefault(defaultTaxRate)));
+                .findByEcosystem_Id(ecosystemId)
+                .orElseGet(() -> {
+                    Ecosystem ecosystem = ecosystemService.requireById(ecosystemId);
+                    return workspaceSettingsRepository.save(
+                            WorkspaceSettings.createDefault(ecosystem, defaultTaxRate));
+                });
     }
 
     private SettingsResponse toResponse(WorkspaceSettings settings) {

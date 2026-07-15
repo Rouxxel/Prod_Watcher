@@ -6,6 +6,7 @@ import java.util.UUID;
 import com.prodwatch.api.dto.warehouse.WarehouseCreate;
 import com.prodwatch.api.dto.warehouse.WarehouseResponse;
 import com.prodwatch.api.dto.warehouse.WarehouseUpdate;
+import com.prodwatch.api.entity.Ecosystem;
 import com.prodwatch.api.entity.Warehouse;
 import com.prodwatch.api.error.BusinessRuleException;
 import com.prodwatch.api.error.ResourceNotFoundException;
@@ -14,6 +15,7 @@ import com.prodwatch.api.repository.ProductRepository;
 import com.prodwatch.api.repository.StockMovementRepository;
 import com.prodwatch.api.repository.WarehouseRepository;
 import com.prodwatch.api.security.CurrentUser;
+import com.prodwatch.api.security.TenantContext;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,38 +28,46 @@ public class WarehouseService {
     private final StockMovementRepository stockMovementRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
     private final AuditService auditService;
+    private final EcosystemService ecosystemService;
 
     public WarehouseService(
             WarehouseRepository warehouseRepository,
             ProductRepository productRepository,
             StockMovementRepository stockMovementRepository,
             InventoryBalanceRepository inventoryBalanceRepository,
-            AuditService auditService) {
+            AuditService auditService,
+            EcosystemService ecosystemService) {
         this.warehouseRepository = warehouseRepository;
         this.productRepository = productRepository;
         this.stockMovementRepository = stockMovementRepository;
         this.inventoryBalanceRepository = inventoryBalanceRepository;
         this.auditService = auditService;
+        this.ecosystemService = ecosystemService;
     }
 
-    public List<WarehouseResponse> list() {
-        return warehouseRepository.findAll().stream().map(this::toResponse).toList();
+    public List<WarehouseResponse> list(CurrentUser user) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
+        return warehouseRepository.findAllByEcosystem_Id(ecosystemId).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    public WarehouseResponse get(UUID id) {
-        return toResponse(load(id));
+    public WarehouseResponse get(UUID id, CurrentUser user) {
+        return toResponse(load(id, user));
     }
 
     @Transactional
     public WarehouseResponse create(WarehouseCreate dto, CurrentUser user) {
-        Warehouse warehouse = warehouseRepository.save(Warehouse.create(dto.name(), dto.location()));
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
+        Ecosystem ecosystem = ecosystemService.requireById(ecosystemId);
+        Warehouse warehouse = warehouseRepository.save(Warehouse.create(dto.name(), dto.location(), ecosystem));
         auditService.log(user.getUserId(), "WAREHOUSE_CREATED", "warehouse", warehouse.getId(), warehouse.getName());
         return toResponse(warehouse);
     }
 
     @Transactional
     public WarehouseResponse update(UUID id, WarehouseUpdate dto, CurrentUser user) {
-        Warehouse warehouse = load(id);
+        Warehouse warehouse = load(id, user);
         if (dto.name() != null) {
             warehouse.setName(dto.name());
         }
@@ -71,11 +81,13 @@ public class WarehouseService {
 
     @Transactional
     public void delete(UUID id, CurrentUser user) {
-        Warehouse warehouse = load(id);
-        if (productRepository.existsByDefaultWarehouse_Id(id)) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
+        Warehouse warehouse = load(id, user);
+        if (productRepository.existsByEcosystem_IdAndDefaultWarehouse_Id(ecosystemId, id)) {
             throw new BusinessRuleException("Cannot delete warehouse assigned as default on products");
         }
-        if (stockMovementRepository.existsByFromWarehouse_IdOrToWarehouse_Id(id, id)) {
+        if (stockMovementRepository.existsByEcosystem_IdAndFromWarehouse_IdOrEcosystem_IdAndToWarehouse_Id(
+                ecosystemId, id, id)) {
             throw new BusinessRuleException("Cannot delete warehouse with stock movement history");
         }
         if (inventoryBalanceRepository.findById_WarehouseId(id).stream()
@@ -86,8 +98,11 @@ public class WarehouseService {
         auditService.log(user.getUserId(), "WAREHOUSE_DELETED", "warehouse", id, warehouse.getName());
     }
 
-    private Warehouse load(UUID id) {
-        return warehouseRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"));
+    private Warehouse load(UUID id, CurrentUser user) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
+        return warehouseRepository
+                .findByIdAndEcosystem_Id(id, ecosystemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"));
     }
 
     private WarehouseResponse toResponse(Warehouse warehouse) {

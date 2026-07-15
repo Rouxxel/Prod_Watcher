@@ -17,10 +17,15 @@ public class AuthBootstrapService {
 
     private final UserRoleRepository userRoleRepository;
     private final ProfileRepository profileRepository;
+    private final EcosystemService ecosystemService;
 
-    public AuthBootstrapService(UserRoleRepository userRoleRepository, ProfileRepository profileRepository) {
+    public AuthBootstrapService(
+            UserRoleRepository userRoleRepository,
+            ProfileRepository profileRepository,
+            EcosystemService ecosystemService) {
         this.userRoleRepository = userRoleRepository;
         this.profileRepository = profileRepository;
+        this.ecosystemService = ecosystemService;
     }
 
     /** Public sign-up is always available; each confirmed sign-up receives the admin role. */
@@ -34,6 +39,12 @@ public class AuthBootstrapService {
                 .findById(userId)
                 .orElseThrow(() -> new BusinessRuleException("Profile not found for user"));
 
+        ecosystemService.createForOwner(userId, profile.getName() + "'s workspace");
+        profile = profileRepository
+                .findById(userId)
+                .orElseThrow(() -> new BusinessRuleException("Profile not found for user"));
+
+        Profile finalProfile = profile;
         userRoleRepository
                 .findByUser_Id(userId)
                 .ifPresentOrElse(
@@ -41,12 +52,20 @@ public class AuthBootstrapService {
                             existing.setRole(AppRole.admin);
                             userRoleRepository.save(existing);
                         },
-                        () -> userRoleRepository.save(new UserRole(profile, AppRole.admin)));
+                        () -> userRoleRepository.save(new UserRole(finalProfile, AppRole.admin)));
     }
 
     /** Public sign-up users receive admin; idempotent if role already exists. */
     @Transactional
     public void ensureAdminRoleFromSignup(UUID userId) {
+        Profile profile = profileRepository
+                .findById(userId)
+                .orElseThrow(() -> new BusinessRuleException("Profile not found for user"));
+
+        if (profile.getEcosystem() == null) {
+            ecosystemService.createForOwner(userId, profile.getName() + "'s workspace");
+        }
+
         if (userRoleRepository.findByUser_Id(userId).isPresent()) {
             return;
         }

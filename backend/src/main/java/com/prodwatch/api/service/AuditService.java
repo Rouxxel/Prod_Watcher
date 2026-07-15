@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import com.prodwatch.api.entity.AuditEntry;
 import com.prodwatch.api.entity.Profile;
+import com.prodwatch.api.error.ResourceNotFoundException;
 import com.prodwatch.api.repository.AuditEntryRepository;
 import com.prodwatch.api.repository.ProfileRepository;
 
@@ -29,7 +30,9 @@ public class AuditService {
     @Transactional
     public void log(
             UUID userId, String action, String entity, UUID entityId, String details, String entityLabel) {
-        Profile user = profileRepository.getReferenceById(userId);
+        Profile user = profileRepository
+                .findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
         auditEntryRepository.save(AuditEntry.create(user, action, entity, entityId, details, entityLabel));
     }
 }

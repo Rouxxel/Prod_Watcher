@@ -13,6 +13,7 @@ import com.prodwatch.api.error.ResourceNotFoundException;
 import com.prodwatch.api.repository.ProductRepository;
 import com.prodwatch.api.repository.WarehouseRepository;
 import com.prodwatch.api.security.CurrentUser;
+import com.prodwatch.api.security.TenantContext;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,33 +37,37 @@ public class ProductService {
         this.auditService = auditService;
     }
 
-    public List<ProductResponse> list(String category, String search, Boolean lowStock, UUID stockWarehouseId) {
+    public List<ProductResponse> list(
+            String category, String search, Boolean lowStock, UUID stockWarehouseId, CurrentUser user) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
         List<Product> products;
         if (category != null && !category.isBlank() && search != null && !search.isBlank()) {
-            products = productRepository.findByCategoryIgnoreCaseAndNameContainingIgnoreCase(category, search);
+            products = productRepository.findByEcosystem_IdAndCategoryIgnoreCaseAndNameContainingIgnoreCase(
+                    ecosystemId, category, search);
         } else if (category != null && !category.isBlank()) {
-            products = productRepository.findByCategoryIgnoreCase(category);
+            products = productRepository.findByEcosystem_IdAndCategoryIgnoreCase(ecosystemId, category);
         } else if (search != null && !search.isBlank()) {
-            products = productRepository.findByNameContainingIgnoreCase(search);
+            products = productRepository.findByEcosystem_IdAndNameContainingIgnoreCase(ecosystemId, search);
         } else if (Boolean.TRUE.equals(lowStock)) {
-            products = inventoryBalanceService.getLowStockProducts();
+            products = inventoryBalanceService.getLowStockProducts(ecosystemId);
         } else {
-            products = productRepository.findAll();
+            products = productRepository.findAllByEcosystem_Id(ecosystemId);
         }
         return products.stream().map(product -> toResponse(product, stockWarehouseId)).toList();
     }
 
-    public ProductResponse get(UUID id) {
-        return toResponse(load(id), null);
+    public ProductResponse get(UUID id, CurrentUser user) {
+        return toResponse(load(id, user), null);
     }
 
     @Transactional
     public ProductResponse create(ProductCreate dto, CurrentUser user) {
-        if (productRepository.existsBySku(dto.sku())) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
+        if (productRepository.existsByEcosystem_IdAndSku(ecosystemId, dto.sku())) {
             throw new BusinessRuleException("SKU already exists");
         }
         Warehouse warehouse = warehouseRepository
-                .findById(dto.warehouseId())
+                .findByIdAndEcosystem_Id(dto.warehouseId(), ecosystemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"));
 
         Product product = productRepository.save(Product.create(
@@ -80,10 +85,11 @@ public class ProductService {
 
     @Transactional
     public ProductResponse update(UUID id, ProductUpdate dto, CurrentUser user) {
-        Product product = load(id);
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
+        Product product = load(id, user);
 
         if (dto.sku() != null && !dto.sku().equals(product.getSku())) {
-            if (productRepository.existsBySku(dto.sku())) {
+            if (productRepository.existsByEcosystem_IdAndSku(ecosystemId, dto.sku())) {
                 throw new BusinessRuleException("SKU already exists");
             }
             product.setSku(dto.sku());
@@ -99,7 +105,7 @@ public class ProductService {
         }
         if (dto.warehouseId() != null) {
             Warehouse warehouse = warehouseRepository
-                    .findById(dto.warehouseId())
+                    .findByIdAndEcosystem_Id(dto.warehouseId(), ecosystemId)
                     .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"));
             product.setDefaultWarehouse(warehouse);
         }
@@ -117,13 +123,16 @@ public class ProductService {
 
     @Transactional
     public void delete(UUID id, CurrentUser user) {
-        Product product = load(id);
+        Product product = load(id, user);
         productRepository.delete(product);
         auditService.log(user.getUserId(), "PRODUCT_DELETED", "product", id, product.getSku());
     }
 
-    private Product load(UUID id) {
-        return productRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+    Product load(UUID id, CurrentUser user) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
+        return productRepository
+                .findByIdAndEcosystem_Id(id, ecosystemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
     }
 
     private ProductResponse toResponse(Product product, UUID stockWarehouseId) {

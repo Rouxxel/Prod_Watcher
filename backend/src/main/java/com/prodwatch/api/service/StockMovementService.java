@@ -18,6 +18,7 @@ import com.prodwatch.api.repository.ProfileRepository;
 import com.prodwatch.api.repository.StockMovementRepository;
 import com.prodwatch.api.repository.WarehouseRepository;
 import com.prodwatch.api.security.CurrentUser;
+import com.prodwatch.api.security.TenantContext;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,25 +50,34 @@ public class StockMovementService {
 
     @Transactional(readOnly = true)
     public List<StockMovementResponse> list(
-            UUID productId, UUID warehouseId, StockMovementType type, Instant from, Instant to) {
+            UUID productId,
+            UUID warehouseId,
+            StockMovementType type,
+            Instant from,
+            Instant to,
+            CurrentUser user) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
         return stockMovementRepository
-                .findWithFilters(productId, warehouseId, type == null ? null : type.name(), from, to)
+                .findWithFilters(ecosystemId, productId, warehouseId, type == null ? null : type.name(), from, to)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public StockMovementResponse get(UUID id) {
-        return toResponse(load(id));
+    public StockMovementResponse get(UUID id, CurrentUser user) {
+        return toResponse(load(id, user));
     }
 
     @Transactional
     public StockMovementResponse create(StockMovementCreate dto, CurrentUser user) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
         Product product = productRepository
-                .findById(dto.productId())
+                .findByIdAndEcosystem_Id(dto.productId(), ecosystemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
-        Profile profile = profileRepository.getReferenceById(user.getUserId());
+        Profile profile = profileRepository
+                .findByIdAndEcosystem_Id(user.getUserId(), ecosystemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         Warehouse fromWarehouse = null;
         Warehouse toWarehouse = null;
@@ -83,7 +93,7 @@ public class StockMovementService {
                 if (dto.recipient() != null && !dto.recipient().isBlank()) {
                     throw new BusinessRuleException("Recipient is only allowed for OUT movements");
                 }
-                toWarehouse = loadWarehouse(dto.toWarehouseId());
+                toWarehouse = loadWarehouse(dto.toWarehouseId(), ecosystemId);
             }
             case OUT -> {
                 if (dto.fromWarehouseId() == null) {
@@ -95,7 +105,7 @@ public class StockMovementService {
                 if (dto.provider() != null && !dto.provider().isBlank()) {
                     throw new BusinessRuleException("Provider is only allowed for IN movements");
                 }
-                fromWarehouse = loadWarehouse(dto.fromWarehouseId());
+                fromWarehouse = loadWarehouse(dto.fromWarehouseId(), ecosystemId);
                 inventoryBalanceService.assertSufficientStock(product.getId(), fromWarehouse.getId(), dto.qty());
             }
             case TRANSFER -> {
@@ -105,8 +115,8 @@ public class StockMovementService {
                 if (dto.fromWarehouseId().equals(dto.toWarehouseId())) {
                     throw new BusinessRuleException("TRANSFER warehouses must differ");
                 }
-                fromWarehouse = loadWarehouse(dto.fromWarehouseId());
-                toWarehouse = loadWarehouse(dto.toWarehouseId());
+                fromWarehouse = loadWarehouse(dto.fromWarehouseId(), ecosystemId);
+                toWarehouse = loadWarehouse(dto.toWarehouseId(), ecosystemId);
                 inventoryBalanceService.assertSufficientStock(product.getId(), fromWarehouse.getId(), dto.qty());
             }
             case ADJUSTMENT -> {
@@ -117,11 +127,11 @@ public class StockMovementService {
                     throw new BusinessRuleException("ADJUSTMENT requires fromWarehouseId or toWarehouseId");
                 }
                 if (dto.fromWarehouseId() != null) {
-                    fromWarehouse = loadWarehouse(dto.fromWarehouseId());
+                    fromWarehouse = loadWarehouse(dto.fromWarehouseId(), ecosystemId);
                     inventoryBalanceService.assertSufficientStock(
                             product.getId(), fromWarehouse.getId(), dto.qty());
                 } else {
-                    toWarehouse = loadWarehouse(dto.toWarehouseId());
+                    toWarehouse = loadWarehouse(dto.toWarehouseId(), ecosystemId);
                 }
             }
         }
@@ -141,15 +151,16 @@ public class StockMovementService {
         return toResponse(movement);
     }
 
-    private StockMovement load(UUID id) {
+    private StockMovement load(UUID id, CurrentUser user) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
         return stockMovementRepository
-                .findById(id)
+                .findByIdAndEcosystem_Id(id, ecosystemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Stock movement not found"));
     }
 
-    private Warehouse loadWarehouse(UUID id) {
+    private Warehouse loadWarehouse(UUID id, UUID ecosystemId) {
         return warehouseRepository
-                .findById(id)
+                .findByIdAndEcosystem_Id(id, ecosystemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found"));
     }
 

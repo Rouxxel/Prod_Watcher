@@ -9,6 +9,7 @@ import com.prodwatch.api.dto.user.UserResetPasswordRequest;
 import com.prodwatch.api.dto.user.UserResponse;
 import com.prodwatch.api.dto.user.UserUpdateRequest;
 import com.prodwatch.api.entity.AppRole;
+import com.prodwatch.api.entity.Ecosystem;
 import com.prodwatch.api.entity.Profile;
 import com.prodwatch.api.entity.UserRole;
 import com.prodwatch.api.error.BusinessRuleException;
@@ -18,6 +19,7 @@ import com.prodwatch.api.repository.TransactionRepository;
 import com.prodwatch.api.repository.UserRoleRepository;
 import com.prodwatch.api.security.CurrentUser;
 import com.prodwatch.api.security.RoleChecker;
+import com.prodwatch.api.security.TenantContext;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +34,7 @@ public class UserService {
     private final TransactionRepository transactionRepository;
     private final SupabaseAuthService supabaseAuthService;
     private final AuditService auditService;
+    private final EcosystemService ecosystemService;
     private final EntityManager entityManager;
 
     public UserService(
@@ -40,32 +43,36 @@ public class UserService {
             TransactionRepository transactionRepository,
             SupabaseAuthService supabaseAuthService,
             AuditService auditService,
+            EcosystemService ecosystemService,
             EntityManager entityManager) {
         this.profileRepository = profileRepository;
         this.userRoleRepository = userRoleRepository;
         this.transactionRepository = transactionRepository;
         this.supabaseAuthService = supabaseAuthService;
         this.auditService = auditService;
+        this.ecosystemService = ecosystemService;
         this.entityManager = entityManager;
     }
 
-    public List<UserResponse> list() {
-        return profileRepository.findAll().stream()
+    public List<UserResponse> list(CurrentUser admin) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(admin);
+        return profileRepository.findAllByEcosystem_Id(ecosystemId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    public UserResponse get(UUID id) {
-        return toResponse(loadProfile(id));
+    public UserResponse get(UUID id, CurrentUser admin) {
+        return toResponse(loadProfile(id, admin));
     }
 
     public UserResponse getMe(CurrentUser currentUser) {
-        return get(currentUser.getUserId());
+        return get(currentUser.getUserId(), currentUser);
     }
 
     @Transactional
     public UserResponse provision(UserProvisionRequest dto, CurrentUser admin) {
         RoleChecker.requireAdmin(admin);
+        UUID ecosystemId = TenantContext.requireEcosystemId(admin);
         if (dto.role() == AppRole.admin) {
             throw new BusinessRuleException("Cannot provision admin via this endpoint");
         }
@@ -74,7 +81,8 @@ public class UserService {
         }
 
         UUID userId = supabaseAuthService.createConfirmedUser(dto.email(), dto.password(), dto.name());
-        Profile profile = ensureProfile(userId, dto.email(), dto.name(), dto.active());
+        Ecosystem ecosystem = ecosystemService.requireById(ecosystemId);
+        Profile profile = ensureProfile(userId, dto.email(), dto.name(), dto.active(), ecosystem);
         userRoleRepository.save(new UserRole(profile, dto.role()));
 
         auditService.log(admin.getUserId(), "USER_PROVISIONED", "user", userId, dto.email(), dto.name().trim());
@@ -84,7 +92,8 @@ public class UserService {
     @Transactional
     public UserResponse update(UUID id, UserUpdateRequest dto, CurrentUser admin) {
         RoleChecker.requireAdmin(admin);
-        Profile profile = loadProfile(id);
+        UUID ecosystemId = TenantContext.requireEcosystemId(admin);
+        Profile profile = loadProfile(id, admin);
         UserRole userRole = userRoleRepository
                 .findByUser_Id(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
@@ -94,7 +103,7 @@ public class UserService {
             if (dto.active()) {
                 supabaseAuthService.enableUser(id);
             } else {
-                assertNotLastAdmin(id, userRole.getRole());
+                assertNotLastAdmin(id, userRole.getRole(), ecosystemId);
                 supabaseAuthService.disableUser(id);
             }
         }
@@ -116,7 +125,7 @@ public class UserService {
     @Transactional
     public UserResponse promoteToAdmin(UUID id, CurrentUser admin) {
         RoleChecker.requireAdmin(admin);
-        Profile profile = loadProfile(id);
+        Profile profile = loadProfile(id, admin);
         UserRole userRole = userRoleRepository
                 .findByUser_Id(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
@@ -138,7 +147,8 @@ public class UserService {
             throw new BusinessRuleException("Cannot step down to admin role");
         }
 
-        Profile profile = loadProfile(actor.getUserId());
+        UUID ecosystemId = TenantContext.requireEcosystemId(actor);
+        Profile profile = loadProfile(actor.getUserId(), actor);
         if (!profile.isActive()) {
             throw new BusinessRuleException("Inactive users cannot step down from admin");
         }
@@ -151,7 +161,7 @@ public class UserService {
             throw new BusinessRuleException("Only admins can step down from admin");
         }
 
-        if (userRoleRepository.countActiveByRole(AppRole.admin) <= 1) {
+        if (userRoleRepository.countActiveByRoleAndEcosystemId(AppRole.admin, ecosystemId) <= 1) {
             throw new BusinessRuleException("Cannot step down while you are the only active admin");
         }
 
@@ -173,7 +183,7 @@ public class UserService {
         UserRole userRole = userRoleRepository
                 .findByUser_Id(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
-        Profile profile = loadProfile(id);
+        Profile profile = loadProfile(id, admin);
         assertCanResetPassword(admin.getUserId(), id, userRole.getRole());
         supabaseAuthService.updatePassword(id, dto.newPassword());
         auditService.log(admin.getUserId(), "PASSWORD_RESET_BY_ADMIN", "user", id, null, profile.getName());
@@ -182,11 +192,12 @@ public class UserService {
     @Transactional
     public UserResponse deactivate(UUID id, CurrentUser admin) {
         RoleChecker.requireAdmin(admin);
-        Profile profile = loadProfile(id);
+        UUID ecosystemId = TenantContext.requireEcosystemId(admin);
+        Profile profile = loadProfile(id, admin);
         UserRole userRole = userRoleRepository
                 .findByUser_Id(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
-        assertNotLastAdmin(id, userRole.getRole());
+        assertNotLastAdmin(id, userRole.getRole(), ecosystemId);
         profile.setActive(false);
         supabaseAuthService.disableUser(id);
         profileRepository.save(profile);
@@ -196,7 +207,7 @@ public class UserService {
     @Transactional
     public UserResponse reactivate(UUID id, CurrentUser admin) {
         RoleChecker.requireAdmin(admin);
-        Profile profile = loadProfile(id);
+        Profile profile = loadProfile(id, admin);
         profile.setActive(true);
         supabaseAuthService.enableUser(id);
         profileRepository.save(profile);
@@ -206,11 +217,12 @@ public class UserService {
     @Transactional
     public void delete(UUID id, CurrentUser admin) {
         RoleChecker.requireAdmin(admin);
+        UUID ecosystemId = TenantContext.requireEcosystemId(admin);
         if (admin.getUserId().equals(id)) {
             throw new BusinessRuleException("You cannot delete your own account");
         }
 
-        Profile profile = loadProfile(id);
+        Profile profile = loadProfile(id, admin);
         UserRole userRole = userRoleRepository
                 .findByUser_Id(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
@@ -219,33 +231,42 @@ public class UserService {
             throw new BusinessRuleException("Cannot delete an admin account");
         }
 
-        if (transactionRepository.existsByCashier_Id(id)) {
+        if (transactionRepository.existsByEcosystem_IdAndCashier_Id(ecosystemId, id)) {
             throw new BusinessRuleException(
                     "Cannot delete user with POS transaction history. Deactivate the account instead.");
         }
 
         auditService.log(admin.getUserId(), "USER_DELETED", "user", id, profile.getEmail(), profile.getName());
 
-        // Supabase auth delete cascades to profiles + user_roles in Postgres.
         supabaseAuthService.deleteUser(id);
 
         entityManager.detach(profile);
         entityManager.detach(userRole);
 
-        // H2 tests have no auth.users — remove app rows when cascade did not run.
         if (profileRepository.existsById(id)) {
             userRoleRepository.findByUser_Id(id).ifPresent(userRoleRepository::delete);
             profileRepository.deleteById(id);
         }
     }
 
-    private Profile loadProfile(UUID id) {
-        return profileRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    private Profile loadProfile(UUID id, CurrentUser user) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
+        return profileRepository
+                .findByIdAndEcosystem_Id(id, ecosystemId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    private Profile ensureProfile(UUID userId, String email, String name, boolean active) {
-        return profileRepository.findById(userId).orElseGet(() -> profileRepository.save(
-                Profile.create(userId, email, name, active)));
+    private Profile ensureProfile(UUID userId, String email, String name, boolean active, Ecosystem ecosystem) {
+        return profileRepository
+                .findById(userId)
+                .map(existing -> {
+                    if (existing.getEcosystem() == null) {
+                        existing.setEcosystem(ecosystem);
+                        return profileRepository.save(existing);
+                    }
+                    return existing;
+                })
+                .orElseGet(() -> profileRepository.save(Profile.create(userId, email, name, active, ecosystem)));
     }
 
     private UserResponse toResponse(Profile profile) {
@@ -257,8 +278,9 @@ public class UserService {
                 profile.getId(), profile.getName(), profile.getEmail(), role, profile.isActive(), null);
     }
 
-    private void assertNotLastAdmin(UUID userId, AppRole role) {
-        if (role == AppRole.admin && userRoleRepository.countActiveByRole(AppRole.admin) <= 1) {
+    private void assertNotLastAdmin(UUID userId, AppRole role, UUID ecosystemId) {
+        if (role == AppRole.admin
+                && userRoleRepository.countActiveByRoleAndEcosystemId(AppRole.admin, ecosystemId) <= 1) {
             throw new BusinessRuleException("Cannot deactivate the last active admin");
         }
     }

@@ -51,17 +51,12 @@ public class InventoryBalanceService {
         }
     }
 
-    public List<Product> getLowStockProducts() {
-        return productRepository.findAll().stream()
+    public List<Product> getLowStockProducts(UUID ecosystemId) {
+        return productRepository.findAllByEcosystem_Id(ecosystemId).stream()
                 .filter(p -> getStockAtDefaultWarehouse(p.getId()) <= p.getLowStockThreshold())
                 .toList();
     }
 
-    /**
-     * Flush pending writes so the stock-balance view reflects them — but only when a transaction
-     * is active. Pure read paths (e.g. product/dashboard listings) run without a transaction and
-     * have nothing to flush; calling flush() there throws TransactionRequiredException.
-     */
     private void flushIfInTransaction() {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             entityManager.flush();
