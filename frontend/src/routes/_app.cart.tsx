@@ -79,7 +79,7 @@ function CartPage() {
           <Card className="p-4">
             <div className="space-y-1 text-sm">
               <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span className="tabular-nums">{currency(cart.subtotal)}</span></div>
-              <div className="flex justify-between text-muted-foreground"><span>Tax ({Math.round(cart.taxRate * 100)}%)</span><span className="tabular-nums">{currency(cart.tax)}</span></div>
+              <div className="flex justify-between text-muted-foreground"><span>{cart.taxLineLabel}</span><span className="tabular-nums">{currency(cart.tax)}</span></div>
               <div className="flex justify-between pt-2 text-base font-semibold"><span>Total</span><span className="tabular-nums">{currency(cart.total)}</span></div>
             </div>
             <Button asChild className="mt-4 w-full">

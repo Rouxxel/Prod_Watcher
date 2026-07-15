@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { clearAccessToken, getAccessToken, setAccessToken } from "@/lib/auth-token";
 import { isApiError } from "@/services/api";
 import { authService } from "@/services/auth.service";
@@ -31,6 +32,7 @@ const APP_MODE_KEY = "prodwatch:app-mode";
 export function CurrentUserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const qc = useQueryClient();
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -63,6 +65,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       setAccessToken(session.accessToken);
       const me = await authService.getMe();
       setUser(me);
+      await qc.invalidateQueries({ queryKey: ["settings"] });
       if (typeof window !== "undefined") {
         window.localStorage.removeItem(APP_MODE_KEY);
       }
@@ -75,7 +78,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       }
       return { ok: false, error: "Unable to log in." };
     }
-  }, []);
+  }, [qc]);
 
   const logout = useCallback(async () => {
     try {
@@ -85,10 +88,11 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
     }
     clearAccessToken();
     setUser(null);
+    qc.removeQueries({ queryKey: ["settings"] });
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(APP_MODE_KEY);
     }
-  }, []);
+  }, [qc]);
 
   const refreshUser = useCallback(async () => {
     const token = getAccessToken();

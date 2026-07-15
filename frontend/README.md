@@ -36,11 +36,12 @@ Product image uploads use **Supabase Storage** directly from the browser (option
 - **Multi-warehouse cart** — switch warehouse, add items; each line stores `warehouseId` and warehouse name
 - **Cart** — review lines before checkout
 - **Transactions** — history with **cashier names** (not UUIDs)
-- **Receipt** dialog after successful checkout
+- **Receipt** dialog after successful checkout (business name, logo, tax label, footer from workspace settings)
 
 ### Admin
 
-- User provisioning, password reset, Settings (static MVP placeholders)
+- User provisioning, password reset, role management (`/users`)
+- **Workspace settings** (`/settings`, admin-only) — company, tax, receipts, business mode via `GET/PATCH /api/v1/settings` (see [`docs/TASK_04_settings.md`](../docs/TASK_04_settings.md))
 
 ### Other
 
@@ -116,9 +117,10 @@ src/
   components/          # Layout, products, movements, POS, users, ui
   hooks/
     use-current-user.tsx   # Auth context (login/logout, GET /users/me)
+    use-settings.tsx       # Workspace settings provider + GET/PATCH hooks
     queries.ts             # TanStack Query hooks (products accept warehouseId)
-    use-cart.tsx           # POS cart — per-warehouse lines + checkout
-  services/            # HTTP clients → Java API (api.ts, *.service.ts)
+    use-cart.tsx           # POS cart — per-warehouse lines + checkout (tax from settings)
+  services/            # HTTP clients → Java API (api.ts, *.service.ts, settings.service.ts)
   lib/
     auth-token.ts      # sessionStorage JWT
     api-error.ts       # Toast mapping for API errors
@@ -147,6 +149,7 @@ All data flows through `src/services/` using `apiGet` / `apiPost` / `apiPatch` /
 | Checkout | `POST /transactions` | Each cart item includes `warehouseId` for stock deduction |
 | Audit | `GET /audit` | Responses include `userName`, `entityLabel` |
 | Transactions | `GET /transactions` | Responses include `cashierName` |
+| Workspace settings | `GET/PATCH /settings` | Admin PATCH; all roles GET (tax/receipts for POS) |
 
 Endpoint reference: [`backend/API.md`](../backend/API.md)
 

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { useProducts, useWarehouses } from "@/hooks/queries";
 import { cartLineKey, useCart } from "@/hooks/use-cart";
+import { useSettingsContext } from "@/hooks/use-settings";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { canUsePosCheckout } from "@/lib/role-access";
 import { currency, dateTime } from "@/lib/format";
@@ -41,6 +42,7 @@ function CashierPage() {
   const [warehouseId, setWarehouseId] = useState<string>("");
   const products = useProducts(warehouseId || undefined);
   const cart = useCart();
+  const { businessName, receiptLogoUrl, receiptFooter, taxLabel } = useSettingsContext();
   const [query, setQuery] = useState("");
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [lastTransaction, setLastTransaction] = useState<Transaction | null>(null);
@@ -273,7 +275,7 @@ function CashierPage() {
               <span className="tabular-nums">{currency(cart.subtotal)}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>Tax ({Math.round(cart.taxRate * 100)}%)</span>
+              <span>{cart.taxLineLabel}</span>
               <span className="tabular-nums">{currency(cart.tax)}</span>
             </div>
             <div className="flex justify-between pt-1 text-base font-semibold">
@@ -300,6 +302,18 @@ function CashierPage() {
           </DialogHeader>
           {lastTransaction && (
             <div className="space-y-3 text-sm">
+              {(businessName || receiptLogoUrl) && (
+                <div className="space-y-2 text-center">
+                  {receiptLogoUrl && (
+                    <img
+                      src={receiptLogoUrl}
+                      alt=""
+                      className="mx-auto h-10 max-w-full object-contain"
+                    />
+                  )}
+                  {businessName && <div className="font-semibold">{businessName}</div>}
+                </div>
+              )}
               <div className="text-xs text-muted-foreground">
                 {dateTime(lastTransaction.timestamp)} · #{lastTransaction.id.slice(0, 8).toUpperCase()}
               </div>
@@ -319,7 +333,7 @@ function CashierPage() {
                   <span className="tabular-nums">{currency(lastTransaction.subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Tax</span>
+                  <span>{taxLabel}</span>
                   <span className="tabular-nums">{currency(lastTransaction.tax)}</span>
                 </div>
               </div>
@@ -329,6 +343,9 @@ function CashierPage() {
                   {currency(lastTransaction.total)}
                 </div>
               </div>
+              {receiptFooter && (
+                <p className="text-center text-xs text-muted-foreground">{receiptFooter}</p>
+              )}
               <Badge variant="outline" className="uppercase">
                 {lastTransaction.status}
               </Badge>

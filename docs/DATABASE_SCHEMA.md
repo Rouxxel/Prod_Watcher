@@ -15,6 +15,7 @@ erDiagram
     profiles ||--o{ stock_movements : "user_id"
     profiles ||--o{ audit_entries : "user_id"
     profiles ||--o{ transactions : "cashier_id"
+    profiles ||--o| workspace_settings : "updated_by"
 
     warehouses ||--o{ products : "default_warehouse_id"
     warehouses ||--o{ stock_movements : "from_warehouse_id"
@@ -94,6 +95,19 @@ erDiagram
         uuid cashier_id FK
         transaction_status status
         timestamptz created_at
+    }
+
+    workspace_settings {
+        uuid id PK
+        text business_name
+        text contact_email
+        numeric tax_rate
+        text tax_label
+        text receipt_footer
+        text receipt_logo_url
+        text business_mode
+        timestamptz updated_at
+        uuid updated_by FK
     }
 ```
 
@@ -242,6 +256,25 @@ POS sales (schema only).
 
 **Indexes:** `cashier_id`, `created_at`, `status`
 
+### `workspace_settings`
+
+Singleton workspace configuration (one row per deployment). See `docs/TASK_04_settings.md`.
+
+| Column | Type | Constraints |
+| --- | --- | --- |
+| `id` | `uuid` | PK, fixed singleton `00000000-0000-4000-8000-000000000001` |
+| `business_name` | `text` | NOT NULL, DEFAULT `''` |
+| `contact_email` | `text` | NOT NULL, DEFAULT `''` |
+| `tax_rate` | `numeric(6,4)` | NOT NULL, DEFAULT `0.16`, CHECK `0`–`1` |
+| `tax_label` | `text` | NOT NULL, DEFAULT `'Tax'` |
+| `receipt_footer` | `text` | nullable |
+| `receipt_logo_url` | `text` | nullable |
+| `business_mode` | `text` | NOT NULL, DEFAULT `'auto'`, CHECK `auto` \| `single` \| `multi` |
+| `updated_at` | `timestamptz` | NOT NULL, DEFAULT `now()` |
+| `updated_by` | `uuid` | FK → `profiles(id)` ON DELETE SET NULL |
+
+**Singleton constraint:** `workspace_settings_singleton` — only the fixed id is allowed.
+
 ---
 
 ## Helper functions
@@ -295,6 +328,7 @@ Inactive users (`profiles.active = false`) fail `is_active_user()` checks.
 | **stock_movements** | SELECT, INSERT | SELECT, INSERT | SELECT, INSERT | SELECT | — |
 | **audit_entries** | SELECT | SELECT | SELECT | SELECT | SELECT |
 | **transactions** | SELECT, INSERT | SELECT | — | — | SELECT, INSERT |
+| **workspace_settings** | SELECT, UPDATE | SELECT | SELECT | SELECT | SELECT |
 
 **Write notes:**
 
@@ -354,6 +388,14 @@ Inactive users (`profiles.active = false`) fail `is_active_user()` checks.
 | `CartItem.sku` | `items[].sku` |
 | `CartItem.qty` | `items[].qty` |
 | `CartItem.unitPrice` | `items[].unitPrice` |
+| `WorkspaceSettings.businessName` | `workspace_settings.business_name` |
+| `WorkspaceSettings.contactEmail` | `workspace_settings.contact_email` |
+| `WorkspaceSettings.taxRate` | `workspace_settings.tax_rate` |
+| `WorkspaceSettings.taxLabel` | `workspace_settings.tax_label` |
+| `WorkspaceSettings.receiptFooter` | `workspace_settings.receipt_footer` |
+| `WorkspaceSettings.receiptLogoUrl` | `workspace_settings.receipt_logo_url` |
+| `WorkspaceSettings.businessMode` | `workspace_settings.business_mode` |
+| `WorkspaceSettings.updatedAt` | `workspace_settings.updated_at` |
 
 ---
 
@@ -373,3 +415,4 @@ Inactive users (`profiles.active = false`) fail `is_active_user()` checks.
 | V10 | `V10__rls_policies.sql` | RLS enable + policies |
 | V11 | `V11__storage_product_images.sql` | `product-images` bucket + storage RLS |
 | V12 | `V12__seed_data.sql` | Reference seed + `seed_demo_activity()` (returns jsonb) |
+| V18 | `V18__workspace_settings.sql` | Singleton workspace settings + RLS (see `TASK_04_settings.md`) |

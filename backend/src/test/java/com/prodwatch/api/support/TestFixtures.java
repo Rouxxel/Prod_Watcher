@@ -20,6 +20,10 @@ public final class TestFixtures {
     public static final UUID WORKER_ID = UUID.fromString("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3");
     public static final UUID CASHIER_ID = UUID.fromString("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4");
 
+    /** Fixed singleton id for workspace_settings (see V18__workspace_settings.sql). */
+    public static final UUID WORKSPACE_SETTINGS_ID =
+            UUID.fromString("00000000-0000-4000-8000-000000000001");
+
     private TestFixtures() {}
 
     public static String bearerToken(UUID userId) {
@@ -31,8 +35,12 @@ public final class TestFixtures {
     }
 
     public static Profile seedUser(ProfileRepository profiles, UserRoleRepository roles, UUID id, AppRole role) {
-        Profile profile = profiles.save(Profile.create(id, role.name() + "@test.local", "Test " + role, true));
-        roles.save(new UserRole(profile, role));
+        Profile profile = profiles.findById(id).orElseGet(() ->
+                profiles.save(Profile.create(id, role.name() + "@test.local", "Test " + role, true)));
+        roles.findByUser_Id(id).orElseGet(() -> {
+            roles.save(new UserRole(profile, role));
+            return null;
+        });
         return profile;
     }
 

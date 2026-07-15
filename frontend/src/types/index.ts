@@ -126,3 +126,29 @@ export interface TransactionCreateInput {
   tax: number;
   total: number;
 }
+
+export type BusinessModePreference = "auto" | "single" | "multi";
+
+export interface WorkspaceSettings {
+  businessName: string;
+  contactEmail: string;
+  taxRate: number;
+  taxLabel: string;
+  receiptFooter: string | null;
+  receiptLogoUrl: string | null;
+  businessMode: BusinessModePreference;
+  updatedAt: string;
+}
+
+export type WorkspaceSettingsUpdate = Partial<
+  Pick<
+    WorkspaceSettings,
+    | "businessName"
+    | "contactEmail"
+    | "taxRate"
+    | "taxLabel"
+    | "receiptFooter"
+    | "receiptLogoUrl"
+    | "businessMode"
+  >
+>;

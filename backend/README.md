@@ -44,7 +44,7 @@ Optional:
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `SERVER_PORT` | `8080` (config) | HTTP port |
-| `POS_TAX_RATE` | `0.16` | Checkout tax rate |
+| `POS_TAX_RATE` | `0.16` | **Bootstrap only** — seeds `workspace_settings.tax_rate` on first API access when no row exists; checkout reads tax from Settings after that |
 | `POS_WAREHOUSE_ID` | — | Fixed warehouse for POS when cart items omit `warehouseId` |
 
 ### 3. Run
@@ -116,6 +116,13 @@ Log in via `POST /api/v1/auth/login`, then call protected routes with `Authoriza
 Migrations: `V14__stock_movement_provider.sql`, `V15__stock_movement_recipient.sql`.
 
 POS checkout creates `OUT` movements with `recipient = "POS customer"`. Refunds/voids create matching `IN` rows.
+
+### Workspace settings
+
+- Singleton row in `workspace_settings` (Flyway `V18`; demo seed in migration or bootstrap on first `GET /api/v1/settings`).
+- **Tax at checkout** comes from the settings row (`SettingsService.getTaxRate()`), not from `POS_TAX_RATE` at runtime.
+- **`POS_TAX_RATE`** (env → `prodwatch.pos.tax-rate`) seeds `tax_rate` only when bootstrap creates the row (empty company fields, `business_mode = auto`).
+- Admins change tax, receipts, and business mode via **`PATCH /api/v1/settings`** or the frontend Settings page.
 
 ### POS / transactions
 

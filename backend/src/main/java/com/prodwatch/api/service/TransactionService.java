@@ -42,7 +42,7 @@ public class TransactionService {
     private final WarehouseRepository warehouseRepository;
     private final InventoryBalanceService inventoryBalanceService;
     private final AuditService auditService;
-    private final BigDecimal taxRate;
+    private final SettingsService settingsService;
     private final UUID posWarehouseId;
 
     public TransactionService(
@@ -53,7 +53,7 @@ public class TransactionService {
             WarehouseRepository warehouseRepository,
             InventoryBalanceService inventoryBalanceService,
             AuditService auditService,
-            @Value("${prodwatch.pos.tax-rate:0.16}") BigDecimal taxRate,
+            SettingsService settingsService,
             @Value("${prodwatch.pos.warehouse-id:#{null}}") UUID posWarehouseId) {
         this.transactionRepository = transactionRepository;
         this.productRepository = productRepository;
@@ -62,7 +62,7 @@ public class TransactionService {
         this.warehouseRepository = warehouseRepository;
         this.inventoryBalanceService = inventoryBalanceService;
         this.auditService = auditService;
-        this.taxRate = taxRate;
+        this.settingsService = settingsService;
         this.posWarehouseId = posWarehouseId;
     }
 
@@ -92,7 +92,9 @@ public class TransactionService {
                 .map(ValidatedLine::lineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(MONEY_SCALE, RoundingMode.HALF_UP);
-        BigDecimal tax = subtotal.multiply(taxRate).setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+        BigDecimal tax = subtotal
+                .multiply(settingsService.getTaxRate())
+                .setScale(MONEY_SCALE, RoundingMode.HALF_UP);
         BigDecimal total = subtotal.add(tax).setScale(MONEY_SCALE, RoundingMode.HALF_UP);
 
         assertAmountMatches("subtotal", dto.subtotal(), subtotal);

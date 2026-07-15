@@ -78,9 +78,12 @@ Errors use a uniform shape:
 | Stock movements | CRU | CRU | CRU | R | R |
 | Audit | R | R | R | R | R |
 | Users | full | — | — | — | — |
+| Settings | RU | R | R | R | R |
 | Transactions | CRUD + refund/void | R | — | R | checkout + R |
 
 Legend: **C** create, **R** read, **U** update, **D** delete.
+
+Settings **U** (PATCH) is admin-only; all roles may **R** (GET) when authenticated. Unauthenticated clients receive **401** and never see `contactEmail` or other fields.
 
 ---
 
@@ -597,9 +600,63 @@ Admin-only except `GET /users/me`.
 
 ---
 
+## Settings
+
+Workspace configuration singleton (tax, receipts, business mode). Persisted in `workspace_settings`.
+
+| Method | Path | Roles | Description |
+| --- | --- | --- | --- |
+| GET | `/api/v1/settings` | authenticated | Workspace settings |
+| PATCH | `/api/v1/settings` | admin | Partial update |
+
+### GET `/api/v1/settings`
+
+**Roles:** any authenticated user (cashiers need tax rate for cart/receipts). Unauthenticated requests → **401** (no settings payload, including `contactEmail`).
+
+**Response 200**
+
+```json
+{
+  "businessName": "ProdWatch Demo Co.",
+  "contactEmail": "ops@prodwatch.app",
+  "taxRate": 0.16,
+  "taxLabel": "VAT",
+  "receiptFooter": "Thank you for your purchase!",
+  "receiptLogoUrl": null,
+  "businessMode": "auto",
+  "updatedAt": "2026-07-15T12:00:00Z"
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `taxRate` | Decimal fraction `0`–`1` (e.g. `0.16` = 16%) |
+| `businessMode` | `auto` \| `single` \| `multi` — inventory/POS location UX preference |
+
+### PATCH `/api/v1/settings`
+
+**Roles:** admin.
+
+**Body:** partial update — omitted/`null` fields are unchanged.
+
+```json
+{
+  "taxRate": 0.10,
+  "taxLabel": "GST"
+}
+```
+
+**Validation:** `taxRate` 0–1; `contactEmail` valid email when set; `receiptLogoUrl` http/https URL when set; `businessMode` one of `auto`, `single`, `multi`.
+
+**Response 200** — full `SettingsResponse` after save. Writes `SETTINGS_UPDATED` audit entry.
+
+On first access, if no row exists the server bootstraps defaults using `POS_TAX_RATE` (env fallback, default `0.16`).
+
+---
+
 ## Transactions (POS)
 
-Tax rate defaults to **16%** (`POS_TAX_RATE=0.16`). Server validates line prices against the product catalog and recalculates tax/total.
+Tax rate comes from **workspace settings** (`GET /api/v1/settings`). `POS_TAX_RATE` seeds the row on first bootstrap only. Server validates line prices against the product catalog and recalculates tax/total.
 
 Checkout creates one **`OUT`** stock movement per line. Stock is deducted from **`warehouseId` on each cart item** when present; otherwise from `POS_WAREHOUSE_ID` (if configured) or the product's default warehouse. Each persisted line item stores `warehouseId` in transaction JSON so refunds/voids restore stock to the correct warehouse.
 

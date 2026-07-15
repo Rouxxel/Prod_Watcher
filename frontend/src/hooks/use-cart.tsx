@@ -7,13 +7,12 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSettingsContext } from "@/hooks/use-settings";
 import { toastApiError } from "@/lib/api-error";
 import { notify, validation } from "@/lib/notify";
 import { isApiError } from "@/services/api";
 import { transactionsService } from "@/services/transactions.service";
 import { cartLineKey, type CartItem, type Product, type Transaction } from "@/types";
-
-const TAX_RATE = 0.16;
 
 type CheckoutResult =
   | { ok: true; transaction: Transaction }
@@ -37,18 +36,25 @@ interface CartCtx {
   tax: number;
   total: number;
   taxRate: number;
+  taxLineLabel: string;
 }
 
 const Ctx = createContext<CartCtx | null>(null);
 
+function roundMoney(amount: number) {
+  return Math.round(amount * 100) / 100;
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { taxRate, taxLabel } = useSettingsContext();
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const qc = useQueryClient();
 
-  const subtotal = items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
-  const tax = subtotal * TAX_RATE;
-  const total = subtotal + tax;
+  const subtotal = roundMoney(items.reduce((s, i) => s + i.qty * i.unitPrice, 0));
+  const tax = roundMoney(subtotal * taxRate);
+  const total = roundMoney(subtotal + tax);
+  const taxLineLabel = `${taxLabel} (${Math.round(taxRate * 100)}%)`;
 
   const add = useCallback((p: Product, context: CartAddContext): boolean => {
     if (context.maxStock <= 0) return false;
@@ -156,9 +162,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
       subtotal,
       tax,
       total,
-      taxRate: TAX_RATE,
+      taxRate,
+      taxLineLabel,
     }),
-    [items, isCheckingOut, add, setQty, remove, clear, checkout, subtotal, tax, total],
+    [
+      items,
+      isCheckingOut,
+      add,
+      setQty,
+      remove,
+      clear,
+      checkout,
+      subtotal,
+      tax,
+      total,
+      taxRate,
+      taxLineLabel,
+    ],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

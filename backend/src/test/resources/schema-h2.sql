@@ -73,6 +73,19 @@ CREATE TABLE IF NOT EXISTS transactions (
     created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS workspace_settings (
+    id                  UUID NOT NULL PRIMARY KEY,
+    business_name       VARCHAR(255) NOT NULL DEFAULT '',
+    contact_email       VARCHAR(255) NOT NULL DEFAULT '',
+    tax_rate            DECIMAL(6, 4) NOT NULL DEFAULT 0.16,
+    tax_label           VARCHAR(255) NOT NULL DEFAULT 'Tax',
+    receipt_footer      VARCHAR(255),
+    receipt_logo_url    VARCHAR(255),
+    business_mode       VARCHAR(32) NOT NULL DEFAULT 'auto',
+    updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by          UUID REFERENCES profiles (id) ON DELETE SET NULL
+);
+
 DROP VIEW IF EXISTS product_stock_summary;
 DROP VIEW IF EXISTS inventory_balances;
 
@@ -107,3 +120,17 @@ SELECT
 FROM products p
 LEFT JOIN inventory_balances ib
     ON ib.product_id = p.id AND ib.warehouse_id = p.default_warehouse_id;
+
+-- Singleton workspace settings (mirrors Flyway V18 seed).
+INSERT INTO workspace_settings (id, business_name, contact_email, tax_rate, tax_label, receipt_footer, business_mode)
+SELECT
+    '00000000-0000-4000-8000-000000000001',
+    'ProdWatch Demo Co.',
+    'ops@prodwatch.app',
+    0.16,
+    'VAT',
+    'Thank you for your purchase!',
+    'auto'
+WHERE NOT EXISTS (
+    SELECT 1 FROM workspace_settings WHERE id = '00000000-0000-4000-8000-000000000001'
+);
