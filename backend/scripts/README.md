@@ -4,9 +4,11 @@ Dev utilities for seeding Supabase auth users and demo activity data.
 
 > **Dev-only.** Seed data is scoped to the **Acme Demo** ecosystem (`33333333-3333-4333-8333-333333333301`). New sign-ups get their own empty ecosystem via the API. Do not run against production unless you intend to load demo tenants. See [`docs/DATABASE_SCHEMA.md`](../../docs/DATABASE_SCHEMA.md) and [`backend/src/main/resources/db/migration/README.md`](../src/main/resources/db/migration/README.md).
 
+> **Greenfield only:** these scripts require a new database migrated with the squashed V1–V14 chain. Do not run them against an existing database with legacy V1–V26 Flyway history.
+
 **Prerequisites**
 
-- Flyway migrations **V1–V26** applied (see [`backend/README.md`](../README.md))
+- Greenfield Flyway migrations **V1–V14** applied (see [`backend/README.md`](../README.md))
 - `backend/.env` copied from [`backend/.env.example`](../.env.example) with real Supabase values
 
 **Required env vars** (in `backend/.env`):

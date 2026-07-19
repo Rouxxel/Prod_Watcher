@@ -26,7 +26,7 @@ Each business is an **ecosystem**. The API enforces `ecosystem_id` on every tena
 
 **Demo data:** `scripts/seed-auth-users.*` attaches seed users to the fixed Acme Demo ecosystem (`33333333-3333-4333-8333-333333333301`). New sign-ups do not see it.
 
-**Defense in depth:** Postgres RLS (V23, V26) scopes direct Supabase access; Java API uses service role and enforces tenancy in services.
+**Defense in depth:** Postgres RLS and storage policies (greenfield V12 and V13) scope direct Supabase access; Java API uses service role and enforces tenancy in services.
 
 See [`src/main/resources/db/migration/README.md`](src/main/resources/db/migration/README.md), [`docs/DATABASE_SCHEMA.md`](../docs/DATABASE_SCHEMA.md), and [`API.md`](API.md) (`UserResponse.ecosystemId`).
 
@@ -76,8 +76,8 @@ Optional:
 
 `bootRun` and the start scripts load `backend/.env` automatically.
 
-On first run, Flyway applies migrations `V1`–`V26` against Supabase Postgres.
-Startup runs `flyway.repair()` then `migrate()` to heal checksum drift from line-ending edits on already-applied migrations.
+On a **new, empty database**, Flyway applies migrations `V1`–`V14` against Supabase Postgres.
+Startup runs `flyway.repair()` then `migrate()` to heal checksum drift from line-ending edits on already-applied migrations. **Never start this build against a database with legacy V1–V26 Flyway history:** reused version numbers have different descriptions and checksums. Keep existing databases on the pre-squash release or branch.
 
 ### 4. Seed dev users (optional)
 
@@ -121,7 +121,7 @@ Log in via `POST /api/v1/auth/login`, then call protected routes with `Authoriza
 
 - `Product.stock` in API responses is computed from the `inventory_balances` view.
 - **`GET /products?warehouseId=`** — when `warehouseId` is set, `stock` is the quantity at that warehouse; otherwise stock at the product's **default warehouse**.
-- `product_stock_summary` and `inventory_balances` are ecosystem-scoped (V23); stock is per default warehouse within the tenant.
+- `product_stock_summary` and `inventory_balances` are ecosystem-scoped (greenfield V8); stock is per default warehouse within the tenant.
 
 ### Stock movements
 
@@ -132,13 +132,13 @@ Log in via `POST /api/v1/auth/login`, then call protected routes with `Authoriza
 | `TRANSFER` | both warehouses, must differ | — |
 | `ADJUSTMENT` | exactly one of from/to | — |
 
-Migrations: `V14__stock_movement_provider.sql`, `V15__stock_movement_recipient.sql`.
+The movement schema is defined in `V7__stock_movements.sql`.
 
 POS checkout creates `OUT` movements with `recipient = "POS customer"`. Refunds/voids create matching `IN` rows.
 
 ### Workspace settings
 
-- **One row per ecosystem** in `workspace_settings` (Flyway `V18` + `V21` backfill; unique on `ecosystem_id` since `V22`).
+- **One row per ecosystem** in `workspace_settings` (greenfield `V11__workspace_settings.sql`, unique on `ecosystem_id`).
 - **Tax at checkout** comes from the settings row for the caller's ecosystem (`SettingsService.getTaxRate(ecosystemId)`).
 - **`POS_TAX_RATE`** (env → `prodwatch.pos.tax-rate`) seeds `tax_rate` when bootstrap creates the row for an ecosystem.
 - Admins change tax, receipts, and business mode via **`PATCH /api/v1/settings`** or the frontend Settings page.
@@ -230,22 +230,23 @@ backend/
 ├── API.md                 # REST contract
 ├── src/main/java/...      # com.prodwatch.api.*
 ├── src/main/resources/
-│   ├── db/migration/      # Flyway V1–V26
+│   ├── db/migration/      # Greenfield Flyway V1–V14
 │   └── core_specs/        # config_file.json, general_data.json
 ├── scripts/               # seed-auth-users.*
 └── .env.example
 ```
 
-### Flyway migrations (recent)
+### Greenfield Flyway migrations
 
 | Version | Purpose |
 | --- | --- |
-| V13 | Rename `transaction_status` enum label `void` → `void_` (Java keyword) |
-| V14 | Add `provider` on `stock_movements` (required for IN) |
-| V15 | Add `recipient` on `stock_movements` (required for OUT) |
-| V18 | `workspace_settings` (per-ecosystem after V22) |
-| V19–V24 | Ecosystems table, `ecosystem_id` columns, backfill, constraints, RLS |
-| V25 | Ecosystem-aware `seed_demo_activity()` |
-| V26 | Storage paths scoped by `ecosystem_id` prefix |
+| V1 | Extensions and final enums, including `void_` |
+| V2 | Auth helper functions |
+| V3–V4 | Ecosystems; profiles, roles, and auth triggers |
+| V5–V7 | Warehouses, products, and stock movements (including `provider` / `recipient`) |
+| V8–V10 | Ecosystem-scoped views, audit entries (including `entity_label`), and transactions |
+| V11–V12 | Per-ecosystem workspace settings and RLS |
+| V13 | Storage bucket with ecosystem-prefixed write policies |
+| V14 | Acme Demo ecosystem/catalog and ecosystem-aware demo activity seed |
 
-Full catalog: [`src/main/resources/db/migration/README.md`](src/main/resources/db/migration/README.md).
+This catalog is **greenfield-only**. Existing V1–V26 databases must remain on the pre-squash release or branch. Full catalog: [`src/main/resources/db/migration/README.md`](src/main/resources/db/migration/README.md).

@@ -30,9 +30,9 @@ ProdWatch runs as **multi-tenant SaaS** on a shared Supabase Postgres project. E
 | **Staff provision** | Inherits the admin's ecosystem |
 | **Cross-tenant UUID** | Returns **404** (no data leakage) |
 
-One Supabase project can host many businesses. Migrations **V19–V26** add ecosystems, RLS, and storage path isolation — see [`backend/src/main/resources/db/migration/README.md`](backend/src/main/resources/db/migration/README.md) and [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md).
+One Supabase project can host many businesses. For **new/greenfield databases**, Flyway **V1–V14** creates ecosystems, RLS, and storage path isolation — see [`backend/src/main/resources/db/migration/README.md`](backend/src/main/resources/db/migration/README.md) and [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md). Existing databases with the legacy V1–V26 Flyway history must remain on the pre-squash release or branch.
 
-**Production:** apply Flyway through **V26**, deploy backend + frontend, then optionally run the dev seed script for demos only.
+**Deployment:** use the V1–V14 chain only for a new, empty database; never apply it to an existing V1–V26 database. Deploy the backend + frontend, then optionally run the dev seed script for demos only.
 
 ---
 
@@ -67,7 +67,7 @@ Default dev password is set in `backend/.env` as `DEV_SEED_PASSWORD` (see `.env.
 - **Products** — optional `warehouseId` query shows stock at that warehouse; warehouse filter on the products page
 - **Cashier** — warehouse filter; cart lines track `warehouseId` (mix warehouses in one sale)
 - **Audit & transactions** — human-readable `userName` / `entityLabel` / `cashierName` instead of raw UUIDs
-- **Backend** — ecosystem-scoped queries; Flyway `V19`–`V26` (multi-tenancy + storage paths); Supabase ES256 JWT (JWKS)
+- **Backend** — ecosystem-scoped queries; greenfield Flyway `V1`–`V14` (multi-tenancy + storage paths); Supabase ES256 JWT (JWKS)
 
 ---
 
@@ -83,5 +83,5 @@ Default dev password is set in `backend/.env` as `DEV_SEED_PASSWORD` (see `.env.
 
 - [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — schema, views, and multi-tenancy
 - [`docs/SUPABASE_SETUP.md`](docs/SUPABASE_SETUP.md) — Supabase project setup
-- [`backend/src/main/resources/db/migration/README.md`](backend/src/main/resources/db/migration/README.md) — Flyway catalog (V1–V26)
+- [`backend/src/main/resources/db/migration/README.md`](backend/src/main/resources/db/migration/README.md) — greenfield Flyway catalog (V1–V14)
 - [`backend/scripts/README.md`](backend/scripts/README.md) — dev seed scripts

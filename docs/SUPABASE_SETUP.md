@@ -1,8 +1,8 @@
 # Supabase Setup — Storage & Auth
 
-One Supabase Postgres project hosts **many businesses** (ecosystems). Flyway migrations through **V26** add tenant columns, RLS, and storage path scoping. The Java API enforces `ecosystem_id` on all queries; new owner sign-ups get an **empty** workspace.
+One Supabase Postgres project hosts **many businesses** (ecosystems). The greenfield Flyway **V1–V14** chain creates tenant columns, RLS, and storage path scoping. The Java API enforces `ecosystem_id` on all queries; new owner sign-ups get an **empty** workspace. Do not apply this squashed chain to an existing database with V1–V26 Flyway history; retain that database on the pre-squash release or branch.
 
-SQL migrations automate the storage bucket (`V11__storage_product_images.sql`, path RLS in `V26`) and auth triggers (`V3__profiles_and_roles.sql`). Dashboard steps below must be applied once per Supabase project.
+SQL migrations automate the storage bucket and ecosystem path RLS (`V13__storage_product_images.sql`) and auth triggers (`V4__profiles_and_roles.sql`). Dashboard steps below must be applied once per new Supabase project.
 
 **Not a single-shop model:** demo seed data (`seed-auth-users.ps1`) lives on the fixed **Acme Demo** ecosystem only. Production sign-ups create separate ecosystems automatically.
 
@@ -12,7 +12,7 @@ See [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md).
 
 ## Storage — `product-images` bucket
 
-### Applied by Flyway (`V11` + `V26`)
+### Applied by Flyway (`V13`)
 
 | Setting | Value |
 | --- | --- |
@@ -21,7 +21,7 @@ See [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md).
 | Max file size | 5 MB |
 | Allowed MIME types | `image/jpeg`, `image/png`, `image/webp`, `image/gif` |
 | Write access | `admin`, `warehouse_manager`, `warehouse_worker` (active users only) |
-| Path scope (V26) | First path segment must equal caller's `profiles.ecosystem_id` |
+| Path scope (V13) | First path segment must equal caller's `profiles.ecosystem_id` |
 
 ### Path layout (multi-tenant)
 
@@ -42,7 +42,7 @@ Example: `https://your-project.supabase.co/storage/v1/object/public/product-imag
 
 ### Seed product images
 
-`V12__seed_data.sql` still uses external [picsum.photos](https://picsum.photos) URLs so demo data works without uploaded files. When ready:
+`V14__seed_data.sql` still uses external [picsum.photos](https://picsum.photos) URLs so demo data works without uploaded files. When ready:
 
 1. Upload images under the demo ecosystem prefix.
 2. Update `products.images` to Storage URLs (migration or admin script).
@@ -124,8 +124,8 @@ Already implemented in migrations — no extra dashboard hooks required for MVP.
 
 | Item | Location |
 | --- | --- |
-| `on_auth_user_created` → `profiles` row | `V3__profiles_and_roles.sql` (`handle_new_user` trigger on `auth.users`) |
-| `bootstrap_assign_admin(user_id)` | `V3__profiles_and_roles.sql` — called by backend after owner email confirmation |
+| `on_auth_user_created` → `profiles` row | `V4__profiles_and_roles.sql` (`handle_new_user` trigger on `auth.users`) |
+| `bootstrap_assign_admin(user_id)` | `V4__profiles_and_roles.sql` — called by backend after owner email confirmation |
 | Block inactive users | RLS policies use `is_active_user()`; must reject login/API access when `profiles.active = false` |
 | Devon Cruz (inactive) | Seed script sets `profiles.active = false` + Auth ban via Admin API |
 
@@ -200,7 +200,7 @@ Apply once per environment (project):
 - [ ] Site URL = Vercel production URL
 - [ ] Redirect URLs: localhost:8080, localhost:3000, Vercel URL, Workers URL (if used)
 - [ ] JWT expiry + refresh rotation configured
-- [ ] Flyway **V26** applied (`ecosystems` table, `ecosystem_id` columns, storage policies)
+- [ ] Greenfield Flyway **V1–V14** applied (`ecosystems` table, `ecosystem_id` columns, storage policies)
 - [ ] `seed-auth-users` script run for local dev demos only (optional)
 
 ---
@@ -209,9 +209,8 @@ Apply once per environment (project):
 
 | File | Purpose |
 | --- | --- |
-| `backend/src/main/resources/db/migration/V3__profiles_and_roles.sql` | Auth user → profile trigger, bootstrap admin function |
-| `backend/src/main/resources/db/migration/V11__storage_product_images.sql` | Storage bucket + base RLS |
-| `backend/src/main/resources/db/migration/V26__storage_ecosystem_paths.sql` | Ecosystem-prefixed storage writes |
-| `backend/src/main/resources/db/migration/V19__ecosystems.sql` | Ecosystems table |
+| `backend/src/main/resources/db/migration/V4__profiles_and_roles.sql` | Auth user → profile trigger, bootstrap admin function |
+| `backend/src/main/resources/db/migration/V13__storage_product_images.sql` | Storage bucket + ecosystem-prefixed write policies |
+| `backend/src/main/resources/db/migration/V3__ecosystems.sql` | Ecosystems table |
 | `backend/scripts/seed-auth-users.ps1` / `.sh` | Dev auth users + Acme Demo ecosystem |
 | `backend/.env.example` | Env vars + dev seed password comments |

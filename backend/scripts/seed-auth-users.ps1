@@ -1,5 +1,5 @@
 # Provision ProdWatch dev auth users via Supabase Admin API + REST (no psql required).
-# Prerequisites: Flyway migrations applied (V1-V25), backend/.env configured.
+# Prerequisites: greenfield Flyway migrations applied (V1-V14), backend/.env configured.
 #
 # Usage (from repo root):
 #   .\backend\scripts\seed-auth-users.ps1
@@ -30,7 +30,7 @@ foreach ($var in @("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")) {
 
 $DevSeedPassword = if ($env:DEV_SEED_PASSWORD) { $env:DEV_SEED_PASSWORD } else { "ProdWatchDev2024!" }
 
-# Demo ecosystem id — must match V21__ecosystem_backfill.sql
+# Demo ecosystem id — must match V14__seed_data.sql
 $DemoEcosystemId = "33333333-3333-4333-8333-333333333301"
 
 $SeedEmails = @(
