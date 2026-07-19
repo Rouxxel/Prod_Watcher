@@ -2,7 +2,9 @@
 
 PostgreSQL schema on **Supabase** for ProdWatch inventory + POS. **Multi-tenant:** business data is scoped by `ecosystem_id`.
 
-Migrations live in `backend/src/main/resources/db/migration/` (Flyway V1–V26). Frontend domain types: `frontend/src/types/index.ts`.
+Migrations live in `backend/src/main/resources/db/migration/` (the greenfield Flyway V1–V14 chain). Frontend domain types: `frontend/src/types/index.ts`.
+
+> **Legacy safety:** V1–V14 is only for a new, empty database. A database with the historical V1–V26 Flyway history must stay on a pre-squash release or branch; do not apply this chain, repair, or baseline it in place.
 
 **Demo ecosystem id:** `33333333-3333-4333-8333-333333333301` (`Acme Demo`).
 
@@ -94,6 +96,8 @@ erDiagram
         uuid to_warehouse_id FK
         uuid user_id FK
         text note
+        text provider
+        text recipient
         timestamptz created_at
     }
 
@@ -105,6 +109,7 @@ erDiagram
         text entity
         uuid entity_id
         text details
+        text entity_label
         timestamptz created_at
     }
 
@@ -137,7 +142,7 @@ erDiagram
 
 **Uniqueness (per ecosystem):** `UNIQUE (ecosystem_id, sku)` on `products`; `UNIQUE (ecosystem_id)` on `workspace_settings`. Email remains globally unique on `profiles`.
 
-**Views (computed, ecosystem-aware after V23):**
+**Views (computed and ecosystem-aware in V8):**
 
 - `inventory_balances` — `(ecosystem_id, product_id, warehouse_id, quantity)` from `stock_movements`
 - `product_stock_summary` — product stock at `default_warehouse_id` within matching ecosystem
@@ -145,7 +150,7 @@ erDiagram
 **External (Supabase managed):**
 
 - `auth.users` — login identities; trigger creates `profiles` on insert (`ecosystem_id` null until bootstrap)
-- `storage.buckets` / `storage.objects` — `product-images` bucket (`V11`); writes scoped by path prefix (`V26`)
+- `storage.buckets` / `storage.objects` — `product-images` bucket and ecosystem-scoped writes (`V13`)
 
 ---
 
@@ -155,7 +160,7 @@ erDiagram
 | --- | --- | --- |
 | `app_role` | `admin`, `warehouse_worker`, `warehouse_manager`, `inspector`, `cashier` | `Role` |
 | `stock_movement_type` | `IN`, `OUT`, `TRANSFER`, `ADJUSTMENT` | `StockMovementType` |
-| `transaction_status` | `completed`, `refunded`, `void` | `TransactionStatus` |
+| `transaction_status` | `completed`, `refunded`, `void_` | `TransactionStatus` |
 
 ---
 
@@ -182,7 +187,7 @@ App user profile; 1:1 with `auth.users`.
 | `name` | `text` | NOT NULL |
 | `email` | `text` | NOT NULL, UNIQUE (global) |
 | `active` | `boolean` | NOT NULL, DEFAULT `true` |
-| `ecosystem_id` | `uuid` | FK → `ecosystems(id)` — nullable until bootstrap (`V24`) |
+| `ecosystem_id` | `uuid` | FK → `ecosystems(id)` — nullable until bootstrap |
 | `created_at` | `timestamptz` | NOT NULL, DEFAULT `now()` |
 | `updated_at` | `timestamptz` | NOT NULL, DEFAULT `now()` |
 
@@ -248,8 +253,10 @@ Source of truth for inventory. `qty` is always **positive**; direction is implie
 | `qty` | `integer` | NOT NULL, CHECK `> 0` |
 | `from_warehouse_id` | `uuid` | FK → `warehouses(id)`, nullable |
 | `to_warehouse_id` | `uuid` | FK → `warehouses(id)`, nullable |
-| `user_id` | `uuid` | NOT NULL, FK → `profiles(id)` |
+| `user_id` | `uuid` | nullable, FK → `profiles(id)` ON DELETE SET NULL |
 | `note` | `text` | nullable |
+| `provider` | `text` | required and non-blank for `IN`; otherwise null |
+| `recipient` | `text` | required and non-blank for `OUT`; otherwise null |
 | `created_at` | `timestamptz` | NOT NULL, DEFAULT `now()` |
 
 **Type rules (`stock_movements_type_warehouses_check`):**
@@ -262,6 +269,8 @@ Source of truth for inventory. `qty` is always **positive**; direction is implie
 | `ADJUSTMENT` (decrease) | required | NULL |
 | `ADJUSTMENT` (increase) | NULL | required |
 
+For `IN`, `provider` is required and `recipient` must be null. For `OUT`, `recipient` is required and `provider` must be null. Both fields are null for `TRANSFER` and `ADJUSTMENT`.
+
 **Indexes:** `product_id`, `from_warehouse_id`, `to_warehouse_id`, `created_at`, `user_id`
 
 ### `audit_entries`
@@ -272,11 +281,12 @@ Append-only audit trail.
 | --- | --- | --- |
 | `id` | `uuid` | PK, DEFAULT `gen_random_uuid()` |
 | `ecosystem_id` | `uuid` | NOT NULL, FK → `ecosystems(id)` |
-| `user_id` | `uuid` | NOT NULL, FK → `profiles(id)` |
+| `user_id` | `uuid` | nullable, FK → `profiles(id)` ON DELETE SET NULL |
 | `action` | `text` | NOT NULL |
 | `entity` | `text` | NOT NULL |
 | `entity_id` | `uuid` | NOT NULL |
 | `details` | `text` | nullable |
+| `entity_label` | `text` | nullable display label for the referenced entity |
 | `created_at` | `timestamptz` | NOT NULL, DEFAULT `now()` |
 
 **Indexes:** `entity`, `entity_id`, `created_at`, `user_id`
@@ -319,7 +329,7 @@ Per-ecosystem workspace configuration.
 | `updated_at` | `timestamptz` | NOT NULL, DEFAULT `now()` |
 | `updated_by` | `uuid` | FK → `profiles(id)` ON DELETE SET NULL |
 
-Demo row id `00000000-0000-4000-8000-000000000001` is tagged to Acme Demo in `V21`.
+Demo row id `00000000-0000-4000-8000-000000000001` is seeded for Acme Demo in `V14`.
 
 ---
 
@@ -332,8 +342,8 @@ Demo row id `00000000-0000-4000-8000-000000000001` is tagged to Acme Demo in `V2
 | `is_active_user(user_id)` | Returns `profiles.active` (false if no profile) |
 | `bootstrap_assign_admin(user_id)` | Inserts `admin` role if none exists (owner bootstrap) |
 | `handle_new_user()` | Trigger fn: `auth.users` insert → `profiles` row |
-| `current_user_ecosystem_id()` | Returns caller's `profiles.ecosystem_id` (V23; used in RLS + storage) |
-| `seed_demo_activity()` | Idempotent dev seed for movements, audit, transactions (ecosystem-aware, V25) |
+| `current_user_ecosystem_id()` | Returns caller's `profiles.ecosystem_id` (used in RLS + storage) |
+| `seed_demo_activity()` | Idempotent dev seed for movements, audit, and transactions (ecosystem-aware) |
 
 ---
 
@@ -364,7 +374,7 @@ Corrections use new `ADJUSTMENT` rows; movements are not deleted.
 
 RLS is enabled on application tables. Policies apply to the `authenticated` role (Supabase JWT). The Java backend connects with postgres/service role (**bypasses RLS**) and enforces **ecosystem_id + RBAC** in services.
 
-Since **V23**, tenant tables use `ecosystem_id = current_user_ecosystem_id()` (plus role checks). Inactive users fail `is_active_user()`.
+Tenant tables use `ecosystem_id = current_user_ecosystem_id()` (plus role checks). Inactive users fail `is_active_user()`.
 
 | Table | Scope | Notes |
 | --- | --- | --- |
@@ -378,7 +388,7 @@ Since **V23**, tenant tables use `ecosystem_id = current_user_ecosystem_id()` (p
 | **transactions** | Per ecosystem | POS scoped |
 | **workspace_settings** | Per ecosystem | One row per `ecosystem_id` |
 
-**Storage** (`product-images`, V26): public read; inventory-role **writes** require path prefix `split_part(name,'/',1) = current_user_ecosystem_id()::text`.
+**Storage** (`product-images`, V13): public read; inventory-role **writes** require path prefix `split_part(name,'/',1) = current_user_ecosystem_id()::text`.
 
 ---
 
@@ -445,30 +455,23 @@ Since **V23**, tenant tables use `ecosystem_id = current_user_ecosystem_id()` (p
 
 ---
 
-## Migration index
+## Migration index (greenfield V1–V14)
 
 | Version | File | Contents |
 | --- | --- | --- |
-| V1 | `V1__extensions_and_enums.sql` | Enum types |
+| V1 | `V1__extensions_and_enums.sql` | Extensions and final enum types |
 | V2 | `V2__auth_helpers.sql` | `has_role`, `current_user_role`, `is_active_user` |
-| V3 | `V3__profiles_and_roles.sql` | `profiles`, `user_roles`, auth trigger, bootstrap admin |
-| V4 | `V4__warehouses.sql` | `warehouses` |
-| V5 | `V5__products.sql` | `products` |
-| V6 | `V6__stock_movements.sql` | `stock_movements` |
-| V7 | `V7__inventory_balances_view.sql` | `inventory_balances`, `product_stock_summary` |
-| V8 | `V8__audit_entries.sql` | `audit_entries` |
-| V9 | `V9__transactions.sql` | `transactions` |
-| V10 | `V10__rls_policies.sql` | RLS enable + policies |
-| V11 | `V11__storage_product_images.sql` | `product-images` bucket + storage RLS |
-| V12 | `V12__seed_data.sql` | Reference seed + `seed_demo_activity()` (demo ecosystem via V21) |
-| V18 | `V18__workspace_settings.sql` | Workspace settings + RLS |
-| V19 | `V19__ecosystems.sql` | `ecosystems` table |
-| V20 | `V20__ecosystem_id_columns.sql` | Nullable `ecosystem_id` on tenant tables |
-| V21 | `V21__ecosystem_backfill.sql` | Acme Demo ecosystem + backfill |
-| V22 | `V22__ecosystem_constraints.sql` | NOT NULL, per-ecosystem unique indexes |
-| V23 | `V23__ecosystem_rls_and_views.sql` | `current_user_ecosystem_id()`, RLS, views |
-| V24 | `V24__profiles_ecosystem_nullable.sql` | Nullable profile ecosystem until bootstrap |
-| V25 | `V25__seed_demo_activity_ecosystem.sql` | Ecosystem-aware activity seed |
-| V26 | `V26__storage_ecosystem_paths.sql` | Storage write policies by path prefix |
+| V3 | `V3__ecosystems.sql` | `ecosystems` table and update trigger |
+| V4 | `V4__profiles_and_roles.sql` | `profiles`, `user_roles`, auth trigger, bootstrap admin |
+| V5 | `V5__warehouses.sql` | Ecosystem-scoped warehouses |
+| V6 | `V6__products.sql` | Ecosystem-scoped products and per-ecosystem SKU uniqueness |
+| V7 | `V7__stock_movements.sql` | Final stock ledger, including `provider` and `recipient` |
+| V8 | `V8__inventory_balances_view.sql` | Ecosystem-aware `inventory_balances` and `product_stock_summary` |
+| V9 | `V9__audit_entries.sql` | Ecosystem audit entries with `entity_label` |
+| V10 | `V10__transactions.sql` | Ecosystem-scoped POS transactions |
+| V11 | `V11__workspace_settings.sql` | Per-ecosystem workspace settings |
+| V12 | `V12__rls_policies.sql` | Ecosystem helper, final RLS policies, and view security |
+| V13 | `V13__storage_product_images.sql` | Product-images bucket and ecosystem-prefixed writes |
+| V14 | `V14__seed_data.sql` | Acme Demo ecosystem, catalog/settings, and activity seed |
 
-Full catalog: `backend/src/main/resources/db/migration/README.md`.
+The V1–V14 chain is greenfield-only. The prior V1–V26 files are retained outside the Flyway location under `backend/src/main/resources/db/migration_archive/pre_squash_V1-V26/`.

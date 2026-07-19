@@ -181,7 +181,7 @@ Endpoint reference: [`backend/API.md`](../backend/API.md)
 
 ## Deployment
 
-> **Shared Supabase:** safe for multi-tenant SaaS when Flyway **V19–V26** and the current backend are deployed. Each sign-up is isolated. Skip `seed-auth-users` in production if you do not want demo data.
+> **Shared Supabase:** safe for multi-tenant SaaS when the greenfield Flyway **V1–V14** chain and the current backend are deployed. Each sign-up is isolated. Never apply this chain to an existing database with V1–V26 Flyway history; keep that database on the pre-squash release or branch. Skip `seed-auth-users` in production if you do not want demo data.
 
 ### Vercel (primary)
 

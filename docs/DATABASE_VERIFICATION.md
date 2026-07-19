@@ -16,7 +16,7 @@ End-to-end checklist after migrations **V1–V12** and auth seed on Supabase.
    SELECT public.seed_demo_activity();
    ```
 3. **Verify** — paste [`backend/scripts/verify-database.sql`](../backend/scripts/verify-database.sql) into Supabase SQL Editor and check results.
-4. **Backend Flyway** (optional) — start backend with `.env` loaded; Flyway baselines at V12 if the schema already exists:
+4. **Backend Flyway** (optional, greenfield only) — start backend only with a new disposable database; the active chain is V1–V14. Never start this build against an existing V1–V26 Flyway history.
    ```powershell
    cd backend
    .\gradlew.bat bootRun
@@ -119,8 +119,8 @@ Query: section 7 in `verify-database.sql`.
 
 If you created the schema in the SQL Editor before starting the backend:
 
-- `spring.flyway.baseline-on-migrate=true` and `spring.flyway.baseline-version=12` auto-baseline existing schemas.
-- Schema at or below the baseline (V12) is not re-run on `bootRun`.
+- `spring.flyway.baseline-on-migrate=true` and `spring.flyway.baseline-version=14` apply only to non-empty schemas without Flyway history that already match the greenfield schema.
+- Baseline is not a migration path for an existing V1–V26 database; do not run `bootRun` against one.
 - Fresh empty databases run **V1–V12** from scratch.
 
 ---
