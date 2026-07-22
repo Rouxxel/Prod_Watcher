@@ -36,12 +36,26 @@ RUN mkdir -p logs && chown -R appuser:appuser /app
 
 USER appuser
 
-# Health check hits the root endpoint.
-HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+# Container-aware JVM tuning. Defaults are conservative so the app survives on
+# small (e.g. 512 MB) hosts like Render's free/starter tier without being
+# OOM-killed mid-startup. Override by setting JAVA_OPTS in the environment.
+#   MaxRAMPercentage  - cap heap relative to the container memory limit
+#   UseSerialGC       - lowest memory/CPU overhead for small heaps
+#   TieredStopAtLevel - faster, lighter startup (less JIT/code cache)
+#   Xss512k           - smaller thread stacks -> lower total RSS
+#   ExitOnOutOfMemoryError - fail fast so the platform restarts cleanly
+#   egd=urandom       - avoid blocking on entropy during secure-random init
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=70.0 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom"
+
+# Health check hits the root endpoint. Long start-period covers slow cold
+# starts (Flyway validation + Spring context) so the container isn't marked
+# unhealthy before it finishes booting.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
     CMD wget -qO- http://localhost:8080/ >/dev/null 2>&1 || exit 1
 
 # Expose the configured port (config_file.json -> network.server_port).
 EXPOSE 8080
 
-# Run the application.
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Run the application. Shell form + exec so JAVA_OPTS is expanded and java
+# still becomes PID 1 (receives SIGTERM for graceful shutdown).
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

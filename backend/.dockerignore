@@ -14,6 +14,7 @@ logs/
 *.log
 
 # Env files (passed via env_file / real environment, not baked into the image)
+.env
 .env.local
 .env.production
 .env.development
