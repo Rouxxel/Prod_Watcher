@@ -186,11 +186,13 @@ Endpoint reference: [`backend/API.md`](../backend/API.md)
 ### Vercel (primary)
 
 1. Connect repo; set **Root Directory** to `frontend/`
-2. Env: `VITE_API_BASE_URL` → your Render API URL (`…/api/v1`)
-3. Optional: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` for image uploads
-4. Add Vercel URL to backend `CORS_ALLOWED_ORIGINS`, `FRONTEND_URL`, and Supabase Auth redirect URLs (include `/confirm-email`)
+2. **Framework preset:** TanStack Start (or leave auto-detect — `vercel.json` sets `"framework": "tanstack-start"`)
+3. Env: `VITE_API_BASE_URL` → your Render API URL (`…/api/v1`)
+4. Optional: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` for image uploads
+5. Add Vercel URL to backend `CORS_ALLOWED_ORIGINS`, `FRONTEND_URL`, and Supabase Auth redirect URLs (include `/confirm-email`)
+6. Redeploy after changing env vars (Vite bakes `VITE_*` at build time)
 
-`frontend/vercel.json` configures build output (`dist/client`) and SPA rewrites.
+Do **not** set Output Directory to `dist/client` or add SPA rewrites to `index.html` — this app uses TanStack Start SSR via Nitro on Vercel.
 
 ### Cloudflare Workers (optional)
 

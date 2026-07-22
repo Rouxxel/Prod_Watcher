@@ -10,6 +10,8 @@ Inventory and point-of-sale web app for businesses with one or more warehouses.
 
 ---
 
+npx plugins add vercel/vercel-plugin
+
 ## What it does
 
 - **Inventory** — products, warehouses, stock movements (IN / OUT / TRANSFER / ADJUSTMENT), audit log, dashboard
