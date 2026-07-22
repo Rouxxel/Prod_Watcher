@@ -31,10 +31,15 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "root")
 public class RootController {
 
+    /** Build marker to verify which image is actually deployed (old vs. new code). */
+    private static final String BUILD_MARKER = "ecosystem-v26-jwks";
+
     @RateLimit("root_directory_endpoint")
     @GetMapping("${config.endpoints.root_directory_endpoint.endpoint_route}")
     public Map<String, String> root() {
         CustomLogger.debug("Backend running successfully");
-        return Map.of("message", "Backend running successfully, ready to use other endpoints");
+        return Map.of(
+                "message", "Backend running successfully, ready to use other endpoints",
+                "build", BUILD_MARKER);
     }
 }
