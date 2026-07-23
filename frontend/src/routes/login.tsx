@@ -1,11 +1,21 @@
 import { createFileRoute, Link, useNavigate, Navigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import logoUrl from "@/assets/prodwatch-logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { checkBackendHealth } from "@/services/api";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -18,6 +28,25 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [backendUnreachable, setBackendUnreachable] = useState(false);
+  const [rechecking, setRechecking] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void checkBackendHealth().then((healthy) => {
+      if (!cancelled) setBackendUnreachable(!healthy);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const retryHealthCheck = async () => {
+    setRechecking(true);
+    const healthy = await checkBackendHealth();
+    setRechecking(false);
+    setBackendUnreachable(!healthy);
+  };
 
   if (isLoading) {
     return (
@@ -114,6 +143,28 @@ function LoginPage() {
           Sign up creates an administrator account only. Staff are added by an admin after login.
         </p>
       </div>
+
+      <AlertDialog open={backendUnreachable}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Connection problem</AlertDialogTitle>
+            <AlertDialogDescription>
+              We have problems connecting to the system. Please try again in a moment.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              disabled={rechecking}
+              onClick={(e) => {
+                e.preventDefault();
+                void retryHealthCheck();
+              }}
+            >
+              {rechecking ? "Checking…" : "Try again"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

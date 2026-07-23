@@ -118,6 +118,25 @@ export function apiGet<T>(path: string, options?: RequestOptions): Promise<T> {
   return request<T>("GET", path, undefined, options);
 }
 
+export type HealthStatus = {
+  status: string;
+  database?: string;
+};
+
+/**
+ * Ping the public backend health endpoint (VITE_API_BASE_URL + /health).
+ * Returns true only when the backend responds with a healthy status.
+ * Any network error, non-2xx response, or non-"ok" status resolves to false.
+ */
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const health = await apiGet<HealthStatus>("/health", { auth: false });
+    return health.status?.toLowerCase() === "ok";
+  } catch {
+    return false;
+  }
+}
+
 export function apiPost<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
   return request<T>("POST", path, body, options);
 }

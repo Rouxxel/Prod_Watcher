@@ -202,10 +202,25 @@ public class SupabaseAuthService {
     private BusinessRuleException mapAuthError(RestClientResponseException ex) {
         String responseBody = ex.getResponseBodyAsString();
         CustomLogger.debug("Supabase auth error " + ex.getStatusCode() + ": " + responseBody);
-        if (isDuplicateEmailError(ex.getStatusCode().value(), responseBody)) {
+        int status = ex.getStatusCode().value();
+        if (isDuplicateEmailError(status, responseBody)) {
             return new BusinessRuleException(SignupEmailService.EMAIL_TAKEN_MESSAGE);
         }
-        return new BusinessRuleException("Authentication request failed: " + ex.getStatusCode().value());
+        if (isInvalidCredentialsError(status, responseBody)) {
+            return new BusinessRuleException(
+                    "Invalid credentials, ensure the email is confirmed and password is correct");
+        }
+        return new BusinessRuleException("Authentication request failed: " + status);
+    }
+
+    private static boolean isInvalidCredentialsError(int status, String responseBody) {
+        if (status != 400 || responseBody == null) {
+            return false;
+        }
+        String lower = responseBody.toLowerCase();
+        return lower.contains("invalid_credentials")
+                || lower.contains("invalid login credentials")
+                || lower.contains("email_not_confirmed");
     }
 
     private static boolean isDuplicateEmailError(int status, String responseBody) {
