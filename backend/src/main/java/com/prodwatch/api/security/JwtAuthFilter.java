@@ -15,11 +15,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.prodwatch.api.entity.AppRole;
-import com.prodwatch.api.entity.Profile;
-import com.prodwatch.api.entity.UserRole;
-import com.prodwatch.api.repository.ProfileRepository;
-import com.prodwatch.api.repository.UserRoleRepository;
+import com.prodwatch.api.service.AuthContextService;
 import com.prodwatch.api.util.CustomLogger;
 
 import jakarta.servlet.FilterChain;
@@ -38,8 +34,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    private final ProfileRepository profileRepository;
-    private final UserRoleRepository userRoleRepository;
+    private final AuthContextService authContextService;
 
     /** Legacy shared secret (HS256) — used only when Supabase issues HS256 tokens. */
     private final Algorithm hmacAlgorithm;
@@ -48,12 +43,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwkProvider jwkProvider;
 
     public JwtAuthFilter(
-            ProfileRepository profileRepository,
-            UserRoleRepository userRoleRepository,
+            AuthContextService authContextService,
             @Value("${SUPABASE_URL}") String supabaseUrl,
             @Value("${SUPABASE_JWT_SECRET:}") String jwtSecret) {
-        this.profileRepository = profileRepository;
-        this.userRoleRepository = userRoleRepository;
+        this.authContextService = authContextService;
         this.hmacAlgorithm =
                 (jwtSecret == null || jwtSecret.isBlank()) ? null : Algorithm.HMAC256(jwtSecret);
 
@@ -91,32 +84,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             DecodedJWT jwt = JWT.require(algorithm).build().verify(token);
             UUID userId = UUID.fromString(jwt.getSubject());
 
-            Profile profile =
-                    profileRepository.findById(userId).orElseThrow(() -> new JWTVerificationException("Unknown user"));
-
-            if (!profile.isActive()) {
-                CustomLogger.debug("Rejected inactive user: " + userId);
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            UUID ecosystemId = profile.getEcosystemId();
-            if (ecosystemId == null) {
-                CustomLogger.debug("Rejected user without ecosystem: " + userId);
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            AppRole role = userRoleRepository
-                    .findByUser_Id(userId)
-                    .map(UserRole::getRole)
-                    .orElseThrow(() -> new JWTVerificationException("User has no role"));
-
-            CurrentUser principal = new CurrentUser(userId, ecosystemId, profile.getEmail(), role, profile.isActive());
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            authContextService
+                    .resolve(userId)
+                    .ifPresent(principal -> {
+                        UsernamePasswordAuthenticationToken authentication =
+                                new UsernamePasswordAuthenticationToken(
+                                        principal, null, principal.getAuthorities());
+                        authentication.setDetails(
+                                new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    });
         } catch (JWTVerificationException | IllegalArgumentException ex) {
             CustomLogger.debug("JWT validation failed: " + ex.getMessage());
             SecurityContextHolder.clearContext();
