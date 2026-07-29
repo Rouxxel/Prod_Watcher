@@ -32,16 +32,15 @@ services:
   #   volumes:
   #     - postgres_data:/var/lib/postgresql/data
 
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: java_rest_api_redis
-  #   ports:
-  #     - "6379:6379"
-  #   restart: unless-stopped
-  #   volumes:
-  #     - redis_data:/data
-  #   command: redis-server --appendonly yes
+  redis:
+    image: redis:7-alpine
+    container_name: prodwatch_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
 
-# volumes:
-#   postgres_data:
-#   redis_data:
+volumes:
+  redis_data:
