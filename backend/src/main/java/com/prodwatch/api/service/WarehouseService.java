@@ -6,6 +6,9 @@ import java.util.UUID;
 import com.prodwatch.api.dto.warehouse.WarehouseCreate;
 import com.prodwatch.api.dto.warehouse.WarehouseResponse;
 import com.prodwatch.api.dto.warehouse.WarehouseUpdate;
+import com.prodwatch.api.cache.RedisCacheKeys;
+import com.prodwatch.api.cache.RedisCacheService;
+import com.prodwatch.api.cache.RedisCacheTtls;
 import com.prodwatch.api.entity.Ecosystem;
 import com.prodwatch.api.entity.Warehouse;
 import com.prodwatch.api.error.BusinessRuleException;
@@ -29,6 +32,8 @@ public class WarehouseService {
     private final InventoryBalanceRepository inventoryBalanceRepository;
     private final AuditService auditService;
     private final EcosystemService ecosystemService;
+    private final RedisCacheService cacheService;
+    private final RedisCacheTtls cacheTtls;
 
     public WarehouseService(
             WarehouseRepository warehouseRepository,
@@ -36,24 +41,43 @@ public class WarehouseService {
             StockMovementRepository stockMovementRepository,
             InventoryBalanceRepository inventoryBalanceRepository,
             AuditService auditService,
-            EcosystemService ecosystemService) {
+            EcosystemService ecosystemService,
+            RedisCacheService cacheService,
+            RedisCacheTtls cacheTtls) {
         this.warehouseRepository = warehouseRepository;
         this.productRepository = productRepository;
         this.stockMovementRepository = stockMovementRepository;
         this.inventoryBalanceRepository = inventoryBalanceRepository;
         this.auditService = auditService;
         this.ecosystemService = ecosystemService;
+        this.cacheService = cacheService;
+        this.cacheTtls = cacheTtls;
     }
 
     public List<WarehouseResponse> list(CurrentUser user) {
         UUID ecosystemId = TenantContext.requireEcosystemId(user);
-        return warehouseRepository.findAllByEcosystem_Id(ecosystemId).stream()
-                .map(this::toResponse)
-                .toList();
+        String cacheKey = RedisCacheKeys.warehousesList(ecosystemId);
+        return cacheService
+                .cacheGetList(cacheKey, WarehouseResponse.class)
+                .orElseGet(() -> {
+                    List<WarehouseResponse> responses = warehouseRepository.findAllByEcosystem_Id(ecosystemId).stream()
+                            .map(this::toResponse)
+                            .toList();
+                    cacheService.cacheSet(cacheKey, responses, cacheTtls.warehousesList());
+                    return responses;
+                });
     }
 
     public WarehouseResponse get(UUID id, CurrentUser user) {
-        return toResponse(load(id, user));
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
+        String cacheKey = RedisCacheKeys.warehouse(ecosystemId, id);
+        return cacheService
+                .cacheGet(cacheKey, WarehouseResponse.class)
+                .orElseGet(() -> {
+                    WarehouseResponse response = toResponse(load(id, user));
+                    cacheService.cacheSet(cacheKey, response, cacheTtls.warehouse());
+                    return response;
+                });
     }
 
     @Transactional
@@ -62,11 +86,13 @@ public class WarehouseService {
         Ecosystem ecosystem = ecosystemService.requireById(ecosystemId);
         Warehouse warehouse = warehouseRepository.save(Warehouse.create(dto.name(), dto.location(), ecosystem));
         auditService.log(user.getUserId(), "WAREHOUSE_CREATED", "warehouse", warehouse.getId(), warehouse.getName());
+        evictWarehouseCaches(ecosystemId, warehouse.getId());
         return toResponse(warehouse);
     }
 
     @Transactional
     public WarehouseResponse update(UUID id, WarehouseUpdate dto, CurrentUser user) {
+        UUID ecosystemId = TenantContext.requireEcosystemId(user);
         Warehouse warehouse = load(id, user);
         if (dto.name() != null) {
             warehouse.setName(dto.name());
@@ -76,6 +102,7 @@ public class WarehouseService {
         }
         warehouse = warehouseRepository.save(warehouse);
         auditService.log(user.getUserId(), "WAREHOUSE_UPDATED", "warehouse", id, warehouse.getName());
+        evictWarehouseCaches(ecosystemId, id);
         return toResponse(warehouse);
     }
 
@@ -95,6 +122,12 @@ public class WarehouseService {
         }
         warehouseRepository.delete(warehouse);
         auditService.log(user.getUserId(), "WAREHOUSE_DELETED", "warehouse", id, warehouse.getName());
+        evictWarehouseCaches(ecosystemId, id);
+    }
+
+    private void evictWarehouseCaches(UUID ecosystemId, UUID warehouseId) {
+        cacheService.cacheDelete(RedisCacheKeys.warehousesList(ecosystemId));
+        cacheService.cacheDelete(RedisCacheKeys.warehouse(ecosystemId, warehouseId));
     }
 
     private Warehouse load(UUID id, CurrentUser user) {
