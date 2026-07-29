@@ -75,4 +75,21 @@ public final class ConfigLoader {
     public static JsonNode endpoint(String key) {
         return CONFIG.path("endpoints").path(key);
     }
+
+    /** Convenience accessor for the "redis_cache" section. */
+    public static JsonNode redisCache() {
+        return CONFIG.path("redis_cache");
+    }
+
+    /**
+     * TTL in seconds for a named Redis cache bucket under redis_cache.ttl_seconds.
+     * Falls back to {@code fallback} when the key is missing or invalid.
+     */
+    public static int redisCacheTtlSeconds(String key, int fallback) {
+        JsonNode node = redisCache().path("ttl_seconds").path(key);
+        if (node.isMissingNode() || !node.isNumber()) {
+            return fallback;
+        }
+        return node.asInt(fallback);
+    }
 }
