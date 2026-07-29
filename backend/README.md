@@ -172,6 +172,30 @@ After updating CORS on Render, redeploy the backend service. See [`frontend/READ
 
 ---
 
+## Optional Redis caching
+
+Redis is **off by default** (`REDIS_ENABLED=false`). When disabled, cache calls no-op and Postgres remains the source of truth. Connection failures are logged; the API still serves traffic with `"redis": "unavailable"` on `GET /`.
+
+TTLs live in [`src/main/resources/core_specs/configuration/config_file.json`](src/main/resources/core_specs/configuration/config_file.json) (`redis_cache.ttl_seconds`). Full mapping: [`REDIS_CACHE_TTL.md`](src/main/resources/core_specs/configuration/REDIS_CACHE_TTL.md).
+
+| Mode | `REDIS_ENABLED` | `REDIS_HOST` | Notes |
+| --- | --- | --- | --- |
+| Off (default) | `false` | — | No Redis required |
+| Local Docker | `true` | `localhost` | `docker run -p 6379:6379 redis:7-alpine` |
+| Docker Compose | `true` | `redis` | Uncomment `redis` service in `docker-compose.yml` |
+| Redis Cloud | `true` | `<endpoint>` | Set `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_TLS=true` |
+
+Verify:
+
+```bash
+curl http://localhost:8080/
+# {"message":"...","build":"...","redis":"disabled"|"connected"|"unavailable"}
+```
+
+Rate limiting remains **in-memory** per instance (`RateLimiter`) until a separate distributed limiter is added.
+
+---
+
 ## Docker
 
 ### Compose (local)
