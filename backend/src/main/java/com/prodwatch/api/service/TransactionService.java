@@ -10,6 +10,9 @@ import java.util.UUID;
 import com.prodwatch.api.dto.transaction.CartItemDto;
 import com.prodwatch.api.dto.transaction.TransactionCreate;
 import com.prodwatch.api.dto.transaction.TransactionResponse;
+import com.prodwatch.api.cache.RedisCacheKeys;
+import com.prodwatch.api.cache.RedisCacheService;
+import com.prodwatch.api.cache.RedisCacheTtls;
 import com.prodwatch.api.entity.Product;
 import com.prodwatch.api.entity.Profile;
 import com.prodwatch.api.entity.StockMovementType;
@@ -45,6 +48,8 @@ public class TransactionService {
     private final AuditService auditService;
     private final SettingsService settingsService;
     private final UUID posWarehouseId;
+    private final RedisCacheService cacheService;
+    private final RedisCacheTtls cacheTtls;
 
     public TransactionService(
             TransactionRepository transactionRepository,
@@ -55,6 +60,8 @@ public class TransactionService {
             InventoryBalanceService inventoryBalanceService,
             AuditService auditService,
             SettingsService settingsService,
+            RedisCacheService cacheService,
+            RedisCacheTtls cacheTtls,
             @Value("${prodwatch.pos.warehouse-id:#{null}}") UUID posWarehouseId) {
         this.transactionRepository = transactionRepository;
         this.productRepository = productRepository;
@@ -64,6 +71,8 @@ public class TransactionService {
         this.inventoryBalanceService = inventoryBalanceService;
         this.auditService = auditService;
         this.settingsService = settingsService;
+        this.cacheService = cacheService;
+        this.cacheTtls = cacheTtls;
         this.posWarehouseId = posWarehouseId;
     }
 
@@ -80,7 +89,14 @@ public class TransactionService {
 
     @Transactional(readOnly = true)
     public TransactionResponse get(UUID id, CurrentUser user) {
-        return toResponse(load(id, user));
+        String cacheKey = RedisCacheKeys.transaction(id);
+        return cacheService
+                .cacheGet(cacheKey, TransactionResponse.class)
+                .orElseGet(() -> {
+                    TransactionResponse response = toResponse(load(id, user));
+                    cacheService.cacheSet(cacheKey, response, cacheTtls.transaction());
+                    return response;
+                });
     }
 
     @Transactional
@@ -132,7 +148,13 @@ public class TransactionService {
                 "transaction",
                 transaction.getId(),
                 null);
-        return toResponse(transaction);
+        for (ValidatedLine line : lines) {
+            inventoryBalanceService.evictStockDisplay(
+                    ecosystemId, line.product().getId(), line.warehouse().getId());
+        }
+        TransactionResponse response = toResponse(transaction);
+        cacheService.cacheSet(RedisCacheKeys.transaction(transaction.getId()), response, cacheTtls.transaction());
+        return response;
     }
 
     @Transactional
@@ -178,11 +200,15 @@ public class TransactionService {
                     "POS return",
                     null,
                     newStatus + " " + transaction.getId()));
+            inventoryBalanceService.evictStockDisplay(ecosystemId, item.productId(), warehouse.getId());
         }
 
         transaction.setStatus(newStatus);
         auditService.log(user.getUserId(), auditAction, "transaction", transaction.getId(), null);
-        return toResponse(transaction);
+        cacheService.cacheDelete(RedisCacheKeys.transaction(transaction.getId()));
+        TransactionResponse response = toResponse(transaction);
+        cacheService.cacheSet(RedisCacheKeys.transaction(transaction.getId()), response, cacheTtls.transaction());
+        return response;
     }
 
     private List<ValidatedLine> validateAndResolveLines(

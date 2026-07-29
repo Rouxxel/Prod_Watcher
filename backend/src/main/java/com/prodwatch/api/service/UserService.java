@@ -36,6 +36,7 @@ public class UserService {
     private final AuditService auditService;
     private final EcosystemService ecosystemService;
     private final EntityManager entityManager;
+    private final AuthContextService authContextService;
 
     public UserService(
             ProfileRepository profileRepository,
@@ -44,7 +45,8 @@ public class UserService {
             SupabaseAuthService supabaseAuthService,
             AuditService auditService,
             EcosystemService ecosystemService,
-            EntityManager entityManager) {
+            EntityManager entityManager,
+            AuthContextService authContextService) {
         this.profileRepository = profileRepository;
         this.userRoleRepository = userRoleRepository;
         this.transactionRepository = transactionRepository;
@@ -52,6 +54,7 @@ public class UserService {
         this.auditService = auditService;
         this.ecosystemService = ecosystemService;
         this.entityManager = entityManager;
+        this.authContextService = authContextService;
     }
 
     public List<UserResponse> list(CurrentUser admin) {
@@ -97,6 +100,7 @@ public class UserService {
         userRoleRepository.save(new UserRole(profile, dto.role()));
 
         auditService.log(admin.getUserId(), "USER_PROVISIONED", "user", userId, dto.email(), dto.name().trim());
+        authContextService.evict(userId);
         return toResponse(profile);
     }
 
@@ -130,6 +134,7 @@ public class UserService {
         }
 
         profileRepository.save(profile);
+        authContextService.evict(id);
         return toResponse(profile);
     }
 
@@ -149,6 +154,7 @@ public class UserService {
         userRoleRepository.save(userRole);
         auditService.log(
                 admin.getUserId(), "ROLE_PROMOTED_TO_ADMIN", "user", id, profile.getEmail(), profile.getName());
+        authContextService.evict(id);
         return toResponse(profile);
     }
 
@@ -185,6 +191,7 @@ public class UserService {
                 actor.getUserId(),
                 dto.role().name(),
                 profile.getName());
+        authContextService.evict(actor.getUserId());
         return toResponse(profile);
     }
 
@@ -198,6 +205,7 @@ public class UserService {
         assertCanResetPassword(admin.getUserId(), id, userRole.getRole());
         supabaseAuthService.updatePassword(id, dto.newPassword());
         auditService.log(admin.getUserId(), "PASSWORD_RESET_BY_ADMIN", "user", id, null, profile.getName());
+        authContextService.evict(id);
     }
 
     @Transactional
@@ -212,6 +220,7 @@ public class UserService {
         profile.setActive(false);
         supabaseAuthService.disableUser(id);
         profileRepository.save(profile);
+        authContextService.evict(id);
         return toResponse(profile);
     }
 
@@ -222,6 +231,7 @@ public class UserService {
         profile.setActive(true);
         supabaseAuthService.enableUser(id);
         profileRepository.save(profile);
+        authContextService.evict(id);
         return toResponse(profile);
     }
 
@@ -249,6 +259,7 @@ public class UserService {
 
         auditService.log(admin.getUserId(), "USER_DELETED", "user", id, profile.getEmail(), profile.getName());
 
+        authContextService.evict(id);
         supabaseAuthService.deleteUser(id);
 
         entityManager.detach(profile);
@@ -286,6 +297,9 @@ public class UserService {
                 .map(UserRole::getRole)
                 .orElseThrow(() -> new ResourceNotFoundException("User role not found"));
         Ecosystem ecosystem = profile.getEcosystem();
+        UUID ecosystemId = ecosystem != null ? ecosystem.getId() : null;
+        String ecosystemName =
+                ecosystemId != null ? ecosystemService.getCachedName(ecosystemId) : null;
         return new UserResponse(
                 profile.getId(),
                 profile.getName(),
@@ -293,8 +307,8 @@ public class UserService {
                 role,
                 profile.isActive(),
                 null,
-                ecosystem != null ? ecosystem.getId() : null,
-                ecosystem != null ? ecosystem.getName() : null);
+                ecosystemId,
+                ecosystemName);
     }
 
     private void assertNotLastAdmin(UUID userId, AppRole role, UUID ecosystemId) {
