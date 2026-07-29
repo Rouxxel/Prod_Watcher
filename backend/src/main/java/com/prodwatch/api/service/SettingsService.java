@@ -8,6 +8,9 @@ import java.util.UUID;
 
 import com.prodwatch.api.dto.settings.SettingsResponse;
 import com.prodwatch.api.dto.settings.SettingsUpdateRequest;
+import com.prodwatch.api.cache.RedisCacheKeys;
+import com.prodwatch.api.cache.RedisCacheService;
+import com.prodwatch.api.cache.RedisCacheTtls;
 import com.prodwatch.api.entity.Ecosystem;
 import com.prodwatch.api.entity.Profile;
 import com.prodwatch.api.entity.WorkspaceSettings;
@@ -29,28 +32,38 @@ public class SettingsService {
     private final AuditService auditService;
     private final EcosystemService ecosystemService;
     private final BigDecimal defaultTaxRate;
+    private final RedisCacheService cacheService;
+    private final RedisCacheTtls cacheTtls;
 
     public SettingsService(
             WorkspaceSettingsRepository workspaceSettingsRepository,
             ProfileRepository profileRepository,
             AuditService auditService,
             EcosystemService ecosystemService,
+            RedisCacheService cacheService,
+            RedisCacheTtls cacheTtls,
             @Value("${prodwatch.pos.tax-rate:0.16}") BigDecimal defaultTaxRate) {
         this.workspaceSettingsRepository = workspaceSettingsRepository;
         this.profileRepository = profileRepository;
         this.auditService = auditService;
         this.ecosystemService = ecosystemService;
+        this.cacheService = cacheService;
+        this.cacheTtls = cacheTtls;
         this.defaultTaxRate = defaultTaxRate;
     }
 
     @Transactional
     public SettingsResponse get(CurrentUser user) {
-        return toResponse(getOrBootstrap(TenantContext.requireEcosystemId(user)));
+        return getCachedOrLoad(TenantContext.requireEcosystemId(user));
     }
 
     @Transactional
     public BigDecimal getTaxRate(UUID ecosystemId) {
-        return getOrBootstrap(ecosystemId).getTaxRate();
+        String cacheKey = RedisCacheKeys.settings(ecosystemId);
+        return cacheService
+                .cacheGet(cacheKey, SettingsResponse.class)
+                .map(SettingsResponse::taxRate)
+                .orElseGet(() -> getOrBootstrap(ecosystemId).getTaxRate());
     }
 
     @Transactional
@@ -109,7 +122,19 @@ public class SettingsService {
                     String.join(", ", changes));
         }
 
+        cacheService.cacheDelete(RedisCacheKeys.settings(ecosystemId));
         return toResponse(settings);
+    }
+
+    private SettingsResponse getCachedOrLoad(UUID ecosystemId) {
+        String cacheKey = RedisCacheKeys.settings(ecosystemId);
+        return cacheService
+                .cacheGet(cacheKey, SettingsResponse.class)
+                .orElseGet(() -> {
+                    SettingsResponse response = toResponse(getOrBootstrap(ecosystemId));
+                    cacheService.cacheSet(cacheKey, response, cacheTtls.settings());
+                    return response;
+                });
     }
 
     private WorkspaceSettings getOrBootstrap(UUID ecosystemId) {
