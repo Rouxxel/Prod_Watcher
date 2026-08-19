@@ -81,6 +81,17 @@ Default dev password is set in `backend/.env` as `DEV_SEED_PASSWORD` (see `.env.
 
 ---
 
+## CI
+
+GitHub Actions workflows run on pull requests and pushes to `main`:
+
+- **Backend** — Gradle tests (H2), bootJar build, Trivy container scan ([`.github/workflows/backend.yml`](.github/workflows/backend.yml))
+- **Frontend** — npm lint, format check, build ([`.github/workflows/frontend.yml`](.github/workflows/frontend.yml))
+- **Security** — Gitleaks secret scanning, dependency review, npm audit ([`.github/workflows/security.yml`](.github/workflows/security.yml))
+- **Dependabot** — Automated dependency updates for npm, Gradle, and GitHub Actions ([`.github/dependabot.yml`](.github/dependabot.yml))
+
+---
+
 ## More docs
 
 - [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — schema, views, and multi-tenancy
