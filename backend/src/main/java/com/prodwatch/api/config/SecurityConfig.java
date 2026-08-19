@@ -54,36 +54,38 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/",
-                                "/actuator/**",
-                                "/favicon.ico",
-                                "/favicon.png")
-                        .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/bootstrap-status", "/api/v1/auth/signup-email-available", "/api/v1/health")
-                        .permitAll()
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/v1/auth/signup",
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/confirm-email")
-                        .permitAll()
-                        .requestMatchers("/api/v1/**")
-                        .authenticated()
-                        .anyRequest()
-                        .permitAll());
-
-        // Conditionally permit Swagger endpoints based on SWAGGER_ENABLED
-        if (swaggerEnabled) {
-            http.authorizeHttpRequests(auth -> auth
-                    .requestMatchers(
-                            "/docs/**",
-                            "/api-docs/**",
-                            "/v3/api-docs/**",
-                            "/swagger-ui/**")
-                    .permitAll());
-        }
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(
+                                    "/",
+                                    "/actuator/**",
+                                    "/favicon.ico",
+                                    "/favicon.png")
+                            .permitAll()
+                            .requestMatchers(
+                                    HttpMethod.GET,
+                                    "/api/v1/auth/bootstrap-status",
+                                    "/api/v1/auth/signup-email-available",
+                                    "/api/v1/health")
+                            .permitAll()
+                            .requestMatchers(
+                                    HttpMethod.POST,
+                                    "/api/v1/auth/signup",
+                                    "/api/v1/auth/login",
+                                    "/api/v1/auth/confirm-email")
+                            .permitAll();
+                    if (swaggerEnabled) {
+                        auth.requestMatchers(
+                                        "/docs/**",
+                                        "/api-docs/**",
+                                        "/v3/api-docs/**",
+                                        "/swagger-ui/**")
+                                .permitAll();
+                    }
+                    auth.requestMatchers("/api/v1/**")
+                            .authenticated()
+                            .anyRequest()
+                            .permitAll();
+                });
 
         http.exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
