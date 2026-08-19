@@ -17,9 +17,7 @@ export default defineConfig({
     host: true,
   },
   plugins: [
-    ...(isVercel
-      ? [nitro()]
-      : [cloudflare({ viteEnvironment: { name: "ssr" } })]),
+    ...(isVercel ? [nitro()] : [cloudflare({ viteEnvironment: { name: "ssr" } })]),
     tanstackStart({
       server: { entry: "server" },
     }),

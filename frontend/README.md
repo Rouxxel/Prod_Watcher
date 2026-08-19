@@ -10,11 +10,11 @@ Product image uploads use **Supabase Storage** directly from the browser (option
 
 Each owner sign-up creates a **new isolated business** (ecosystem) on the shared backend. The API scopes all data by `ecosystem_id` — you only see warehouses, products, users, and transactions in **your** workspace.
 
-| Scenario | What you see |
-| --- | --- |
-| **New owner sign-up** | Empty inventory (no demo seed data) |
+| Scenario                              | What you see                                        |
+| ------------------------------------- | --------------------------------------------------- |
+| **New owner sign-up**                 | Empty inventory (no demo seed data)                 |
 | **Demo seed** (`seed-auth-users.ps1`) | Acme Demo ecosystem only — `alex@acme.co` and staff |
-| **Staff provisioned by admin** | Same ecosystem as the admin who created them |
+| **Staff provisioned by admin**        | Same ecosystem as the admin who created them        |
 
 There is **no tenant switcher** in the UI (MVP). The sidebar shows your workspace name from `GET /users/me` (`ecosystemName`) when available.
 
@@ -66,14 +66,14 @@ There is **no tenant switcher** in the UI (MVP). The sidebar shows your workspac
 
 ## Tech stack
 
-| Concern        | Choice                                                |
-| -------------- | ----------------------------------------------------- |
-| Framework      | TanStack Start v1 (React 19, Vite 7)                  |
-| Routing        | TanStack Router (file-based, `src/routes/`)           |
-| Data layer     | TanStack Query + `src/services/*` → Java REST API     |
-| UI             | shadcn/ui (Radix), Tailwind CSS v4                    |
-| Toasts         | sonner (`src/lib/notify.ts`)                          |
-| Deploy         | Vercel (primary, `vercel.json`); Cloudflare Workers optional |
+| Concern    | Choice                                                       |
+| ---------- | ------------------------------------------------------------ |
+| Framework  | TanStack Start v1 (React 19, Vite 7)                         |
+| Routing    | TanStack Router (file-based, `src/routes/`)                  |
+| Data layer | TanStack Query + `src/services/*` → Java REST API            |
+| UI         | shadcn/ui (Radix), Tailwind CSS v4                           |
+| Toasts     | sonner (`src/lib/notify.ts`)                                 |
+| Deploy     | Vercel (primary, `vercel.json`); Cloudflare Workers optional |
 
 ---
 
@@ -106,10 +106,10 @@ so owner sign-up emails redirect to `/confirm-email`.
 
 ### Auth flow (summary)
 
-| User | How to get an account |
-| --- | --- |
-| **Owner (admin)** | `/signup` → confirm email → `/login` → empty workspace; add warehouses/products |
-| **Staff** | Admin provisions on **Users** → staff logs in at `/login` (inherits admin's ecosystem) |
+| User              | How to get an account                                                                  |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| **Owner (admin)** | `/signup` → confirm email → `/login` → empty workspace; add warehouses/products        |
+| **Staff**         | Admin provisions on **Users** → staff logs in at `/login` (inherits admin's ecosystem) |
 
 Demo databases seeded with `seed-auth-users.ps1` use the **Acme Demo** ecosystem (`alex@acme.co` = admin). New sign-ups on the same Supabase project get a **separate** ecosystem and do not see Alex's catalog.
 
@@ -158,14 +158,14 @@ All data flows through `src/services/` using `apiGet` / `apiPost` / `apiPatch` /
 
 ### Notable API usage
 
-| Feature | Client | Notes |
-| --- | --- | --- |
-| Products list | `GET /products?warehouseId=` | When set, `stock` is quantity **at that warehouse** (default warehouse when omitted) |
-| Stock movement create | `POST /stock-movements` | Send `provider` for IN, `recipient` for OUT |
-| Checkout | `POST /transactions` | Each cart item includes `warehouseId` for stock deduction |
-| Audit | `GET /audit` | Responses include `userName`, `entityLabel` |
-| Transactions | `GET /transactions` | Responses include `cashierName` |
-| Workspace settings | `GET/PATCH /settings` | Admin PATCH; all roles GET (tax/receipts for POS) |
+| Feature               | Client                       | Notes                                                                                |
+| --------------------- | ---------------------------- | ------------------------------------------------------------------------------------ |
+| Products list         | `GET /products?warehouseId=` | When set, `stock` is quantity **at that warehouse** (default warehouse when omitted) |
+| Stock movement create | `POST /stock-movements`      | Send `provider` for IN, `recipient` for OUT                                          |
+| Checkout              | `POST /transactions`         | Each cart item includes `warehouseId` for stock deduction                            |
+| Audit                 | `GET /audit`                 | Responses include `userName`, `entityLabel`                                          |
+| Transactions          | `GET /transactions`          | Responses include `cashierName`                                                      |
+| Workspace settings    | `GET/PATCH /settings`        | Admin PATCH; all roles GET (tax/receipts for POS)                                    |
 
 Endpoint reference: [`backend/API.md`](../backend/API.md)
 
