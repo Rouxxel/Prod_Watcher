@@ -6,6 +6,7 @@ import java.util.List;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prodwatch.api.error.ErrorResponse;
 import com.prodwatch.api.security.JwtAuthFilter;
+import com.prodwatch.api.security.SecurityHeadersFilter;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -30,13 +31,21 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final ObjectMapper objectMapper;
+    private final SecurityHeadersFilter securityHeadersFilter;
 
     @Value("${CORS_ALLOWED_ORIGINS:http://localhost:8000,http://localhost:8080,http://localhost:3000}")
     private String corsAllowedOrigins;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter, ObjectMapper objectMapper) {
+    @Value("${SWAGGER_ENABLED:true}")
+    private boolean swaggerEnabled;
+
+    public SecurityConfig(
+            JwtAuthFilter jwtAuthFilter,
+            ObjectMapper objectMapper,
+            SecurityHeadersFilter securityHeadersFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.objectMapper = objectMapper;
+        this.securityHeadersFilter = securityHeadersFilter;
     }
 
     @Bean
@@ -49,10 +58,6 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/",
                                 "/actuator/**",
-                                "/docs/**",
-                                "/api-docs/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
                                 "/favicon.ico",
                                 "/favicon.png")
                         .permitAll()
@@ -67,8 +72,20 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/**")
                         .authenticated()
                         .anyRequest()
-                        .permitAll())
-                .exceptionHandling(ex -> ex
+                        .permitAll());
+
+        // Conditionally permit Swagger endpoints based on SWAGGER_ENABLED
+        if (swaggerEnabled) {
+            http.authorizeHttpRequests(auth -> auth
+                    .requestMatchers(
+                            "/docs/**",
+                            "/api-docs/**",
+                            "/v3/api-docs/**",
+                            "/swagger-ui/**")
+                    .permitAll());
+        }
+
+        http.exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(401);
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -83,6 +100,7 @@ public class SecurityConfig {
                                     new ErrorResponse(403, "Forbidden", "Insufficient permissions");
                             response.getWriter().write(objectMapper.writeValueAsString(body));
                         }))
+                .addFilterBefore(securityHeadersFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
