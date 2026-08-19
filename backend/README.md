@@ -65,6 +65,7 @@ Optional:
 | `SERVER_PORT` | `8080` (config) | HTTP port |
 | `POS_TAX_RATE` | `0.16` | **Bootstrap only** — seeds `workspace_settings.tax_rate` on first API access when no row exists; checkout reads tax from Settings after that |
 | `POS_WAREHOUSE_ID` | — | Fixed warehouse for POS when cart items omit `warehouseId` |
+| `SWAGGER_ENABLED` | `true` | Enable/disable Swagger UI and API docs (set to `false` in production) |
 
 ### 3. Run
 
@@ -222,9 +223,12 @@ The Dockerfile runs `./gradlew clean bootJar` and starts `java -jar app.jar` on 
 3. **Start command:** `java -jar build/libs/app.jar`
 4. Set environment variables (same as `.env.example`). Use the **session pooler** JDBC URL for `DATABASE_URL` on Render.
 5. Set `CORS_ALLOWED_ORIGINS` to your Vercel URL + local dev origins.
-6. Post-deploy smoke test:
+6. **Production security hardening:**
+   - Set `SPRING_PROFILES_ACTIVE=prod` to activate production profile
+   - Set `SWAGGER_ENABLED=false` to disable Swagger UI in production
+7. Post-deploy smoke test:
    - `GET /actuator/health`
-   - `GET /docs`
+   - `GET /docs` (should return 404 if `SWAGGER_ENABLED=false`)
    - Preflight `OPTIONS` from Vercel origin
    - Authenticated `GET /api/v1/products` from the hosted frontend
 
