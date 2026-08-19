@@ -55,12 +55,11 @@ export function MovementDetailDialog({
     movement.productName ??
     products.find((p) => p.id === movement.productId)?.name ??
     movement.productId;
-  const whName = (id?: string) =>
-    id ? warehouses.find((w) => w.id === id)?.name ?? "—" : "—";
+  const whName = (id?: string) => (id ? (warehouses.find((w) => w.id === id)?.name ?? "—") : "—");
   const fromLabel =
-    movement.type === "IN" ? movement.provider ?? "—" : whName(movement.fromWarehouseId);
+    movement.type === "IN" ? (movement.provider ?? "—") : whName(movement.fromWarehouseId);
   const toLabel =
-    movement.type === "OUT" ? movement.recipient ?? "—" : whName(movement.toWarehouseId);
+    movement.type === "OUT" ? (movement.recipient ?? "—") : whName(movement.toWarehouseId);
   const userName = movement.userName ?? "—";
   const qtyDisplay = movement.qty > 0 ? `+${movement.qty}` : String(movement.qty);
   const note = movement.note?.trim();

@@ -47,7 +47,10 @@ function settingsToForm(settings: WorkspaceSettings): SettingsForm {
   };
 }
 
-function buildPatch(form: SettingsForm, settings: WorkspaceSettings): WorkspaceSettingsUpdate | null {
+function buildPatch(
+  form: SettingsForm,
+  settings: WorkspaceSettings,
+): WorkspaceSettingsUpdate | null {
   const patch: WorkspaceSettingsUpdate = {};
   const name = form.businessName.trim();
   const email = form.contactEmail.trim();
@@ -144,7 +147,10 @@ function SettingsPage() {
   if (isLoading || !form || !settings) {
     return (
       <div>
-        <PageHeader title="Settings" description="Configure company, tax, receipt and integration defaults." />
+        <PageHeader
+          title="Settings"
+          description="Configure company, tax, receipt and integration defaults."
+        />
         <div className="grid gap-4 lg:grid-cols-2">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-48" />
@@ -175,8 +181,8 @@ function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              ProdWatch adapts to the size of your operation. Small shops can hide warehouse selectors entirely;
-              larger companies get full multi-warehouse routing.
+              ProdWatch adapts to the size of your operation. Small shops can hide warehouse
+              selectors entirely; larger companies get full multi-warehouse routing.
             </p>
             <div className="space-y-1.5">
               <Label>Operating mode</Label>
@@ -307,10 +313,7 @@ function SettingsPage() {
       </div>
 
       <div className="sticky bottom-4 mt-6 flex justify-end">
-        <Button
-          onClick={handleSave}
-          disabled={!dirty || updateSettings.isPending}
-        >
+        <Button onClick={handleSave} disabled={!dirty || updateSettings.isPending}>
           {updateSettings.isPending ? "Saving…" : "Save changes"}
         </Button>
       </div>

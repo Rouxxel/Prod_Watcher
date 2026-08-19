@@ -48,7 +48,10 @@ export function AuditDetailDialog({ entry, open, onOpenChange }: Props) {
         </DialogHeader>
         <dl className="relative z-[1] grid grid-cols-2 gap-x-4 gap-y-4">
           <DetailField label="Action">
-            <Badge variant="outline" className="bg-primary/15 text-primary-foreground border-primary/30">
+            <Badge
+              variant="outline"
+              className="bg-primary/15 text-primary-foreground border-primary/30"
+            >
               {entry.action}
             </Badge>
           </DetailField>

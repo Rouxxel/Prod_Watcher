@@ -48,7 +48,14 @@ const empty: ProductInput = {
   images: [],
 };
 
-export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onSubmit, pending }: Props) {
+export function ProductFormDialog({
+  open,
+  onOpenChange,
+  initial,
+  warehouses,
+  onSubmit,
+  pending,
+}: Props) {
   const [form, setForm] = useState<ProductInput>(empty);
   const [imageUrl, setImageUrl] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -110,10 +117,7 @@ export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onS
       set("images", [...form.images, url]);
       notify.success("Image uploaded");
     } catch (err) {
-      notify.error(
-        "Upload failed",
-        err instanceof Error ? err.message : "Could not upload image.",
-      );
+      notify.error("Upload failed", err instanceof Error ? err.message : "Could not upload image.");
     } finally {
       setUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -185,14 +189,17 @@ export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onS
             {!uploadEnabled && (
               <p className="text-xs text-muted-foreground">
                 Set <code className="text-foreground/80">VITE_SUPABASE_URL</code> and{" "}
-                <code className="text-foreground/80">VITE_SUPABASE_ANON_KEY</code> to enable file uploads.
-                URL paste works without them.
+                <code className="text-foreground/80">VITE_SUPABASE_ANON_KEY</code> to enable file
+                uploads. URL paste works without them.
               </p>
             )}
             {form.images.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {form.images.map((src, idx) => (
-                  <div key={idx} className="relative h-12 w-12 overflow-hidden rounded-md border border-border">
+                  <div
+                    key={idx}
+                    className="relative h-12 w-12 overflow-hidden rounded-md border border-border"
+                  >
                     <img src={src} alt="" className="h-full w-full object-cover" />
                     <button
                       type="button"
@@ -210,16 +217,31 @@ export function ProductFormDialog({ open, onOpenChange, initial, warehouses, onS
 
           <div className="space-y-1.5">
             <Label htmlFor="name">Name</Label>
-            <Input id="name" value={form.name} onChange={(e) => set("name", e.target.value)} required />
+            <Input
+              id="name"
+              value={form.name}
+              onChange={(e) => set("name", e.target.value)}
+              required
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="sku">SKU</Label>
-              <Input id="sku" value={form.sku} onChange={(e) => set("sku", e.target.value)} required />
+              <Input
+                id="sku"
+                value={form.sku}
+                onChange={(e) => set("sku", e.target.value)}
+                required
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="category">Category</Label>
-              <Input id="category" value={form.category} onChange={(e) => set("category", e.target.value)} required />
+              <Input
+                id="category"
+                value={form.category}
+                onChange={(e) => set("category", e.target.value)}
+                required
+              />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">

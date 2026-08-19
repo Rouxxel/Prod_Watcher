@@ -56,29 +56,32 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
-    try {
-      const session = await authService.login({
-        email: email.trim(),
-        password,
-      });
-      setAccessToken(session.accessToken);
-      const me = await authService.getMe();
-      setUser(me);
-      await qc.invalidateQueries({ queryKey: ["settings"] });
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem(APP_MODE_KEY);
+  const login = useCallback(
+    async (email: string, password: string): Promise<LoginResult> => {
+      try {
+        const session = await authService.login({
+          email: email.trim(),
+          password,
+        });
+        setAccessToken(session.accessToken);
+        const me = await authService.getMe();
+        setUser(me);
+        await qc.invalidateQueries({ queryKey: ["settings"] });
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem(APP_MODE_KEY);
+        }
+        return { ok: true };
+      } catch (err) {
+        clearAccessToken();
+        setUser(null);
+        if (isApiError(err)) {
+          return { ok: false, error: err.message };
+        }
+        return { ok: false, error: "Unable to log in." };
       }
-      return { ok: true };
-    } catch (err) {
-      clearAccessToken();
-      setUser(null);
-      if (isApiError(err)) {
-        return { ok: false, error: err.message };
-      }
-      return { ok: false, error: "Unable to log in." };
-    }
-  }, [qc]);
+    },
+    [qc],
+  );
 
   const logout = useCallback(async () => {
     try {

@@ -167,13 +167,13 @@ export function MovementFormDialog({
                   fromWarehouseId:
                     type === "IN" || type === "ADJUSTMENT"
                       ? null
-                      : f.fromWarehouseId ?? defaultWarehouseId,
+                      : (f.fromWarehouseId ?? defaultWarehouseId),
                   toWarehouseId:
                     type === "OUT" || type === "ADJUSTMENT"
                       ? null
-                      : f.toWarehouseId ?? defaultWarehouseId,
-                  provider: type === "IN" ? f.provider ?? "" : null,
-                  recipient: type === "OUT" ? f.recipient ?? "" : null,
+                      : (f.toWarehouseId ?? defaultWarehouseId),
+                  provider: type === "IN" ? (f.provider ?? "") : null,
+                  recipient: type === "OUT" ? (f.recipient ?? "") : null,
                 }));
                 if (type === "ADJUSTMENT") {
                   setAdjustmentDirection("add");

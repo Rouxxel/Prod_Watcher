@@ -1,4 +1,10 @@
-import { Outlet, createFileRoute, useRouterState, Navigate, redirect } from "@tanstack/react-router";
+import {
+  Outlet,
+  createFileRoute,
+  useRouterState,
+  Navigate,
+  redirect,
+} from "@tanstack/react-router";
 import { useEffect } from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
@@ -8,7 +14,12 @@ import { CRTOverlay } from "@/components/layout/CRTOverlay";
 import { useAppMode } from "@/hooks/use-app-mode";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { getAccessToken } from "@/lib/auth-token";
-import { allowedModesForRole, canUseAppMode, defaultAppModeForRole, defaultPathForRole } from "@/lib/role-modes";
+import {
+  allowedModesForRole,
+  canUseAppMode,
+  defaultAppModeForRole,
+  defaultPathForRole,
+} from "@/lib/role-modes";
 import { canUsePosCheckout, isAdminOnlyPath, isAdminRole } from "@/lib/role-access";
 
 export const Route = createFileRoute("/_app")({
@@ -93,12 +104,25 @@ function AppLayout() {
       <div
         aria-hidden
         className="vw-ambient-glow"
-        style={{ top: "-10%", left: "-10%", width: "60vw", height: "60vh", background: "var(--gradient-sun)" }}
+        style={{
+          top: "-10%",
+          left: "-10%",
+          width: "60vw",
+          height: "60vh",
+          background: "var(--gradient-sun)",
+        }}
       />
       <div
         aria-hidden
         className="vw-ambient-glow"
-        style={{ bottom: "-20%", right: "-10%", width: "55vw", height: "55vh", background: "var(--gradient-accent)", opacity: 0.4 }}
+        style={{
+          bottom: "-20%",
+          right: "-10%",
+          width: "55vw",
+          height: "55vh",
+          background: "var(--gradient-accent)",
+          opacity: 0.4,
+        }}
       />
       <div className="relative z-10 flex min-h-screen w-full">
         <AppSidebar />

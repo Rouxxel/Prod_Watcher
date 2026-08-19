@@ -93,8 +93,18 @@
   --gradient-primary: linear-gradient(135deg, oklch(0.52 0.16 18), oklch(0.32 0.11 12));
   --gradient-accent: linear-gradient(135deg, oklch(0.32 0.11 15), oklch(0.16 0.01 20));
   --gradient-surface: linear-gradient(180deg, oklch(0.2 0.008 20), oklch(0.16 0.006 20));
-  --gradient-sun: linear-gradient(180deg, oklch(0.72 0.18 25) 0%, oklch(0.55 0.18 18) 45%, oklch(0.32 0.13 12) 100%);
-  --gradient-horizon: linear-gradient(180deg, transparent 0%, oklch(0.42 0.135 15 / 0.0) 60%, oklch(0.52 0.16 18 / 0.25) 100%);
+  --gradient-sun: linear-gradient(
+    180deg,
+    oklch(0.72 0.18 25) 0%,
+    oklch(0.55 0.18 18) 45%,
+    oklch(0.32 0.13 12) 100%
+  );
+  --gradient-horizon: linear-gradient(
+    180deg,
+    transparent 0%,
+    oklch(0.42 0.135 15 / 0) 60%,
+    oklch(0.52 0.16 18 / 0.25) 100%
+  );
 
   --shadow-elegant: 0 10px 30px -12px oklch(0.42 0.135 15 / 0.45);
   --shadow-soft: 0 4px 14px -6px oklch(0 0 0 / 0.5);
@@ -135,7 +145,8 @@
   * {
     border-color: var(--color-border);
   }
-  html, body {
+  html,
+  body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
@@ -152,7 +163,12 @@
       radial-gradient(1px 1px at 88% 64%, oklch(0.95 0 0 / 0.4), transparent 50%);
     background-attachment: fixed;
   }
-  h1, h2, h3, h4, h5, h6,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
   .font-display {
     font-family: "Orbitron", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
     letter-spacing: 0.005em;
@@ -176,9 +192,12 @@
     background:
       linear-gradient(180deg, transparent 0%, oklch(0.145 0.005 20 / 0.85) 90%),
       linear-gradient(oklch(0.6 0.18 18 / 0.55) 1px, transparent 1px),
-      linear-gradient(90deg, oklch(0.6 0.18 18 / 0.55) 1px, transparent 1px),
-      var(--background);
-    background-size: 100% 100%, 40px 40px, 40px 40px, auto;
+      linear-gradient(90deg, oklch(0.6 0.18 18 / 0.55) 1px, transparent 1px), var(--background);
+    background-size:
+      100% 100%,
+      40px 40px,
+      40px 40px,
+      auto;
     transform-origin: center top;
   }
   .vw-scanlines {
@@ -202,7 +221,13 @@
       0 0 18px -4px oklch(0.52 0.16 18 / 0.55);
   }
   .vw-chrome-text {
-    background: linear-gradient(180deg, oklch(0.98 0 0) 0%, oklch(0.78 0.02 20) 45%, oklch(0.52 0.16 18) 55%, oklch(0.32 0.11 12) 100%);
+    background: linear-gradient(
+      180deg,
+      oklch(0.98 0 0) 0%,
+      oklch(0.78 0.02 20) 45%,
+      oklch(0.52 0.16 18) 55%,
+      oklch(0.32 0.11 12) 100%
+    );
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -224,10 +249,17 @@
     inset: 0;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(135deg, oklch(0.62 0.18 20 / 0.55), transparent 45%, oklch(0.62 0.18 20 / 0.45));
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    background: linear-gradient(
+      135deg,
+      oklch(0.62 0.18 20 / 0.55),
+      transparent 45%,
+      oklch(0.62 0.18 20 / 0.45)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
-            mask-composite: exclude;
+    mask-composite: exclude;
     pointer-events: none;
   }
   .vw-panel::after {
@@ -237,14 +269,22 @@
     pointer-events: none;
     border-radius: inherit;
     background:
-      linear-gradient(to right, oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) top left / 12px 1px no-repeat,
-      linear-gradient(to bottom, oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) top left / 1px 12px no-repeat,
-      linear-gradient(to left,  oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) top right / 12px 1px no-repeat,
-      linear-gradient(to bottom, oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) top right / 1px 12px no-repeat,
-      linear-gradient(to right, oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) bottom left / 12px 1px no-repeat,
-      linear-gradient(to top,    oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) bottom left / 1px 12px no-repeat,
-      linear-gradient(to left,  oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) bottom right / 12px 1px no-repeat,
-      linear-gradient(to top,    oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) bottom right / 1px 12px no-repeat;
+      linear-gradient(to right, oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) top left / 12px
+        1px no-repeat,
+      linear-gradient(to bottom, oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) top left / 1px
+        12px no-repeat,
+      linear-gradient(to left, oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) top right / 12px
+        1px no-repeat,
+      linear-gradient(to bottom, oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) top right / 1px
+        12px no-repeat,
+      linear-gradient(to right, oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) bottom left /
+        12px 1px no-repeat,
+      linear-gradient(to top, oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) bottom left / 1px
+        12px no-repeat,
+      linear-gradient(to left, oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) bottom right /
+        12px 1px no-repeat,
+      linear-gradient(to top, oklch(0.62 0.18 20 / 0.7) 0 12px, transparent 12px) bottom right / 1px
+        12px no-repeat;
   }
 
   .vw-ambient-grid {
@@ -278,8 +318,12 @@
     animation: crt-scan-drift 7s linear infinite;
   }
   @keyframes crt-scan-drift {
-    from { background-position: 0 0; }
-    to   { background-position: 0 8px; }
+    from {
+      background-position: 0 0;
+    }
+    to {
+      background-position: 0 8px;
+    }
   }
   .crt-sweep {
     background: linear-gradient(
@@ -293,28 +337,56 @@
     animation: crt-sweep-move 9s linear infinite;
   }
   @keyframes crt-sweep-move {
-    0%   { transform: translateY(0); }
-    100% { transform: translateY(400vh); }
+    0% {
+      transform: translateY(0);
+    }
+    100% {
+      transform: translateY(400vh);
+    }
   }
   .crt-flicker {
     animation: crt-flicker-anim 4.5s steps(1, end) infinite;
   }
   @keyframes crt-flicker-anim {
-    0%, 100% { opacity: 0.10; }
-    8%       { opacity: 0.18; }
-    9%       { opacity: 0.06; }
-    20%      { opacity: 0.12; }
-    45%      { opacity: 0.08; }
-    46%      { opacity: 0.16; }
-    70%      { opacity: 0.11; }
+    0%,
+    100% {
+      opacity: 0.1;
+    }
+    8% {
+      opacity: 0.18;
+    }
+    9% {
+      opacity: 0.06;
+    }
+    20% {
+      opacity: 0.12;
+    }
+    45% {
+      opacity: 0.08;
+    }
+    46% {
+      opacity: 0.16;
+    }
+    70% {
+      opacity: 0.11;
+    }
   }
 
   .vw-pulse {
     animation: vw-pulse-anim 4s ease-in-out infinite;
   }
   @keyframes vw-pulse-anim {
-    0%, 100% { box-shadow: inset 0 0 0 1px oklch(0.52 0.16 18 / 0.35), 0 0 18px -6px oklch(0.52 0.16 18 / 0.45); }
-    50%      { box-shadow: inset 0 0 0 1px oklch(0.62 0.18 20 / 0.55), 0 0 28px -4px oklch(0.62 0.18 20 / 0.75); }
+    0%,
+    100% {
+      box-shadow:
+        inset 0 0 0 1px oklch(0.52 0.16 18 / 0.35),
+        0 0 18px -6px oklch(0.52 0.16 18 / 0.45);
+    }
+    50% {
+      box-shadow:
+        inset 0 0 0 1px oklch(0.62 0.18 20 / 0.55),
+        0 0 28px -4px oklch(0.62 0.18 20 / 0.75);
+    }
   }
 }
 
@@ -344,4 +416,6 @@
     inset 0 0 0 1px oklch(0.72 0.2 22 / 0.7),
     0 0 14px oklch(0.62 0.18 20 / 0.8);
 }
-*::-webkit-scrollbar-corner { background: transparent; }
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}

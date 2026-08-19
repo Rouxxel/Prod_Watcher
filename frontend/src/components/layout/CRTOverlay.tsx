@@ -2,7 +2,10 @@
 // Combines: moving scanlines, gentle flicker, vignette, and a slow sweep beam.
 export function CRTOverlay() {
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-[60] overflow-hidden mix-blend-screen">
+    <div
+      aria-hidden
+      className="pointer-events-none fixed inset-0 z-[60] overflow-hidden mix-blend-screen"
+    >
       {/* Static scanlines (very subtle) */}
       <div className="absolute inset-0 vw-scanlines opacity-[0.18]" />
       {/* Animated scanlines (slow drift) */}

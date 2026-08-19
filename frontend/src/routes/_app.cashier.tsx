@@ -135,12 +135,15 @@ function CashierPage() {
           {selectedWarehouse && (
             <p className="mb-3 text-xs text-muted-foreground">
               {readOnly ? (
-                <>Viewing stock at <span className="font-medium text-foreground">{selectedWarehouse.name}</span>.</>
+                <>
+                  Viewing stock at{" "}
+                  <span className="font-medium text-foreground">{selectedWarehouse.name}</span>.
+                </>
               ) : (
                 <>
                   Showing stock available at{" "}
-                  <span className="font-medium text-foreground">{selectedWarehouse.name}</span>. Switch warehouse to
-                  add items from another location.
+                  <span className="font-medium text-foreground">{selectedWarehouse.name}</span>.
+                  Switch warehouse to add items from another location.
                 </>
               )}
             </p>
@@ -170,7 +173,9 @@ function CashierPage() {
                       {p.sku} · {p.category}
                     </div>
                     <div className="mt-1 flex items-center justify-between">
-                      <span className="text-sm font-semibold tabular-nums">{currency(p.price)}</span>
+                      <span className="text-sm font-semibold tabular-nums">
+                        {currency(p.price)}
+                      </span>
                       <Badge variant="outline" className="text-[10px]">
                         {p.stock} in stock
                       </Badge>
@@ -189,7 +194,9 @@ function CashierPage() {
                       {p.sku} · {p.category}
                     </div>
                     <div className="mt-1 flex items-center justify-between">
-                      <span className="text-sm font-semibold tabular-nums">{currency(p.price)}</span>
+                      <span className="text-sm font-semibold tabular-nums">
+                        {currency(p.price)}
+                      </span>
                       <Badge variant="outline" className="text-[10px]">
                         {p.stock} in stock
                       </Badge>
@@ -202,96 +209,100 @@ function CashierPage() {
         </Card>
 
         {!readOnly && (
-        <Card className="flex flex-col p-4">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Cart</h2>
-          {cart.items.length === 0 ? (
-            <div className="grid flex-1 place-items-center py-10 text-center text-sm text-muted-foreground">
-              <div>
-                <ShoppingCart className="mx-auto mb-2 h-8 w-8" />
-                Cart is empty
+          <Card className="flex flex-col p-4">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Cart
+            </h2>
+            {cart.items.length === 0 ? (
+              <div className="grid flex-1 place-items-center py-10 text-center text-sm text-muted-foreground">
+                <div>
+                  <ShoppingCart className="mx-auto mb-2 h-8 w-8" />
+                  Cart is empty
+                </div>
+              </div>
+            ) : (
+              <ul className="flex-1 divide-y divide-border">
+                {cart.items.map((i) => (
+                  <li key={cartLineKey(i.productId, i.warehouseId)} className="py-3">
+                    <div className="flex justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">{i.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {i.sku} · {currency(i.unitPrice)}
+                        </div>
+                        {i.warehouseName && (
+                          <div className="text-xs text-muted-foreground">{i.warehouseName}</div>
+                        )}
+                      </div>
+                      <div className="text-right text-sm tabular-nums">
+                        {currency(i.qty * i.unitPrice)}
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-7 w-7"
+                        onClick={() =>
+                          cart.setQty(i.productId, i.warehouseId, i.qty - 1, i.maxStock)
+                        }
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="w-8 text-center text-sm tabular-nums">{i.qty}</span>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-7 w-7"
+                        disabled={i.qty >= (i.maxStock ?? i.qty)}
+                        onClick={() => {
+                          const maxStock = i.maxStock ?? i.qty;
+                          if (i.qty >= maxStock) {
+                            validation.quantityExceedsStock(maxStock);
+                            return;
+                          }
+                          cart.setQty(i.productId, i.warehouseId, i.qty + 1, maxStock);
+                        }}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="ml-auto h-7 w-7"
+                        onClick={() => cart.remove(i.productId, i.warehouseId)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="mt-4 space-y-1 border-t border-border pt-3 text-sm">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Subtotal</span>
+                <span className="tabular-nums">{currency(cart.subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>{cart.taxLineLabel}</span>
+                <span className="tabular-nums">{currency(cart.tax)}</span>
+              </div>
+              <div className="flex justify-between pt-1 text-base font-semibold">
+                <span>Total</span>
+                <span className="tabular-nums">{currency(cart.total)}</span>
               </div>
             </div>
-          ) : (
-            <ul className="flex-1 divide-y divide-border">
-              {cart.items.map((i) => (
-                <li key={cartLineKey(i.productId, i.warehouseId)} className="py-3">
-                  <div className="flex justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{i.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {i.sku} · {currency(i.unitPrice)}
-                      </div>
-                      {i.warehouseName && (
-                        <div className="text-xs text-muted-foreground">{i.warehouseName}</div>
-                      )}
-                    </div>
-                    <div className="text-right text-sm tabular-nums">
-                      {currency(i.qty * i.unitPrice)}
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-center gap-1">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="h-7 w-7"
-                      onClick={() => cart.setQty(i.productId, i.warehouseId, i.qty - 1, i.maxStock)}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <span className="w-8 text-center text-sm tabular-nums">{i.qty}</span>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="h-7 w-7"
-                      disabled={i.qty >= (i.maxStock ?? i.qty)}
-                      onClick={() => {
-                        const maxStock = i.maxStock ?? i.qty;
-                        if (i.qty >= maxStock) {
-                          validation.quantityExceedsStock(maxStock);
-                          return;
-                        }
-                        cart.setQty(i.productId, i.warehouseId, i.qty + 1, maxStock);
-                      }}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="ml-auto h-7 w-7"
-                      onClick={() => cart.remove(i.productId, i.warehouseId)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
 
-          <div className="mt-4 space-y-1 border-t border-border pt-3 text-sm">
-            <div className="flex justify-between text-muted-foreground">
-              <span>Subtotal</span>
-              <span className="tabular-nums">{currency(cart.subtotal)}</span>
-            </div>
-            <div className="flex justify-between text-muted-foreground">
-              <span>{cart.taxLineLabel}</span>
-              <span className="tabular-nums">{currency(cart.tax)}</span>
-            </div>
-            <div className="flex justify-between pt-1 text-base font-semibold">
-              <span>Total</span>
-              <span className="tabular-nums">{currency(cart.total)}</span>
-            </div>
-          </div>
-
-          <Button
-            className="mt-4 w-full"
-            disabled={cart.items.length === 0 || cart.isCheckingOut}
-            onClick={handleCheckout}
-          >
-            {cart.isCheckingOut ? "Processing…" : "Checkout"}
-          </Button>
-        </Card>
+            <Button
+              className="mt-4 w-full"
+              disabled={cart.items.length === 0 || cart.isCheckingOut}
+              onClick={handleCheckout}
+            >
+              {cart.isCheckingOut ? "Processing…" : "Checkout"}
+            </Button>
+          </Card>
         )}
       </div>
 
@@ -315,15 +326,21 @@ function CashierPage() {
                 </div>
               )}
               <div className="text-xs text-muted-foreground">
-                {dateTime(lastTransaction.timestamp)} · #{lastTransaction.id.slice(0, 8).toUpperCase()}
+                {dateTime(lastTransaction.timestamp)} · #
+                {lastTransaction.id.slice(0, 8).toUpperCase()}
               </div>
               <ul className="divide-y divide-border rounded-md border border-border">
                 {lastTransaction.items.map((item) => (
-                  <li key={cartLineKey(item.productId, item.warehouseId ?? item.productId)} className="flex justify-between gap-2 px-3 py-2">
+                  <li
+                    key={cartLineKey(item.productId, item.warehouseId ?? item.productId)}
+                    className="flex justify-between gap-2 px-3 py-2"
+                  >
                     <span className="min-w-0 truncate">
                       {item.name} × {item.qty}
                     </span>
-                    <span className="shrink-0 tabular-nums">{currency(item.qty * item.unitPrice)}</span>
+                    <span className="shrink-0 tabular-nums">
+                      {currency(item.qty * item.unitPrice)}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -338,7 +355,9 @@ function CashierPage() {
                 </div>
               </div>
               <div className="rounded-md border border-border bg-muted/30 p-3 text-center">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Total charged</div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Total charged
+                </div>
                 <div className="mt-1 text-2xl font-semibold tabular-nums">
                   {currency(lastTransaction.total)}
                 </div>

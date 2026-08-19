@@ -21,8 +21,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
             "group-[.toaster]:!border-[oklch(0.65_0.16_150/0.6)] group-[.toaster]:shadow-[0_0_22px_-4px_oklch(0.65_0.16_150/0.5)]",
           warning:
             "group-[.toaster]:!border-[oklch(0.78_0.15_75/0.6)] group-[.toaster]:shadow-[0_0_22px_-4px_oklch(0.78_0.15_75/0.5)]",
-          info:
-            "group-[.toaster]:!border-[oklch(0.65_0.13_230/0.6)] group-[.toaster]:shadow-[0_0_22px_-4px_oklch(0.65_0.13_230/0.5)]",
+          info: "group-[.toaster]:!border-[oklch(0.65_0.13_230/0.6)] group-[.toaster]:shadow-[0_0_22px_-4px_oklch(0.65_0.13_230/0.5)]",
         },
       }}
       {...props}

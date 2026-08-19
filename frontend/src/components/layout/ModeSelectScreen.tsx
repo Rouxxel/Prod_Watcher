@@ -21,7 +21,12 @@ const cards: Array<{
     description:
       "For managers, warehouse workers and inspectors. Focused on what's in stock, where it lives, and how it moves.",
     icon: Boxes,
-    points: ["Products & photos", "Warehouses / single location", "Stock movements", "Inventory audit"],
+    points: [
+      "Products & photos",
+      "Warehouses / single location",
+      "Stock movements",
+      "Inventory audit",
+    ],
   },
   {
     mode: "selling",
@@ -66,7 +71,10 @@ export function ModeSelectScreen() {
           maskImage: "linear-gradient(to bottom, transparent 0%, black 35%, transparent 100%)",
         }}
       />
-      <div className="vw-scanlines pointer-events-none absolute inset-0 opacity-[0.08]" aria-hidden />
+      <div
+        className="vw-scanlines pointer-events-none absolute inset-0 opacity-[0.08]"
+        aria-hidden
+      />
 
       <div className="relative w-full max-w-4xl">
         <div className="mb-10 flex flex-col items-center text-center">
@@ -83,11 +91,14 @@ export function ModeSelectScreen() {
             Choose how you want to work today. You can switch modes anytime from the top bar.
           </p>
           <p className="font-mono-retro mt-2 text-[11px] uppercase tracking-widest text-muted-foreground">
-            Signed in as <span className="text-foreground/80">{user ? roleLabel(user.role) : "—"}</span>
+            Signed in as{" "}
+            <span className="text-foreground/80">{user ? roleLabel(user.role) : "—"}</span>
           </p>
         </div>
 
-        <div className={`grid gap-4 ${visibleCards.length > 1 ? "sm:grid-cols-2" : "max-w-md mx-auto"}`}>
+        <div
+          className={`grid gap-4 ${visibleCards.length > 1 ? "sm:grid-cols-2" : "max-w-md mx-auto"}`}
+        >
           {visibleCards.map((c) => (
             <button
               key={c.mode}
@@ -128,7 +139,12 @@ export function ModeSelectScreen() {
         </div>
 
         <div className="mt-8 flex justify-center">
-          <Button variant="ghost" size="sm" onClick={() => setMode(null)} className="text-muted-foreground">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setMode(null)}
+            className="text-muted-foreground"
+          >
             (Demo) Stay on this screen
           </Button>
         </div>

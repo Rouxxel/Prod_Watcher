@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSettingsContext } from "@/hooks/use-settings";
 import { toastApiError } from "@/lib/api-error";
@@ -14,9 +7,7 @@ import { isApiError } from "@/services/api";
 import { transactionsService } from "@/services/transactions.service";
 import { cartLineKey, type CartItem, type Product, type Transaction } from "@/types";
 
-type CheckoutResult =
-  | { ok: true; transaction: Transaction }
-  | { ok: false };
+type CheckoutResult = { ok: true; transaction: Transaction } | { ok: false };
 
 export interface CartAddContext {
   warehouseId: string;

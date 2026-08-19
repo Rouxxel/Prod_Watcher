@@ -16,7 +16,9 @@ export function PageHeader({
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_oklch(0.52_0.16_18/0.8)]" />
           ProdWatch · Module
         </div>
-        <h1 className="font-display text-2xl font-semibold uppercase tracking-wide vw-text-glow">{title}</h1>
+        <h1 className="font-display text-2xl font-semibold uppercase tracking-wide vw-text-glow">
+          {title}
+        </h1>
         {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}

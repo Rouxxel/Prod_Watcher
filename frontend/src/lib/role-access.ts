@@ -12,10 +12,7 @@ export function canUsePosCheckout(role: Role): boolean {
 /** Read completed sales (transactions list/detail). */
 export function canViewTransactions(role: Role): boolean {
   return (
-    role === "admin" ||
-    role === "cashier" ||
-    role === "warehouse_manager" ||
-    role === "inspector"
+    role === "admin" || role === "cashier" || role === "warehouse_manager" || role === "inspector"
   );
 }
 
@@ -38,10 +35,7 @@ export function canAdminResetPassword(
 }
 
 /** Admins may permanently delete non-admin users (not themselves or other admins). */
-export function canAdminDeleteUser(
-  actorId: string,
-  target: { id: string; role: Role },
-): boolean {
+export function canAdminDeleteUser(actorId: string, target: { id: string; role: Role }): boolean {
   return target.id !== actorId && !isAdminRole(target.role);
 }
 

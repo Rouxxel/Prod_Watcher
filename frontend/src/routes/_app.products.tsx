@@ -120,13 +120,29 @@ function ProductsPage() {
     }
   };
 
-  const warehouseName = (id: string) =>
-    warehouses.data?.find((w) => w.id === id)?.name ?? "—";
+  const warehouseName = (id: string) => warehouses.data?.find((w) => w.id === id)?.name ?? "—";
 
   const stockBadge = (p: Product) => {
-    if (p.stock === 0) return <Badge variant="outline" className="bg-destructive/15 text-destructive border-destructive/30">Out</Badge>;
-    if (p.stock <= p.lowStockThreshold) return <Badge variant="outline" className="bg-warning/15 text-warning border-warning/30">Low</Badge>;
-    return <Badge variant="outline" className="bg-success/15 text-success border-success/30">OK</Badge>;
+    if (p.stock === 0)
+      return (
+        <Badge
+          variant="outline"
+          className="bg-destructive/15 text-destructive border-destructive/30"
+        >
+          Out
+        </Badge>
+      );
+    if (p.stock <= p.lowStockThreshold)
+      return (
+        <Badge variant="outline" className="bg-warning/15 text-warning border-warning/30">
+          Low
+        </Badge>
+      );
+    return (
+      <Badge variant="outline" className="bg-success/15 text-success border-success/30">
+        OK
+      </Badge>
+    );
   };
 
   return (
@@ -140,7 +156,12 @@ function ProductsPage() {
         }
         actions={
           !readOnly ? (
-            <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+            >
               <Plus className="mr-2 h-4 w-4" /> Add product
             </Button>
           ) : undefined
@@ -159,27 +180,37 @@ function ProductsPage() {
             />
           </div>
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Category" /></SelectTrigger>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All categories</SelectItem>
               {categories.map((c) => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           {!isSingleLocation && (
             <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Warehouse" /></SelectTrigger>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Warehouse" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All warehouses</SelectItem>
                 {warehouses.data?.map((w) => (
-                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                  <SelectItem key={w.id} value={w.id}>
+                    {w.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
           <Select value={stockLevel} onValueChange={setStockLevel}>
-            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Stock level" /></SelectTrigger>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Stock level" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All stock</SelectItem>
               <SelectItem value="out">Out of stock</SelectItem>
@@ -202,7 +233,12 @@ function ProductsPage() {
             }
             action={
               !readOnly ? (
-                <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+                <Button
+                  onClick={() => {
+                    setEditing(null);
+                    setDialogOpen(true);
+                  }}
+                >
                   <Plus className="mr-2 h-4 w-4" /> Add product
                 </Button>
               ) : undefined
@@ -243,12 +279,21 @@ function ProductsPage() {
                     <TableCell className="text-right tabular-nums">{p.stock}</TableCell>
                     <TableCell>{stockBadge(p)}</TableCell>
                     {!isSingleLocation && (
-                      <TableCell className="text-muted-foreground">{warehouseName(p.warehouseId)}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {warehouseName(p.warehouseId)}
+                      </TableCell>
                     )}
                     {!readOnly && (
                       <TableCell>
                         <div className="flex justify-end gap-1">
-                          <Button size="icon" variant="ghost" onClick={() => { setEditing(p); setDialogOpen(true); }}>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditing(p);
+                              setDialogOpen(true);
+                            }}
+                          >
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button size="icon" variant="ghost" onClick={() => setToDelete(p)}>
@@ -269,7 +314,10 @@ function ProductsPage() {
         <>
           <ProductFormDialog
             open={dialogOpen}
-            onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditing(null); }}
+            onOpenChange={(o) => {
+              setDialogOpen(o);
+              if (!o) setEditing(null);
+            }}
             initial={editing}
             warehouses={warehouses.data ?? []}
             onSubmit={handleSubmit}

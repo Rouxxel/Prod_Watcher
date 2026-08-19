@@ -23,16 +23,25 @@ function CartPage() {
           icon={ShoppingCart}
           title="Cart is empty"
           description="Head to the cashier screen to add products."
-          action={<Button asChild><Link to="/cashier">Open cashier</Link></Button>}
+          action={
+            <Button asChild>
+              <Link to="/cashier">Open cashier</Link>
+            </Button>
+          }
         />
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
           <Card className="divide-y divide-border p-2">
             {cart.items.map((i) => (
-              <div key={cartLineKey(i.productId, i.warehouseId)} className="flex items-center gap-3 p-3">
+              <div
+                key={cartLineKey(i.productId, i.warehouseId)}
+                className="flex items-center gap-3 p-3"
+              >
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">{i.name}</div>
-                  <div className="text-xs text-muted-foreground">{i.sku} · {currency(i.unitPrice)}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {i.sku} · {currency(i.unitPrice)}
+                  </div>
                   {i.warehouseName && (
                     <div className="text-xs text-muted-foreground">{i.warehouseName}</div>
                   )}
@@ -64,7 +73,9 @@ function CartPage() {
                     <Plus className="h-3 w-3" />
                   </Button>
                 </div>
-                <div className="w-24 text-right text-sm tabular-nums">{currency(i.qty * i.unitPrice)}</div>
+                <div className="w-24 text-right text-sm tabular-nums">
+                  {currency(i.qty * i.unitPrice)}
+                </div>
                 <Button
                   size="icon"
                   variant="ghost"
@@ -78,14 +89,25 @@ function CartPage() {
 
           <Card className="p-4">
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span className="tabular-nums">{currency(cart.subtotal)}</span></div>
-              <div className="flex justify-between text-muted-foreground"><span>{cart.taxLineLabel}</span><span className="tabular-nums">{currency(cart.tax)}</span></div>
-              <div className="flex justify-between pt-2 text-base font-semibold"><span>Total</span><span className="tabular-nums">{currency(cart.total)}</span></div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Subtotal</span>
+                <span className="tabular-nums">{currency(cart.subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>{cart.taxLineLabel}</span>
+                <span className="tabular-nums">{currency(cart.tax)}</span>
+              </div>
+              <div className="flex justify-between pt-2 text-base font-semibold">
+                <span>Total</span>
+                <span className="tabular-nums">{currency(cart.total)}</span>
+              </div>
             </div>
             <Button asChild className="mt-4 w-full">
               <Link to="/cashier">Continue to checkout</Link>
             </Button>
-            <Button variant="ghost" className="mt-2 w-full" onClick={cart.clear}>Clear cart</Button>
+            <Button variant="ghost" className="mt-2 w-full" onClick={cart.clear}>
+              Clear cart
+            </Button>
           </Card>
         </div>
       )}

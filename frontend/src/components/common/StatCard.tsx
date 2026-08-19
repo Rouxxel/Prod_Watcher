@@ -70,7 +70,9 @@ export function StatCard({
           <div
             className={cn(
               "grid h-10 w-10 shrink-0 place-items-center rounded-md",
-              accent ? "bg-background/15 text-primary-foreground" : "bg-primary/15 text-primary-foreground",
+              accent
+                ? "bg-background/15 text-primary-foreground"
+                : "bg-primary/15 text-primary-foreground",
             )}
           >
             <Icon className="h-5 w-5" />

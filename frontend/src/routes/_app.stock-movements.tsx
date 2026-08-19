@@ -59,11 +59,12 @@ function MovementsPage() {
     m.productName ?? products.data?.find((p) => p.id === m.productId)?.name ?? m.productId;
   const userName = (m: StockMovement) => m.userName ?? "—";
   const fromLabel = (m: StockMovement) =>
-    m.type === "IN" ? m.provider ?? "—" : whName(m.fromWarehouseId);
+    m.type === "IN" ? (m.provider ?? "—") : whName(m.fromWarehouseId);
   const toLabel = (m: StockMovement) =>
-    m.type === "OUT" ? m.recipient ?? "—" : whName(m.toWarehouseId);
+    m.type === "OUT" ? (m.recipient ?? "—") : whName(m.toWarehouseId);
 
-  const whName = (id?: string) => (id ? warehouses.data?.find((w) => w.id === id)?.name ?? "—" : "—");
+  const whName = (id?: string) =>
+    id ? (warehouses.data?.find((w) => w.id === id)?.name ?? "—") : "—";
 
   return (
     <div>
@@ -85,7 +86,9 @@ function MovementsPage() {
       <Card className="p-4">
         <div className="mb-4 flex items-center justify-between">
           <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All types</SelectItem>
               <SelectItem value="IN">IN</SelectItem>
@@ -134,8 +137,14 @@ function MovementsPage() {
                     onClick={() => setSelected(m)}
                   >
                     <TableCell className="font-medium">{productName(m)}</TableCell>
-                    <TableCell><Badge variant="outline" className={typeColor[m.type]}>{m.type}</Badge></TableCell>
-                    <TableCell className="text-right tabular-nums">{m.qty > 0 ? `+${m.qty}` : m.qty}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={typeColor[m.type]}>
+                        {m.type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {m.qty > 0 ? `+${m.qty}` : m.qty}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{fromLabel(m)}</TableCell>
                     <TableCell className="text-muted-foreground">{toLabel(m)}</TableCell>
                     <TableCell>{userName(m)}</TableCell>
