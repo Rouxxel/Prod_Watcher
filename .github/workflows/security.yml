@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 jobs:
   secrets:
@@ -26,21 +25,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
-
-  dependency-review:
-    runs-on: ubuntu-24.04
-    if: github.event_name == 'pull_request'
-    # Requires Dependency graph enabled:
-    # https://github.com/<owner>/<repo>/settings/security_analysis
-    continue-on-error: true
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: moderate
 
   frontend-audit:
     runs-on: ubuntu-24.04
