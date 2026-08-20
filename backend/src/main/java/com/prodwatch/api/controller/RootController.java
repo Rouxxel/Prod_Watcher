@@ -18,6 +18,7 @@ package com.prodwatch.api.controller;
 import java.util.Map;
 
 import com.prodwatch.api.config.RateLimit;
+import com.prodwatch.api.cache.RedisClient;
 import com.prodwatch.api.util.CustomLogger;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,12 +35,19 @@ public class RootController {
     /** Build marker to verify which image is actually deployed (old vs. new code). */
     private static final String BUILD_MARKER = "ecosystem-v26-jwks";
 
+    private final RedisClient redisClient;
+
+    public RootController(RedisClient redisClient) {
+        this.redisClient = redisClient;
+    }
+
     @RateLimit("root_directory_endpoint")
     @GetMapping("${config.endpoints.root_directory_endpoint.endpoint_route}")
     public Map<String, String> root() {
         CustomLogger.debug("Backend running successfully");
         return Map.of(
                 "message", "Backend running successfully, ready to use other endpoints",
-                "build", BUILD_MARKER);
+                "build", BUILD_MARKER,
+                "redis", redisClient.getStatus());
     }
 }

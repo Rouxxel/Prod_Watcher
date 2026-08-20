@@ -29,9 +29,10 @@ function DashboardPage() {
   const stockValue = products.data?.reduce((s, p) => s + p.price * p.stock, 0) ?? 0;
   const lowStock = products.data?.filter((p) => p.stock <= p.lowStockThreshold).length ?? 0;
   const today = new Date().toDateString();
-  const salesToday = transactions.data
-    ?.filter((t) => t.status === "completed" && new Date(t.timestamp).toDateString() === today)
-    .reduce((s, t) => s + t.total, 0) ?? 0;
+  const salesToday =
+    transactions.data
+      ?.filter((t) => t.status === "completed" && new Date(t.timestamp).toDateString() === today)
+      .reduce((s, t) => s + t.total, 0) ?? 0;
 
   const productName = (m: StockMovement) =>
     m.productName ?? products.data?.find((p) => p.id === m.productId)?.name ?? m.productId;
@@ -39,13 +40,37 @@ function DashboardPage() {
 
   return (
     <div>
-      <PageHeader title="Dashboard" description="At-a-glance view of inventory health and recent activity." />
+      <PageHeader
+        title="Dashboard"
+        description="At-a-glance view of inventory health and recent activity."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Products" value={String(totalProducts)} icon={Package} hint="across all warehouses" accent />
-        <StatCard label="Stock Value" value={currency(stockValue)} icon={DollarSign} hint="current valuation" />
-        <StatCard label="Low Stock Alerts" value={String(lowStock)} icon={AlertTriangle} hint="below threshold" />
-        <StatCard label="Sales Today" value={currency(salesToday)} icon={ShoppingBag} hint="completed transactions" />
+        <StatCard
+          label="Total Products"
+          value={String(totalProducts)}
+          icon={Package}
+          hint="across all warehouses"
+          accent
+        />
+        <StatCard
+          label="Stock Value"
+          value={currency(stockValue)}
+          icon={DollarSign}
+          hint="current valuation"
+        />
+        <StatCard
+          label="Low Stock Alerts"
+          value={String(lowStock)}
+          icon={AlertTriangle}
+          hint="below threshold"
+        />
+        <StatCard
+          label="Sales Today"
+          value={currency(salesToday)}
+          icon={ShoppingBag}
+          hint="completed transactions"
+        />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
@@ -57,7 +82,9 @@ function DashboardPage() {
           <CardContent>
             {movements.isLoading ? (
               <div className="space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
               </div>
             ) : (
               <div className="overflow-hidden rounded-md border border-border/70">
@@ -81,7 +108,9 @@ function DashboardPage() {
                         </div>
                       </div>
                       <div className="flex justify-center border-r border-border/40">
-                        <Badge variant="outline" className={movementColor[m.type]}>{m.type}</Badge>
+                        <Badge variant="outline" className={movementColor[m.type]}>
+                          {m.type}
+                        </Badge>
                       </div>
                       <div className="text-right text-sm font-semibold tabular-nums text-muted-foreground">
                         {m.qty > 0 ? `+${m.qty}` : m.qty}
@@ -101,7 +130,9 @@ function DashboardPage() {
           <CardContent>
             {transactions.isLoading ? (
               <div className="space-y-2">
-                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
               </div>
             ) : (
               <ul className="divide-y divide-border">
@@ -113,7 +144,9 @@ function DashboardPage() {
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-semibold tabular-nums">{currency(t.total)}</div>
-                      <Badge variant="outline" className="text-[10px] uppercase">{t.status}</Badge>
+                      <Badge variant="outline" className="text-[10px] uppercase">
+                        {t.status}
+                      </Badge>
                     </div>
                   </li>
                 ))}

@@ -87,7 +87,10 @@ function LoginPage() {
           maskImage: "linear-gradient(to bottom, transparent 0%, black 35%, transparent 100%)",
         }}
       />
-      <div className="vw-scanlines pointer-events-none absolute inset-0 opacity-[0.08]" aria-hidden />
+      <div
+        className="vw-scanlines pointer-events-none absolute inset-0 opacity-[0.08]"
+        aria-hidden
+      />
 
       <div className="relative w-full max-w-md rounded-xl border border-border bg-card/80 p-6 backdrop-blur sm:p-8">
         <div className="mb-6 flex flex-col items-center text-center">

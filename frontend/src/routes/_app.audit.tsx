@@ -29,7 +29,10 @@ function AuditPage() {
 
   return (
     <div>
-      <PageHeader title="Inventory Audit" description="Immutable log of inventory-related user actions." />
+      <PageHeader
+        title="Inventory Audit"
+        description="Immutable log of inventory-related user actions."
+      />
       <Card className="p-4">
         {audit.isLoading ? (
           <TableSkeleton rows={6} cols={5} />
@@ -54,11 +57,20 @@ function AuditPage() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => setSelected(a)}
                   >
-                    <TableCell><Badge variant="outline" className="bg-primary/15 text-primary-foreground border-primary/30">{a.action}</Badge></TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className="bg-primary/15 text-primary-foreground border-primary/30"
+                      >
+                        {a.action}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-muted-foreground" title={a.entityId}>
                       {a.entity} · {a.entityLabel ?? shortId(a.entityId)}
                     </TableCell>
-                    <TableCell title={a.userId ?? undefined}>{auditUserLabel(a.userName, a.userId)}</TableCell>
+                    <TableCell title={a.userId ?? undefined}>
+                      {auditUserLabel(a.userName, a.userId)}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{a.details ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{dateTime(a.timestamp)}</TableCell>
                   </TableRow>

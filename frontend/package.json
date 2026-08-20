@@ -1,6 +1,7 @@
 {
   "name": "prodwatch-frontend",
   "private": true,
+  "packageManager": "npm@11.6.2",
   "sideEffects": false,
   "type": "module",
   "scripts": {
@@ -9,7 +10,8 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",

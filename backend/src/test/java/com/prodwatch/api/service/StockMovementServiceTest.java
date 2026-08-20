@@ -77,7 +77,7 @@ class StockMovementServiceTest extends AbstractIntegrationTest {
                 new StockMovementCreate(StockMovementType.IN, product.getId(), 10, null, warehouseA.getId(), "Test Supplier", null, null),
                 TestFixtures.currentUser(TestFixtures.WORKER_ID, AppRole.warehouse_worker));
 
-        assertThat(inventoryBalanceService.getStock(product.getId(), warehouseA.getId())).isEqualTo(10);
+        assertThat(inventoryBalanceService.getStockForCheckout(product.getId(), warehouseA.getId())).isEqualTo(10);
     }
 
     @Test
@@ -88,7 +88,7 @@ class StockMovementServiceTest extends AbstractIntegrationTest {
                 new StockMovementCreate(StockMovementType.OUT, product.getId(), 4, warehouseA.getId(), null, null, "Test Customer", null),
                 TestFixtures.currentUser(TestFixtures.WORKER_ID, AppRole.warehouse_worker));
 
-        assertThat(inventoryBalanceService.getStock(product.getId(), warehouseA.getId())).isEqualTo(6);
+        assertThat(inventoryBalanceService.getStockForCheckout(product.getId(), warehouseA.getId())).isEqualTo(6);
     }
 
     @Test
@@ -117,8 +117,8 @@ class StockMovementServiceTest extends AbstractIntegrationTest {
                         null),
                 TestFixtures.currentUser(TestFixtures.WORKER_ID, AppRole.warehouse_worker));
 
-        assertThat(inventoryBalanceService.getStock(product.getId(), warehouseA.getId())).isEqualTo(5);
-        assertThat(inventoryBalanceService.getStock(product.getId(), warehouseB.getId())).isEqualTo(3);
+        assertThat(inventoryBalanceService.getStockForCheckout(product.getId(), warehouseA.getId())).isEqualTo(5);
+        assertThat(inventoryBalanceService.getStockForCheckout(product.getId(), warehouseB.getId())).isEqualTo(3);
     }
 
     @Test
@@ -128,12 +128,12 @@ class StockMovementServiceTest extends AbstractIntegrationTest {
         stockMovementService.create(
                 new StockMovementCreate(StockMovementType.ADJUSTMENT, product.getId(), 2, null, warehouseA.getId(), null, null, "found"),
                 TestFixtures.currentUser(TestFixtures.WORKER_ID, AppRole.warehouse_worker));
-        assertThat(inventoryBalanceService.getStock(product.getId(), warehouseA.getId())).isEqualTo(8);
+        assertThat(inventoryBalanceService.getStockForCheckout(product.getId(), warehouseA.getId())).isEqualTo(8);
 
         stockMovementService.create(
                 new StockMovementCreate(StockMovementType.ADJUSTMENT, product.getId(), 3, warehouseA.getId(), null, null, null, "loss"),
                 TestFixtures.currentUser(TestFixtures.WORKER_ID, AppRole.warehouse_worker));
-        assertThat(inventoryBalanceService.getStock(product.getId(), warehouseA.getId())).isEqualTo(5);
+        assertThat(inventoryBalanceService.getStockForCheckout(product.getId(), warehouseA.getId())).isEqualTo(5);
     }
 
     private void seedStock(int qty) {

@@ -1,6 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Pencil, Plus, Trash2, Warehouse as WarehouseIcon, MapPin, Package, AlertTriangle, Store } from "lucide-react";
+import {
+  Pencil,
+  Plus,
+  Trash2,
+  Warehouse as WarehouseIcon,
+  MapPin,
+  Package,
+  AlertTriangle,
+  Store,
+} from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -100,7 +109,12 @@ function WarehousesPage() {
         }
         actions={
           !readOnly ? (
-            <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+            >
               <Plus className="mr-2 h-4 w-4" /> Add warehouse
             </Button>
           ) : undefined
@@ -113,8 +127,8 @@ function WarehousesPage() {
             <div>
               <div className="font-medium">Single-location mode is active</div>
               <p className="text-muted-foreground">
-                Warehouse selectors are hidden across the app. Switch to multi-location in Settings when you open
-                a second site.
+                Warehouse selectors are hidden across the app. Switch to multi-location in Settings
+                when you open a second site.
               </p>
             </div>
           </CardContent>
@@ -154,7 +168,8 @@ function WarehousesPage() {
                         <h3 className="truncate font-semibold">{w.name}</h3>
                       </div>
                       <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                        <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{w.location}</span>
+                        <MapPin className="h-3 w-3 shrink-0" />{" "}
+                        <span className="truncate">{w.location}</span>
                       </div>
                     </div>
                     <div className="flex shrink-0 gap-1">
@@ -165,10 +180,23 @@ function WarehousesPage() {
                       )}
                       {!readOnly && (
                         <>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditing(w); setDialogOpen(true); }}>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              setEditing(w);
+                              setDialogOpen(true);
+                            }}
+                          >
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setToDelete(w)}>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => setToDelete(w)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </>
@@ -183,7 +211,13 @@ function WarehousesPage() {
                     ].map(({ label, value }) => {
                       const len = value.length;
                       const size =
-                        len <= 4 ? "text-lg" : len <= 7 ? "text-base" : len <= 10 ? "text-sm" : "text-xs";
+                        len <= 4
+                          ? "text-lg"
+                          : len <= 7
+                            ? "text-base"
+                            : len <= 10
+                              ? "text-sm"
+                              : "text-xs";
                       return (
                         <div key={label} className="min-w-0 px-1">
                           <div className="text-xs text-muted-foreground">{label}</div>
@@ -211,7 +245,10 @@ function WarehousesPage() {
         <>
           <WarehouseFormDialog
             open={dialogOpen}
-            onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditing(null); }}
+            onOpenChange={(o) => {
+              setDialogOpen(o);
+              if (!o) setEditing(null);
+            }}
             initial={editing}
             onSubmit={handleSubmit}
             pending={createMut.isPending || updateMut.isPending}
@@ -222,7 +259,8 @@ function WarehousesPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete {toDelete?.name}?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Deletion is blocked if this warehouse has stock, movements, or is a product default location.
+                  Deletion is blocked if this warehouse has stock, movements, or is a product
+                  default location.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

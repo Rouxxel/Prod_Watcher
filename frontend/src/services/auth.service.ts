@@ -63,7 +63,9 @@ export const authService = {
 
   signupEmailAvailable(email: string): Promise<SignupEmailAvailability> {
     const params = new URLSearchParams({ email: email.trim().toLowerCase() });
-    return apiGet<SignupEmailAvailability>(`/auth/signup-email-available?${params}`, { auth: false });
+    return apiGet<SignupEmailAvailability>(`/auth/signup-email-available?${params}`, {
+      auth: false,
+    });
   },
 
   signup(input: SignupInput): Promise<SignupResponse> {

@@ -6,6 +6,9 @@ import java.util.UUID;
 
 import com.prodwatch.api.dto.movement.StockMovementCreate;
 import com.prodwatch.api.dto.movement.StockMovementResponse;
+import com.prodwatch.api.cache.RedisCacheKeys;
+import com.prodwatch.api.cache.RedisCacheService;
+import com.prodwatch.api.cache.RedisCacheTtls;
 import com.prodwatch.api.entity.Product;
 import com.prodwatch.api.entity.Profile;
 import com.prodwatch.api.entity.StockMovement;
@@ -32,6 +35,8 @@ public class StockMovementService {
     private final ProfileRepository profileRepository;
     private final InventoryBalanceService inventoryBalanceService;
     private final AuditService auditService;
+    private final RedisCacheService cacheService;
+    private final RedisCacheTtls cacheTtls;
 
     public StockMovementService(
             StockMovementRepository stockMovementRepository,
@@ -39,13 +44,17 @@ public class StockMovementService {
             WarehouseRepository warehouseRepository,
             ProfileRepository profileRepository,
             InventoryBalanceService inventoryBalanceService,
-            AuditService auditService) {
+            AuditService auditService,
+            RedisCacheService cacheService,
+            RedisCacheTtls cacheTtls) {
         this.stockMovementRepository = stockMovementRepository;
         this.productRepository = productRepository;
         this.warehouseRepository = warehouseRepository;
         this.profileRepository = profileRepository;
         this.inventoryBalanceService = inventoryBalanceService;
         this.auditService = auditService;
+        this.cacheService = cacheService;
+        this.cacheTtls = cacheTtls;
     }
 
     @Transactional(readOnly = true)
@@ -66,7 +75,14 @@ public class StockMovementService {
 
     @Transactional(readOnly = true)
     public StockMovementResponse get(UUID id, CurrentUser user) {
-        return toResponse(load(id, user));
+        String cacheKey = RedisCacheKeys.movement(id);
+        return cacheService
+                .cacheGet(cacheKey, StockMovementResponse.class)
+                .orElseGet(() -> {
+                    StockMovementResponse response = toResponse(load(id, user));
+                    cacheService.cacheSet(cacheKey, response, cacheTtls.movement());
+                    return response;
+                });
     }
 
     @Transactional
@@ -148,7 +164,14 @@ public class StockMovementService {
                 dto.note()));
 
         auditService.log(user.getUserId(), auditAction(dto.type()), "movement", movement.getId(), product.getSku());
-        return toResponse(movement);
+        inventoryBalanceService.evictStockDisplayForMovement(
+                ecosystemId,
+                product.getId(),
+                fromWarehouse != null ? fromWarehouse.getId() : null,
+                toWarehouse != null ? toWarehouse.getId() : null);
+        StockMovementResponse response = toResponse(movement);
+        cacheService.cacheSet(RedisCacheKeys.movement(movement.getId()), response, cacheTtls.movement());
+        return response;
     }
 
     private StockMovement load(UUID id, CurrentUser user) {

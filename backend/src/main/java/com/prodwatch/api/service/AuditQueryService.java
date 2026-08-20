@@ -6,6 +6,9 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.prodwatch.api.dto.audit.AuditEntryResponse;
+import com.prodwatch.api.cache.RedisCacheKeys;
+import com.prodwatch.api.cache.RedisCacheService;
+import com.prodwatch.api.cache.RedisCacheTtls;
 import com.prodwatch.api.entity.AuditEntry;
 import com.prodwatch.api.entity.Profile;
 import com.prodwatch.api.error.ResourceNotFoundException;
@@ -21,11 +24,18 @@ public class AuditQueryService {
 
     private final AuditEntryRepository auditEntryRepository;
     private final AuditEntityLabelResolver entityLabelResolver;
+    private final RedisCacheService cacheService;
+    private final RedisCacheTtls cacheTtls;
 
     public AuditQueryService(
-            AuditEntryRepository auditEntryRepository, AuditEntityLabelResolver entityLabelResolver) {
+            AuditEntryRepository auditEntryRepository,
+            AuditEntityLabelResolver entityLabelResolver,
+            RedisCacheService cacheService,
+            RedisCacheTtls cacheTtls) {
         this.auditEntryRepository = auditEntryRepository;
         this.entityLabelResolver = entityLabelResolver;
+        this.cacheService = cacheService;
+        this.cacheTtls = cacheTtls;
     }
 
     @Transactional(readOnly = true)
@@ -39,9 +49,16 @@ public class AuditQueryService {
 
     @Transactional(readOnly = true)
     public AuditEntryResponse get(UUID id, CurrentUser user) {
-        AuditEntry entry = load(id, user);
-        Map<String, String> labels = entityLabelResolver.resolveLabels(List.of(entry));
-        return toResponse(entry, labels);
+        String cacheKey = RedisCacheKeys.audit(id);
+        return cacheService
+                .cacheGet(cacheKey, AuditEntryResponse.class)
+                .orElseGet(() -> {
+                    AuditEntry entry = load(id, user);
+                    Map<String, String> labels = entityLabelResolver.resolveLabels(List.of(entry));
+                    AuditEntryResponse response = toResponse(entry, labels);
+                    cacheService.cacheSet(cacheKey, response, cacheTtls.audit());
+                    return response;
+                });
     }
 
     private AuditEntry load(UUID id, CurrentUser user) {

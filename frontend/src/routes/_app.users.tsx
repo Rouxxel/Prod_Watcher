@@ -59,12 +59,7 @@ export const Route = createFileRoute("/_app/users")({
   component: UsersPage,
 });
 
-const ASSIGNABLE_ROLES: Role[] = [
-  "warehouse_manager",
-  "warehouse_worker",
-  "inspector",
-  "cashier",
-];
+const ASSIGNABLE_ROLES: Role[] = ["warehouse_manager", "warehouse_worker", "inspector", "cashier"];
 
 function UsersPage() {
   const navigate = useNavigate();
@@ -115,7 +110,11 @@ function UsersPage() {
         {users.isLoading ? (
           <TableSkeleton rows={6} cols={5} />
         ) : users.isError ? (
-          <EmptyState icon={UsersIcon} title="Unable to load users" description="Admin access is required." />
+          <EmptyState
+            icon={UsersIcon}
+            title="Unable to load users"
+            description="Admin access is required."
+          />
         ) : (users.data?.length ?? 0) === 0 ? (
           <EmptyState icon={UsersIcon} title="No users" />
         ) : (
@@ -150,7 +149,9 @@ function UsersPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-primary/20 text-xs">{initials}</AvatarFallback>
+                            <AvatarFallback className="bg-primary/20 text-xs">
+                              {initials}
+                            </AvatarFallback>
                           </Avatar>
                           <span className="font-medium">{u.name}</span>
                         </div>
@@ -305,8 +306,8 @@ function UsersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {deleteUser?.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes their account and login access. Audit and stock movement history
-              is kept, but users with POS sales cannot be deleted — deactivate them instead.
+              This permanently removes their account and login access. Audit and stock movement
+              history is kept, but users with POS sales cannot be deleted — deactivate them instead.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -334,8 +335,8 @@ function UsersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Grant admin access?</AlertDialogTitle>
             <AlertDialogDescription>
-              {promoteUser?.name} will receive full admin permissions. This cannot be undone from the role
-              dropdown — only another admin can change their role later.
+              {promoteUser?.name} will receive full admin permissions. This cannot be undone from
+              the role dropdown — only another admin can change their role later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

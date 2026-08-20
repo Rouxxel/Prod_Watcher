@@ -28,7 +28,9 @@ function ConfirmEmailPage() {
 
     if (!token) {
       setStatus("error");
-      setMessage("Missing confirmation token. Open the link from your email or request a new sign-up.");
+      setMessage(
+        "Missing confirmation token. Open the link from your email or request a new sign-up.",
+      );
       return;
     }
 
@@ -86,7 +88,10 @@ function AuthShell({ title, children }: { title: string; children: React.ReactNo
         className="pointer-events-none absolute left-1/2 top-[10%] h-72 w-72 -translate-x-1/2 rounded-full opacity-80 blur-[1px]"
         style={{ background: "var(--gradient-sun)" }}
       />
-      <div className="vw-scanlines pointer-events-none absolute inset-0 opacity-[0.08]" aria-hidden />
+      <div
+        className="vw-scanlines pointer-events-none absolute inset-0 opacity-[0.08]"
+        aria-hidden
+      />
 
       <div className="relative w-full max-w-md rounded-xl border border-border bg-card/80 p-6 backdrop-blur sm:p-8">
         <div className="mb-6 flex flex-col items-center text-center">

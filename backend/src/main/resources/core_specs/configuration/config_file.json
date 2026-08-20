@@ -100,5 +100,20 @@
             "endpoint_tag": "settings",
             "endpoint_route": "/settings"
         }
+    },
+
+    "redis_cache": {
+        "ttl_seconds": {
+            "profile": 600,
+            "settings": 1800,
+            "warehouses_list": 3600,
+            "warehouse": 3600,
+            "product_meta": 1800,
+            "ecosystem": 21600,
+            "movement": 86400,
+            "audit": 86400,
+            "transaction": 86400,
+            "stock_display": 15
+        }
     }
 }

@@ -19,12 +19,7 @@ import {
 import { roleLabel } from "@/lib/format";
 import type { Role } from "@/types";
 
-const STEP_DOWN_ROLES: Role[] = [
-  "warehouse_manager",
-  "warehouse_worker",
-  "inspector",
-  "cashier",
-];
+const STEP_DOWN_ROLES: Role[] = ["warehouse_manager", "warehouse_worker", "inspector", "cashier"];
 
 interface Props {
   open: boolean;
@@ -46,8 +41,8 @@ export function StepDownAdminDialog({ open, onOpenChange, onSubmit, pending }: P
         <DialogHeader>
           <DialogTitle>Step down as admin</DialogTitle>
           <DialogDescription>
-            Choose a new role for your account. You will lose admin access immediately, including this
-            users page. At least one other active admin must remain.
+            Choose a new role for your account. You will lose admin access immediately, including
+            this users page. At least one other active admin must remain.
           </DialogDescription>
         </DialogHeader>
         <form

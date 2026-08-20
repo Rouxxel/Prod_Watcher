@@ -39,10 +39,7 @@ export function Topbar() {
       </div>
       <div className="flex items-center gap-3">
         {canSwitchAppMode(user.role) && (
-          <Select
-            value={mode ?? undefined}
-            onValueChange={(v) => setMode(v as AppMode)}
-          >
+          <Select value={mode ?? undefined} onValueChange={(v) => setMode(v as AppMode)}>
             <SelectTrigger className="h-8 w-[160px] gap-1.5" aria-label="Switch mode">
               <SelectValue placeholder="Select mode" />
             </SelectTrigger>

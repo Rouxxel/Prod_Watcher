@@ -38,13 +38,28 @@ const inventoryItems: Item[] = [
   { title: "Products", url: "/products", icon: Package },
   { title: "Warehouses", url: "/warehouses", icon: Warehouse },
   { title: "Stock Movements", url: "/stock-movements", icon: ArrowLeftRight },
-  { title: "Inventory Audit", url: "/audit", icon: ClipboardCheck, roles: ["admin", "inspector", "warehouse_manager", "warehouse_worker"] },
+  {
+    title: "Inventory Audit",
+    url: "/audit",
+    icon: ClipboardCheck,
+    roles: ["admin", "inspector", "warehouse_manager", "warehouse_worker"],
+  },
 ];
 
 const sellingItems: Item[] = [
-  { title: "Cashier", url: "/cashier", icon: ScanBarcode, roles: ["admin", "cashier", "inspector"] },
+  {
+    title: "Cashier",
+    url: "/cashier",
+    icon: ScanBarcode,
+    roles: ["admin", "cashier", "inspector"],
+  },
   { title: "Cart", url: "/cart", icon: ShoppingCart, roles: ["admin", "cashier"] },
-  { title: "Transactions", url: "/transactions", icon: Receipt, roles: ["admin", "cashier", "warehouse_manager", "inspector"] },
+  {
+    title: "Transactions",
+    url: "/transactions",
+    icon: Receipt,
+    roles: ["admin", "cashier", "warehouse_manager", "inspector"],
+  },
 ];
 
 const adminItems: Item[] = [
@@ -106,8 +121,12 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="leading-tight">
-              <div className="font-display text-sm font-semibold uppercase tracking-[0.18em] vw-text-glow">ProdWatch</div>
-              <div className="font-mono-retro text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Inventory · POS</div>
+              <div className="font-display text-sm font-semibold uppercase tracking-[0.18em] vw-text-glow">
+                ProdWatch
+              </div>
+              <div className="font-mono-retro text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+                Inventory · POS
+              </div>
             </div>
           )}
         </div>
@@ -135,7 +154,10 @@ export function AppSidebar() {
                   <div className="truncate text-sm font-medium">{user.name}</div>
                   <div className="truncate text-xs text-muted-foreground">{user.email}</div>
                   {user.ecosystemName && (
-                    <div className="truncate text-[10px] text-muted-foreground/80" title={user.ecosystemId}>
+                    <div
+                      className="truncate text-[10px] text-muted-foreground/80"
+                      title={user.ecosystemId}
+                    >
                       {user.ecosystemName}
                     </div>
                   )}

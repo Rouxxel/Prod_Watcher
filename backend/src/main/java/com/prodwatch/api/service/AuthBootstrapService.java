@@ -19,14 +19,17 @@ public class AuthBootstrapService {
     private final UserRoleRepository userRoleRepository;
     private final ProfileRepository profileRepository;
     private final EcosystemService ecosystemService;
+    private final AuthContextService authContextService;
 
     public AuthBootstrapService(
             UserRoleRepository userRoleRepository,
             ProfileRepository profileRepository,
-            EcosystemService ecosystemService) {
+            EcosystemService ecosystemService,
+            AuthContextService authContextService) {
         this.userRoleRepository = userRoleRepository;
         this.profileRepository = profileRepository;
         this.ecosystemService = ecosystemService;
+        this.authContextService = authContextService;
     }
 
     /** Public sign-up is always available; each confirmed sign-up receives the admin role. */
@@ -38,6 +41,7 @@ public class AuthBootstrapService {
     public void assignAdminFromSignup(UUID userId) {
         createEcosystemIfAbsent(userId);
         assignAdminRole(userId);
+        authContextService.evict(userId);
     }
 
     /** Public sign-up users receive admin; idempotent if role already exists. */
@@ -45,9 +49,11 @@ public class AuthBootstrapService {
     public void ensureAdminRoleFromSignup(UUID userId) {
         createEcosystemIfAbsent(userId);
         if (userRoleRepository.findByUser_Id(userId).isPresent()) {
+            authContextService.evict(userId);
             return;
         }
         assignAdminRole(userId);
+        authContextService.evict(userId);
     }
 
     @Transactional

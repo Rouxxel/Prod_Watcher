@@ -87,7 +87,7 @@ class TransactionServiceTest extends AbstractIntegrationTest {
 
         transactionService.checkout(request, TestFixtures.currentUser(TestFixtures.CASHIER_ID, AppRole.cashier));
 
-        assertThat(inventoryBalanceService.getStockAtDefaultWarehouse(product.getId())).isEqualTo(8);
+        assertThat(inventoryBalanceService.getStockForCheckout(product.getId(), warehouse.getId())).isEqualTo(8);
     }
 
     @Test
@@ -98,7 +98,7 @@ class TransactionServiceTest extends AbstractIntegrationTest {
                         request, TestFixtures.currentUser(TestFixtures.CASHIER_ID, AppRole.cashier)))
                 .isInstanceOf(InsufficientStockException.class);
 
-        assertThat(inventoryBalanceService.getStockAtDefaultWarehouse(product.getId())).isEqualTo(10);
+        assertThat(inventoryBalanceService.getStockForCheckout(product.getId(), warehouse.getId())).isEqualTo(10);
     }
 
     private TransactionCreate checkoutRequest(int qty, BigDecimal subtotal, BigDecimal tax, BigDecimal total) {

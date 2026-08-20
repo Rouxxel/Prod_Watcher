@@ -64,7 +64,8 @@ export function ProvisionUserDialog({ open, onOpenChange, onSubmit, pending }: P
         <DialogHeader>
           <DialogTitle>Provision user</DialogTitle>
           <DialogDescription>
-            Create a confirmed account — the employee can log in immediately with the password you set.
+            Create a confirmed account — the employee can log in immediately with the password you
+            set.
           </DialogDescription>
         </DialogHeader>
         <form

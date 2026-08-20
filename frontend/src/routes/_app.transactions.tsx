@@ -41,7 +41,11 @@ function TransactionsPage() {
         {tx.isLoading ? (
           <TableSkeleton rows={6} cols={5} />
         ) : tx.isError ? (
-          <EmptyState icon={Receipt} title="Unable to load transactions" description="You may not have permission to view sales history." />
+          <EmptyState
+            icon={Receipt}
+            title="Unable to load transactions"
+            description="You may not have permission to view sales history."
+          />
         ) : (tx.data?.length ?? 0) === 0 ? (
           <EmptyState icon={Receipt} title="No transactions yet" />
         ) : (

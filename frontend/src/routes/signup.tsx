@@ -75,7 +75,10 @@ function SignupPage() {
         className="pointer-events-none absolute left-1/2 top-[10%] h-72 w-72 -translate-x-1/2 rounded-full opacity-80 blur-[1px]"
         style={{ background: "var(--gradient-sun)" }}
       />
-      <div className="vw-scanlines pointer-events-none absolute inset-0 opacity-[0.08]" aria-hidden />
+      <div
+        className="vw-scanlines pointer-events-none absolute inset-0 opacity-[0.08]"
+        aria-hidden
+      />
 
       <div className="relative w-full max-w-md rounded-xl border border-border bg-card/80 p-6 backdrop-blur sm:p-8">
         <div className="mb-6 flex flex-col items-center text-center">
@@ -86,8 +89,8 @@ function SignupPage() {
             Sign up
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Create your business workspace. You become admin with an empty inventory — add warehouses and products after
-            you log in. Staff are added from Users.
+            Create your business workspace. You become admin with an empty inventory — add
+            warehouses and products after you log in. Staff are added from Users.
           </p>
         </div>
 
@@ -160,7 +163,10 @@ function SignupPage() {
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
               Already have an account?{" "}
-              <Link to="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
+              <Link
+                to="/login"
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
                 Log in
               </Link>
             </p>

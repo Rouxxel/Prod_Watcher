@@ -26,14 +26,12 @@ export const useWarehouses = () =>
 export const useMovements = () =>
   useQuery({ queryKey: ["movements"], queryFn: () => movementsService.list() });
 
-export const useAudit = () =>
-  useQuery({ queryKey: ["audit"], queryFn: () => auditService.list() });
+export const useAudit = () => useQuery({ queryKey: ["audit"], queryFn: () => auditService.list() });
 
 export const useTransactions = () =>
   useQuery({ queryKey: ["transactions"], queryFn: () => transactionsService.list() });
 
-export const useUsers = () =>
-  useQuery({ queryKey: ["users"], queryFn: () => usersService.list() });
+export const useUsers = () => useQuery({ queryKey: ["users"], queryFn: () => usersService.list() });
 
 export const useCreateProduct = () => {
   const qc = useQueryClient();
