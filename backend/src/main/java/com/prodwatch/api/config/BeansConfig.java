@@ -15,6 +15,7 @@ package com.prodwatch.api.config;
 
 import com.prodwatch.api.util.RateLimiter;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,10 +35,12 @@ public class BeansConfig {
      * for already-applied migrations. It does not re-run applied migrations.
      */
     @Bean
-    public FlywayMigrationStrategy flywayMigrationStrategy() {
-        return flyway -> {
-            flyway.repair();
-            flyway.migrate();
-        };
+    public FlywayMigrationStrategy flywayMigrationStrategy(
+            @Value("${prodwatch.flyway.startup.max-attempts:12}") int maxAttempts,
+            @Value("${prodwatch.flyway.startup.initial-backoff-ms:2000}") long initialBackoffMs,
+            @Value("${prodwatch.flyway.startup.max-backoff-ms:10000}") long maxBackoffMs) {
+        return flyway ->
+                FlywayStartupSupport.repairAndMigrateWithRetry(
+                        flyway, maxAttempts, initialBackoffMs, maxBackoffMs);
     }
 }
